@@ -42,7 +42,7 @@ struct ReplayBar {
     bool shown = false;    // shown for the pad (a director button was pressed lately)
     bool paused = false;
     float pos = 0, length = 0;   // seconds
-    std::string speed, driver;
+    std::string speed, driver, camera;
 };
 void set_replay_bar(const ReplayBar& bar);   // (any thread)
 struct ReplayBarInput {

@@ -633,9 +633,12 @@ void draw_bar(ImDrawList* dl, float W, float H) {
     // car watched
     const float dw = text_w(F.semi, 20 * S, b.driver.c_str());
     text(dl, F.semi, 20 * S, ImVec2(r - 24 * S - dw, ty - 13 * S), WHITE, b.driver);
+    // camera, under the car
+    const float cw = text_w(F.semi, 15 * S, b.camera.c_str());
+    text(dl, F.semi, 15 * S, ImVec2(r - 24 * S - cw, L.y1 - 24 * S), RED, b.camera);
     // hints
-    const char* h = "SQUARE  play / pause      L2 / R2  speed      L1 / R1  car      TRIANGLE  camera      SELECT  TV mode"
-                    "      MOUSE  click the timeline";
+    const char* h = "SQUARE  play / pause     L2 / R2  speed     L1 / R1  car     CIRCLE  standard cameras     TRIANGLE  replay"
+                    " camera     SELECT  TV mode     MOUSE  timeline";
     text(dl, F.medium, 14 * S, ImVec2(sx - ss, L.y1 - 24 * S), IM_COL32(180, 180, 180, 255), h);
 }
 

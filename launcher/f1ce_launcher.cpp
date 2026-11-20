@@ -137,8 +137,8 @@ Combo g_combos[] = {
     // replay controls over the game's replay (runtime/hle_replay.cpp); off = the original replay, untouched
     {L"Advanced replay mode", L"F1CE_REPLAY_DIRECTOR", {{L"Off (original)", nullptr}, {L"On", L"1"}}, 0, GAME,
      L"In a replay: square play / pause, L2 / R2 slower / faster (1/4x to 8x), L1 / R1 the car watched, with a time "
-     L"bar: click or drag its timeline to jump there. Sound off while paused. Triangle (camera) and select (TV mode) "
-     L"stay the game's."},
+     L"bar: click or drag its timeline to jump there. Circle the standard cameras (chase, TV pod, cockpit, nose...) on "
+     L"that car. Sound off while paused. Triangle (replay camera) and select (TV mode) stay the game's."},
     // lighting of the track by session type, or a preset folder of ENVIRONMENTS (add_packs; runtime/hle_environment.cpp)
     {L"Race environment", L"F1CE_RACE_ENV", {{L"Early afternoon (original)", nullptr}, {L"Sunset", L"sunset"}}, 0,
      GAME, L"The light of races, Grands Prix and practice. The folders of ENVIRONMENTS are your own presets."},

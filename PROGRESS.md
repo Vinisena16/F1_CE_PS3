@@ -1223,6 +1223,14 @@ tests (timeline click / drag with a time tooltip, play / pause symbol), seek = l
 as the end of playback does + fast ticks (MODDING_IDEAS.md "Advanced Replay Mode" / Status), mixer fade while paused or
 seeking. Checked with scripted mouse and seek runs: seeks land on the target, same-keyframe seeks bit-identical.
 
+**2026-11-20 (later)** – replay standard cameras (circle, Advanced Replay Mode): a replay has a PlayerCam of its own
+(camera list 17..23 = the replay angles that triangle cycles; F1CE_CAM_LOG) that already follows the watched car with
+that car's camera set. `hle_camera.cpp` writes the chosen race camera id (0 chase, 1 far chase, 2 TV pod, 3 onboard TV,
+4 cockpit, 5 nose) into its current list entry for the length of each update and restores it; a new choice resets the
+smoothing with 0x36f79c (it does not read the list). Bar shows the camera name. Checked with frame / window dumps:
+every camera on the player's car and on an AI car (Ferrari: cockpit interior, TV pod, nose), chase on another car
+after L1 / R1, triangle and the end of the cycle give the replay cameras back.
+
 **2026-11-20 (later)** - season pack build hang with a new McLaren model (2007 pack): `sg._Nearest.find` searched up
 to 64 rings of cells, each ring walking the whole (2r+1)^3 cube, for vertices far from the original part (the edited
 `pushrodfl` reaches 90 cells away) - hours per mesh. Now the search starts at the occupied cells' box and compares all

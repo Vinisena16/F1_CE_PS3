@@ -111,7 +111,8 @@ std::vector<Option> make_options() {
     v.push_back(choice(GENERAL, "Advanced replay mode", "F1CE_REPLAY_DIRECTOR", {{"Off (original)", nullptr}, {"On", "1"}}, 0,
                        "Replay controls over the game's replay: square play / pause, L2 / R2 slower / faster (1/4x "
                        "to 8x), L1 / R1 the car watched, with a time bar: click or drag its timeline with the mouse to "
-                       "jump there. Sound off while paused. Triangle (camera) and select (TV mode) stay the game's. "
+                       "jump there. Circle the standard cameras (chase, TV pod, cockpit, nose...) on that car. Sound off "
+                       "while paused. Triangle (replay camera) and select (TV mode) stay the game's. "
                        "Off: the original replay."));
     v.push_back(choice(GENERAL, "Language", "F1CE_LANGUAGE",
                        {{"English", nullptr}, {"Français", "french"}, {"Deutsch", "german"}, {"Italiano", "italian"},

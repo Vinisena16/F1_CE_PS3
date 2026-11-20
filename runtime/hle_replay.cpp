@@ -17,7 +17,9 @@
 // The original replay's own pad controls (seen 2026-11-20): triangle changes the camera angle (inside the replay
 // camera, id 0 on the world's camera stack) and select toggles "TV MODE" manual / auto; start opens the replay menu.
 // They stay the game's. Added, while a replay plays: square play / pause, R2 faster, L2 slower, R1 / L1 next /
-// previous car. These four are hidden from the game then (cellPadGetData). When start is pressed the speed control
+// previous car, circle the race's standard cameras (chase, far chase, TV pod, onboard TV, cockpit, nose) on the watched
+// car, then back to the replay cameras (triangle also goes back). These five are hidden from the game then
+// (cellPadGetData). When start is pressed the speed control
 // steps aside until the replay moves again (the game's own pause menu may need ticks).
 // The bar (overlay.cpp) shows the time in the replay window, its length, the speed and the car watched; it hides
 // itself 4 s after the last director button and shows while the mouse moves. A click on its timeline seeks: the
@@ -228,12 +230,20 @@ struct Director {
     u64 seek_start = 0;
     bool seek_check = false;   // the target is reached when the ticks of this frame have run: log it next frame
     u64 last_frame = 0;
+    int cam = 0;               // index into kCameras: 0 = the game's replay cameras
 } g;
+
+// Standard cameras (circle): the replay's own PlayerCam (camera list 17..23, triangle cycles them) already follows the
+// watched car, so hle_camera.cpp shows one of the race's camera ids (hle_camera.cpp's header) in its place.
+const struct { int id; const char* name; } kCameras[] = {
+    {-1, "REPLAY CAMERA"}, {0, "CHASE"}, {1, "FAR CHASE"}, {2, "TV POD"}, {3, "ONBOARD TV"}, {4, "COCKPIT"}, {5, "NOSE"},
+};
 std::atomic<bool> g_mute{false};   // read by the audio thread (replay_audio_muted)
 
 constexpr u16 D1_START = 0x08;
-constexpr u16 D2_L2 = 0x01, D2_R2 = 0x02, D2_L1 = 0x04, D2_R1 = 0x08, D2_SQUARE = 0x80;
-constexpr u16 kMask2 = D2_L2 | D2_R2 | D2_L1 | D2_R1 | D2_SQUARE;
+constexpr u16 D2_L2 = 0x01, D2_R2 = 0x02, D2_L1 = 0x04, D2_R1 = 0x08, D2_TRIANGLE = 0x10, D2_CIRCLE = 0x20,
+              D2_SQUARE = 0x80;
+constexpr u16 kMask2 = D2_L2 | D2_R2 | D2_L1 | D2_R1 | D2_CIRCLE | D2_SQUARE;
 
 void show_bar() { g.bar_until = time_usec() + 4000000; }
 
@@ -270,6 +280,16 @@ void handle_input(const Replay& r) {
     }
     if (pressed2(D2_R1)) { step_car(r, 1); any = g.car_changed = true; }
     if (pressed2(D2_L1)) { step_car(r, -1); any = g.car_changed = true; }
+    if (pressed2(D2_CIRCLE)) {
+        g.cam = (g.cam + 1) % (int)std::size(kCameras);
+        any = true;
+        LOG_I("replay: camera %s", kCameras[g.cam].name);
+    }
+    if (pressed2(D2_TRIANGLE) && g.cam) {   // (the game's: its next replay camera, so back to those)
+        g.cam = 0;
+        any = true;
+        LOG_I("replay: camera %s", kCameras[g.cam].name);
+    }
     if (pressed1(D1_START)) {
         g.menu = true;
         g.menu_pos = ld32(r.obj + 0x1C);
@@ -367,6 +387,7 @@ void update_bar(const Replay& r) {
         b.length = (t.end - t.first) / 60.0f;
         b.speed = g.seek_left ? "SEEKING" : speed_text();
         if (const u32 cur = ld32(r.world + 0x21C)) b.driver = car_name(cur);
+        b.camera = kCameras[g.cam].name;
     }
     overlay::set_replay_bar(b);
 }
@@ -500,6 +521,11 @@ void replay_ticks_probe(PPUContext& c) {
     c.r[31] = n;
 }
 
+// hle_camera.cpp: the race camera id to show in place of the replay's own cameras, -1 = theirs
+int replay_standard_camera() {
+    return replay_director_on() && g.active ? kCameras[g.cam].id : -1;
+}
+
 // the audio mixer (hle_misc.cpp): the output fades to silence while a replay is paused or seeking
 bool replay_audio_muted() { return g_mute.load(std::memory_order_relaxed); }
 
@@ -507,6 +533,7 @@ bool replay_audio_muted() { return g_mute.load(std::memory_order_relaxed); }
 void replay_pad_filter(host::PadState& s) {
     if (!replay_director_on() || !g.active) return;
     s.digital2 &= (u16)~kMask2;
-    // pressures: [7] square, [8] L1, [9] R1, [10] L2, [11] R2
+    // pressures: [5] circle, [7] square, [8] L1, [9] R1, [10] L2, [11] R2
+    s.pressure[5] = 0;
     for (int i = 7; i < 12; i++) s.pressure[i] = 0;
 }

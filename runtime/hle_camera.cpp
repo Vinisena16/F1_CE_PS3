@@ -29,6 +29,9 @@
 //    which only acts on ids 2/3/0xc (TV pods) and 4/5 (cockpit, nose) and returns untouched when that byte is set;
 //    the hook returns the same way for the TV pod ids. (The record's +0x34 flag gates another shake, 0x36c764, but it
 //    is 0 in the TV pod records.)
+//  * Replays have a PlayerCam of their own, following the watched car, whose list holds the replay camera ids 17..23
+//    (triangle cycles them; seen 2026-11-20). Advanced Replay Mode's standard cameras (hle_replay.cpp, circle) put one
+//    of the race ids 0..5 in its current entry while it updates, so the watched car's own records are used.
 //  * F1CE_CAM_LOG=1 logs the state once a second; F1CE_CAMERA=<id> forces that camera id (test aids).
 #include <algorithm>
 #include <bit>
@@ -43,6 +46,7 @@
 
 void sub_0036F0E8(PPUContext& __restrict c);
 void sub_0036F79C(PPUContext& __restrict c);
+int replay_standard_camera();   // hle_replay.cpp (F1CE_REPLAY_DIRECTOR): a race camera id in place of the replay's, or -1
 
 namespace {
 constexpr float kPi = 3.14159265358979f;
@@ -312,12 +316,34 @@ bool playercam_update_hook(PPUContext& c) {
     const u32 next_set = next_ctl ? ld32(next_ctl + 0x58) : 0;
     if (g_tv_on && g_tv_tune) tv_tune();
     if (g_tv_on && next_set) apply_tvcam(next_set);
+    // Advanced Replay Mode's standard cameras: the replay's PlayerCam (its list holds the replay camera ids 17..23) gets
+    // the chosen race camera id in its current list entry for the length of the update; a new choice resets the
+    // smoothing state as a camera change does (0x36f79c, which does not read the list)
+    static u32 std_pc = 0;
+    static int std_id = -1;
+    const u32 cur = ld32(pc + 0x80);
+    const int want = (list && cur < n && (s32)ld32(list) >= 17) ? replay_standard_camera() : -1;
+    const u32 saved_id = want >= 0 ? ld32(list + cur * 4) : 0;
+    if (want >= 0) st32(list + cur * 4, (u32)want);
+    if (want >= 0 ? pc != std_pc || want != std_id : pc == std_pc) {   // chosen, or back to the replay's camera
+        const u64 r3 = c.r[3], r4 = c.r[4];
+        c.r[3] = pc; c.r[4] = cur;
+        inside = true;
+        sub_0036F79C(c);
+        inside = false;
+        c.r[3] = r3; c.r[4] = r4;
+        LOG_I("cam: replay camera index %u shows %s %d (pc %08x)", cur, want >= 0 ? "race camera id" : "its own id",
+              want >= 0 ? want : (s32)ld32(list + cur * 4), pc);
+        std_pc = want >= 0 ? pc : 0;
+        std_id = want;
+    }
     inside = true;
     sub_0036F0E8(c);
     inside = false;
     const u32 set = ld32(pc + 0x160);
     const u32 idx = ld32(pc + 0x80);
     const s32 id = (list && idx < n) ? (s32)ld32(list + idx * 4) : -1;
+    if (want >= 0) st32(list + cur * 4, saved_id);
     const u32 ctl = ld32(pc + 0x14), car = ctl ? ld32(ctl + 0x24) : 0;
     if (orbit_on() && out && car && set && id >= 0 && ld32(set + id * 0x40 + 0x3c) != 0) apply_orbit(out, car);
     if (cam_log()) {
