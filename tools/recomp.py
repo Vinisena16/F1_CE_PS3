@@ -48,6 +48,7 @@ HOOKS = {0x3FB310: "camera_projection_hook",   # camera projection and frustum, 
 PROBES = {0x1187EC: "probe_1187ec", 0x11B05C: "probe_11b05c",   # hle_physics.cpp
           0x249518: "shake_tick_probe", 0x249B38: "shake_tick_probe",   # hle_physics.cpp: before a main loop tick
           0x249550: "shake_frame_probe", 0x249B40: "shake_frame_probe",   # and after the frame's last tick
+          0x249504: "replay_ticks_probe", 0x249654: "replay_ticks_probe",   # hle_replay.cpp: the frame's tick count
           0x489AAC: "flip_label_written",   # hle_gcm.cpp: the flip handler set a label the RSX may wait for
           0x48B054: "put_written",   # hle_gcm.cpp: libgcm wrote PUT
           0x55165C: "joblist_job", 0x5516F0: "joblist_job", 0x551780: "joblist_entry",   # hle_joblist.cpp

@@ -1207,3 +1207,12 @@ sceNp (22: manager/basic/ticket only, no NP matching), cellRtc, cellSysCacheMoun
   Not tested: two PCs / internet latency, races to the finish, more than two players, Linux.
 - Menu script for tests: profile load needs F1CE_SAVE_UI=0; LAN user name with the game keyboard (down, down, right,
   cross = "a" ...; the check mark then focuses Create User Name by itself).
+
+**2026-11-20** – Advanced Replay Mode, phases 1-2 (MODDING_IDEAS.md "Advanced Replay Mode" / Status):
+`runtime/hle_replay.cpp` (F1CE_REPLAY_DIRECTOR, launchers "Advanced replay mode"): play / pause and 1/4x-8x through the
+main loop's per-frame tick count (probes 0x249504 / 0x249654 rewrite r31; whole ticks, so the input re-simulation stays
+exact), car watched with L1 / R1 (world +0x21c / +0x208; entities found by a memory scan), bar in `overlay.cpp` (drawn
+when no dialog is up, never takes the pad), director buttons masked in cellPadGetData. The original replay's triangle
+(camera) and select (TV mode) are untouched. Scripted tests (Silverstone, AI drive, pause menu -> REPLAY): pause, all
+speeds (8x at 30 fps), car changes followed by the camera and the game's caption, replay menu continue / save / back,
+watched car restored after BACK. F1CE_REPLAY_LOG=1 dumps the camera stack and cars.

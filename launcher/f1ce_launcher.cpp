@@ -134,6 +134,10 @@ Combo g_combos[] = {
      L"The speed shake of both TV pod views of the camera cycle (also the onboard TV camera)."},
     {L"Chase cam look-around", L"F1CE_CAM_ORBIT", {{L"On", nullptr}, {L"Off", L"0"}}, 0, GAME,
      L"The right stick turns the chase cameras around the car."},
+    // replay controls over the game's replay (runtime/hle_replay.cpp); off = the original replay, untouched
+    {L"Advanced replay mode", L"F1CE_REPLAY_DIRECTOR", {{L"Off (original)", nullptr}, {L"On", L"1"}}, 0, GAME,
+     L"In a replay: square play / pause, L2 / R2 slower / faster (1/4x to 8x), L1 / R1 the car watched, with a time "
+     L"bar. Triangle (camera) and select (TV mode) stay the game's."},
     // lighting of the track by session type, or a preset folder of ENVIRONMENTS (add_packs; runtime/hle_environment.cpp)
     {L"Race environment", L"F1CE_RACE_ENV", {{L"Early afternoon (original)", nullptr}, {L"Sunset", L"sunset"}}, 0,
      GAME, L"The light of races, Grands Prix and practice. The folders of ENVIRONMENTS are your own presets."},

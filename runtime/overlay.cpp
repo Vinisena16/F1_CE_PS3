@@ -513,6 +513,53 @@ void draw(ImDrawList* dl, float W, float H) {
     }
 }
 
+// ------------------------------------------------------------------ replay director bar
+ReplayBar g_bar;   // (g_m)
+std::atomic<bool> g_bar_shown{false};
+
+std::string clock_text(float s) {
+    const int t = (int)(s * 10 + 0.5f);
+    char b[24];
+    snprintf(b, sizeof b, "%d:%02d.%d", t / 600, t / 10 % 60, t % 10);
+    return b;
+}
+
+// a strip at the bottom of the central 16:9 rect: play state, speed, timeline, time code, car watched, button hints
+void draw_bar(ImDrawList* dl, float W, float H) {
+    const ReplayBar& b = g_bar;
+    const float S = std::min(W / 1280.0f, H / 720.0f), cw = 1280 * S, x0 = (W - cw) / 2;
+    // (below the game's own replay captions: the driver's name box ends at y 630 of 720)
+    const float bh = 70 * S, y0 = H - (H - 720 * S) / 2 - bh - 8 * S, x1 = x0 + cw;
+    const float l = x0 + 40 * S, r = x1 - 40 * S;
+    dl->AddRectFilled(ImVec2(l, y0), ImVec2(r, y0 + bh), IM_COL32(16, 16, 16, 200));
+    dl->AddRectFilled(ImVec2(l, y0), ImVec2(l + 6 * S, y0 + bh), RED);
+    // play / pause symbol
+    const float sx = l + 30 * S, sy = y0 + 24 * S, ss = 12 * S;
+    if (b.paused) {
+        dl->AddRectFilled(ImVec2(sx - ss * 0.8f, sy - ss), ImVec2(sx - ss * 0.25f, sy + ss), WHITE);
+        dl->AddRectFilled(ImVec2(sx + ss * 0.25f, sy - ss), ImVec2(sx + ss * 0.8f, sy + ss), WHITE);
+    } else {
+        dl->AddTriangleFilled(ImVec2(sx - ss * 0.7f, sy - ss), ImVec2(sx + ss, sy), ImVec2(sx - ss * 0.7f, sy + ss), WHITE);
+    }
+    text(dl, F.black, 22 * S, ImVec2(sx + 26 * S, sy - 14 * S), WHITE, b.speed);
+    // timeline
+    const std::string tc = clock_text(b.pos) + " / " + clock_text(b.length);
+    const float tcw = text_w(F.semi, 18 * S, tc.c_str());
+    const float tl = sx + 130 * S, tr = r - 300 * S - tcw, ty = sy;
+    dl->AddRectFilled(ImVec2(tl, ty - 3 * S), ImVec2(tr, ty + 3 * S), IM_COL32(90, 90, 90, 255));
+    const float f = b.length > 0 ? std::clamp(b.pos / b.length, 0.0f, 1.0f) : 0;
+    const float px = std::floor(tl + (tr - tl) * f);   // (whole pixels: the image is rasterised again only when it changes)
+    dl->AddRectFilled(ImVec2(tl, ty - 3 * S), ImVec2(px, ty + 3 * S), RED);
+    dl->AddCircleFilled(ImVec2(px, ty), 8 * S, WHITE, 24);
+    text(dl, F.semi, 18 * S, ImVec2(tr + 16 * S, ty - 11 * S), WHITE, tc);
+    // car watched
+    const float dw = text_w(F.semi, 20 * S, b.driver.c_str());
+    text(dl, F.semi, 20 * S, ImVec2(r - 24 * S - dw, ty - 13 * S), WHITE, b.driver);
+    // hints
+    const char* h = "SQUARE  play / pause      L2 / R2  speed      L1 / R1  car      TRIANGLE  camera      SELECT  TV mode";
+    text(dl, F.medium, 14 * S, ImVec2(sx - ss, y0 + bh - 24 * S), IM_COL32(180, 180, 180, 255), h);
+}
+
 // ------------------------------------------------------------------ frame
 Target g_target;
 std::unordered_map<ImTextureData*, SoftTex> g_texes;   // ImGui's textures (the font atlas): their pixels as ImGui keeps them
@@ -540,19 +587,25 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
     static u64 last = 0;
     const u64 now = time_usec();
     g_last_frame = now;
-    if (!g_open.load() || !win_w || !win_h) return false;
+    if (!win_w || !win_h) return false;
+    if (!g_open.load() && !g_bar_shown.load()) return false;
     std::lock_guard lk(g_m);
-    if (g_st.kind == Kind::None) return false;
     static bool inited = false;
+    bool dialog = g_open.load() && g_st.kind != Kind::None;
+    if (dialog) {
+        if (!inited) { imgui_init(); inited = true; }
+        update(pressed(g_st.serial));
+        dialog = g_st.kind != Kind::None;   // (answered)
+    }
+    if (!dialog && !g_bar.shown) return false;
     if (!inited) { imgui_init(); inited = true; }
-    update(pressed(g_st.serial));
-    if (g_st.kind == Kind::None) return false;   // answered
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)win_w, (float)win_h);
     io.DeltaTime = last && now > last ? std::min((now - last) / 1e6f, 0.25f) : 1.0f / 60.0f;
     last = now;
     ImGui::NewFrame();
-    draw(ImGui::GetForegroundDrawList(), (float)win_w, (float)win_h);
+    if (dialog) draw(ImGui::GetForegroundDrawList(), (float)win_w, (float)win_h);
+    else draw_bar(ImGui::GetForegroundDrawList(), (float)win_w, (float)win_h);
     ImGui::Render();
     ImDrawData* dd = ImGui::GetDrawData();
     bool tex_changed = false;
@@ -617,5 +670,11 @@ bool message(const std::string& text) {
     st.kind = Kind::Message;
     st.text = text;
     return run(std::move(st)) != UNAVAILABLE;
+}
+
+void set_replay_bar(const ReplayBar& bar) {
+    std::lock_guard lk(g_m);
+    g_bar = bar;
+    g_bar_shown = bar.shown;
 }
 }  // namespace overlay

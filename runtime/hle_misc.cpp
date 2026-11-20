@@ -27,12 +27,14 @@ HLE_FUNC(cellPadGetInfo) {
 }
 void quick_race_overrides(u32 digital1, u32 lx, u32 ly);   // hle_quickrace.cpp (F1CE_QR_*)
 void rumble_update();                                        // hle_rumble.cpp
+void replay_pad_filter(host::PadState& s);                   // hle_replay.cpp (F1CE_REPLAY_DIRECTOR)
 // CellPadData: s32 len; u16 button[64]
 HLE_FUNC(cellPadGetData) {
     u32 port = (u32)ARG(0), p = (u32)ARG(1);
     if (port != 0) { st32(p, 0); RET(CELL_OK); }
     host::PadState s = host::pad_state();
     if (overlay::input_captured()) s = {};   // a system dialog (overlay.h) has the pad
+    if (!g_online_image) replay_pad_filter(s);
     if (!g_online_image) quick_race_overrides(s.digital1, s.lx, s.ly);   // (EBOOT addresses)
     rumble_update();
     st32(p, 24);

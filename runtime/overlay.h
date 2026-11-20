@@ -34,4 +34,13 @@ constexpr int UNAVAILABLE = -2;   // no dialog can be shown (nothing presents fr
 int save_list(SaveMode mode, const std::vector<SaveEntry>& entries, int focus);
 // A message with an OK button. False: no dialog can be shown (it returns at once).
 bool message(const std::string& text);
+
+// ---- Advanced Replay Mode bar (hle_replay.cpp): drawn while no dialog is up; it never takes the pad
+struct ReplayBar {
+    bool shown = false;
+    bool paused = false;
+    float pos = 0, length = 0;   // seconds
+    std::string speed, driver;
+};
+void set_replay_bar(const ReplayBar& bar);   // (any thread)
 }  // namespace overlay
