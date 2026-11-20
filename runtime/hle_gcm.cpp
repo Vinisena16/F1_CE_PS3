@@ -528,6 +528,9 @@ std::atomic<u32> g_list_start_pos{0};
 std::atomic<u32> g_front_get{0};     // where the front end is (for the watcher)
 std::atomic<u32> g_last_list{0};     // the frame list the front end last entered from the ring
 
+// a ring slot: a page starting with SET_REFERENCE
+bool is_slot(u32 io) { u32 p = g.io_map[(io >> 20) & 4095]; return p != 0xFFFFFFFF && ld32(p + (io & 0xFFFFF)) == 0x00040050; }
+
 void note_list_start(u32 target) {
     g_last_list = target;
     for (auto& t : g_list_starts) if (t.load() == target) return;
@@ -563,7 +566,6 @@ void snap_watcher() {
         static u64 st_made = 0, st_skipped = 0, st_late = 0, st_window = 0;
         u32 closing = 0;
         // (PUT at slot + 0x60 inside a list, not at a ring slot: no SET_REFERENCE at the page start, nothing to copy)
-        auto is_slot = [](u32 io) { u32 p = g.io_map[(io >> 20) & 4095]; return p != 0xFFFFFFFF && ld32(p + (io & 0xFFFFF)) == 0x00040050; };
         if (put != prev && prev && (prev & 0xFFF) != 0x060 && (put & 0xFFF) == 0x060 && poll_gap < 30000 && is_slot(put & ~0xFFFu)) {
             const u32 want = 0x20000000 | (put & ~0xFFFu);
             if (poll_gap > 10000) st_late++;
@@ -605,7 +607,15 @@ void snap_watcher() {
             bool pending = lo && ((get >= lo && get < hi) || g_last_list.load() != lo);
             // only what the front end has not run yet: it never goes back within the list
             if (pending && get > lo && get < hi) lo = get & ~3u;
-            if (pending && g.io_map[(lo >> 20) & 4095] != 0xFFFFFFFF && g.io_map[((hi - 4) >> 20) & 4095] != 0xFFFFFFFF) {
+            // A real list copy is at most ~2.4 MB (loading). A larger one starts in the other list: a stale start from
+            // loading (1af68c) taken for a list closing in list A covered list B before the game wrote it, and the
+            // front end ran list B's old words misaligned (FIFO fault at Istanbul, tester log).
+            if (pending && hi - lo > 0x400000) {
+                static u32 n = 0;
+                if (n++ < 20) LOG_W("RSX: list copy %08x..%08x not made: spans more than one list (front end at %08x, put %08x)", lo, hi, get, put);
+                pending = false;
+            }
+            if (pending &&g.io_map[(lo >> 20) & 4095] != 0xFFFFFFFF && g.io_map[((hi - 4) >> 20) & 4095] != 0xFFFFFFFF) {
                 auto sn = std::make_shared<ListSnap>();
                 sn->lo = lo; sn->hi = hi;
                 {   // the slot's SET_REFERENCE (first word pair of the slot)
@@ -924,7 +934,9 @@ void rsx_thread() {
             g_flow_hist[g_flow_pos++ % 48] = {(u32)(time_usec() / 1000), get, cmd, put, ld32(g.control_addr + 8)};
             flush_pending();
         }
-        if (((cmd & 0xE0000003) == 0x20000000 || (cmd & 3) == 1) && (get & 0xFFF) == 0x060)   // ring slot -> frame list
+        // ring slot -> frame list. A list can close at xxx060 too (00737060 -> slot 10000): that jump taken for a slot's
+        // put the slot among the list starts and in g_last_list, and the watcher copied both lists (FIFO fault).
+        if (((cmd & 0xE0000003) == 0x20000000 || (cmd & 3) == 1) && (get & 0xFFF) == 0x060 && is_slot(get & ~0xFFFu))
             note_list_start((cmd & 0xE0000003) == 0x20000000 ? (cmd & 0x1FFFFFFC) : (cmd & 0xFFFFFFFC));
         if ((cmd & 0xE0000003) == 0x20000000) {        // old jump
             set_get(cmd & 0x1FFFFFFC);
