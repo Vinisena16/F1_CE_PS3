@@ -6,6 +6,9 @@ the runtime overrides (runtime/mods.cpp). The original game files are only read.
   python -I tools/season_pack.py build <USRDIR> <MODS/pack | PLAYER_HELMETS/pack>
   python -I tools/season_pack.py tyremaker <MODS/pack> <name> [--like Bridgestone|Michelin]
   python -I tools/season_pack.py wheelmodels <USRDIR> <MODS/pack>    adds WHEELS/model to a pack made without --models
+  python -I tools/season_pack.py carlods <USRDIR> <MODS/pack>        adds the car model files a pack lacks (lod1/lod2)
+  python -I tools/season_pack.py figures <USRDIR> <MODS/pack> [--models]   adds DRIVERS/<id>/figure (and model) to
+                                                                            an older pack
   python -I tools/season_pack.py steering <USRDIR> <MODS/pack> [--models]   adds STEERING/ to an older pack (or
                                                                             its models)
 
@@ -35,7 +38,14 @@ template writes (folders named by the database ids: CARS/Honda, DRIVERS/jbutton,
                                     import to layer the decals on the paint. Export from Blender as glTF Binary
                                     over this file: build imports the changed parts, decal UVs included (when both
                                     the .glb and the .obj were edited, the .glb is used)
-  DRIVERS/<id>/Helmet/*.png         helmet Colour and Specular (the paint; the shape is chosen in entities.json:
+  CARS/<team>/model/<team>_lod1.*, _lod2.*  with --models: the low-detail cars (seen from further away), imported
+                                    like the close one (lod2 is the furthest)
+  DRIVERS/<id>/figure/*.png         the driver's garage (driver select) and podium figures: face (<name>_c, normal
+                                    _n, specular _s), hair, cap, eyes, teeth, overalls (one PNG for a texture both
+                                    figures use)
+  DRIVERS/<id>/model/*.glb          with --models: those figures (Garage, Podium_Head / _Eyes / _Body) as glTF using
+                                    the figure PNGs, a reference for painting: skinned with many bones, not imported
+  DRIVERS/<id>/Helmet/*.png        helmet Colour and Specular (the paint; the shape is chosen in entities.json:
                                     helmet_model 0-2 = HELMETS/Helmet<n>, helmet_vent 0-5 = HELMETS/Vent<n>, -1 none)
   HELMETS/<shape>/<shape>.obj       with --models: the helmet shapes for Blender (in-car shells, vents and their
                                     low-detail versions, Garage_Helmet, Classic_<car>); build imports edited ones
@@ -87,6 +97,8 @@ same name used as it is, i.e. upside down; any size, encoded in the original's f
                                                           (PlayerNN/offline.wad/... in a helmet pack)
   DATABASE/offline.wad/entities.bin                       (the game reads offline.wad's copy, not update.wad's)
   DATABASE/offline.wad/dynamics.bin                       (likewise)
+  DATABASE/stream.wad/Animations/Frontend/DriverSelect/   a changed abbreviation's garage figure (the original
+                                                          driver's model and animations under the new name)
 Files built earlier that no longer differ are removed, so reverting an edit restores the original.
 Model files at their template places that template.json does not list (a pack made without --models, the models
 copied in from another pack) are always imported: an unedited export changes nothing.
@@ -127,6 +139,30 @@ HELMET_MODELS = ([('offline.wad', f'Animations/Driver/Helmet/{n}.sg') for n in
 SIDEWALLS = 'Models/TextureSwaps/Wheels/SideWalls/'
 TYRE_MAKERS = {'Bridgestone': 'Default_SideWall_BS', 'Michelin': 'Default_SideWall_M'}
 SIDEWALL_LEVELS = 4
+# the race model's detail levels (CarParts.sg branches), each exported to its own model file
+CAR_LODS = ('lod0', 'lod1', 'lod2')
+# the drivers' front-end figures, found by the abbreviation (entities driver field 6): the driver select garage
+# loads Animations/Frontend/DriverSelect/<abbr>.<ext> (0x236028: model with head, hair, cap, eyes, teeth, overalls
+# and the face morphs; skeleton, body and face animations; <abbr>.wad bundles the same files, the loose .sg is the
+# one drawn), the podium Animations/Drivers/<ABBR>_Head/_Eyes/_Body.sg (on the shared DriverSkin skeleton). A new
+# abbreviation has no files: the game shows "Disc read error" and retries forever, so build adds the original
+# driver's files under the new name. The figures are skinned with many bones: their textures are editable, the
+# models are exported for reference only (not imported)
+DRIVER_POSES = 'Animations/Frontend/DriverSelect/'
+DRIVER_POSE_FILES = ('sg', 'sgskel', 'skel', 'anim', 'face', 'fanm', 'idx', 'wad')
+PODIUM_PARTS = ('Head', 'Eyes', 'Body')
+
+
+def figure_models(abbr):
+    """The figure models of a driver abbreviation: [(archive, wad path, pack model stem)]."""
+    return ([('stream.wad', f'{DRIVER_POSES}{abbr.lower()}.sg', 'Garage')] +
+            [('offline.wad', f'Animations/Drivers/{abbr.upper()}_{p}.sg', f'Podium_{p}') for p in PODIUM_PARTS])
+
+
+def figure_files(abbr):
+    """Every game file of a driver abbreviation's figures: [wad path]."""
+    return ([f'{DRIVER_POSES}{abbr.lower()}.{ext}' for ext in DRIVER_POSE_FILES] +
+            [f'Animations/Drivers/{abbr.upper()}_{p}.sg' for p in PODIUM_PARTS])
 # the tyre models every car uses (entities cars field65 / field73): pack path stem, the meshes exported
 WHEEL_MODELS = [('offline.wad', 'models/wheels/wheels.sg', 'WHEELS/model/Wheels', {'lod0', 'lod1', 'lod2'}),
                 ('stream.wad', 'models/wheels/wheels_fe.sg', 'WHEELS/model/Wheels_Garage', None)]
@@ -238,8 +274,9 @@ def untracked_models(pack, manifest):
     unedited export changes nothing."""
     out = {}
     for team, model in TEAMS.items():
-        for ext in ('.glb', '.obj'):
-            out[f'CARS/{team}/model/{team}{ext}'] = ['offline.wad', f'Models/{model}/CarParts.sg']
+        for lod in CAR_LODS:
+            for ext in ('.glb', '.obj'):
+                out[car_model_stem(team, lod) + ext] = ['offline.wad', f'Models/{model}/CarParts.sg']
     for archive, path in HELMET_MODELS:
         stem = helmet_stem(path)
         for ext in ('.glb', '.obj'):
@@ -419,6 +456,8 @@ def used_in(rel, targets, roles=None):
             out.add('garage')
         elif lo.startswith(('frontend/', 'loading/')):
             out.add('menus')
+        elif lo.startswith('animations/drivers/'):
+            out.add('podium')
         elif archive == 'stream.wad':
             out.add('garage')
         else:
@@ -428,7 +467,8 @@ def used_in(rel, targets, roles=None):
     return sorted(out)
 
 
-USED_IN_TEXT = {'race': 'in game (races, time trials)', 'garage': 'garage / menu car', 'menus': 'menus'}
+USED_IN_TEXT = {'race': 'in game (races, time trials)', 'garage': 'garage / menu car', 'menus': 'menus',
+                'podium': 'podium'}
 
 
 class Game:
@@ -479,6 +519,63 @@ def model_sources(game, team, model):
             stem = t.path.replace('\\', '/').split('/')[-1].rsplit('.', 1)[0].lower()
             out.setdefault(f'CARS/{team}/livery/{stem}.png', []).append((archive, path, stem))
     return out
+
+
+def figure_sources(game, ents):
+    """The drivers' garage and podium figure textures (face, hair, cap, eyes, teeth, overalls; one PNG for the same
+    texture in both): {pack path: [(archive, wad path, texture key)]}."""
+    out = {}
+    for d in ents['drivers']:
+        if not d.get('abbreviation'):
+            continue
+        for archive, path, _ in figure_models(d['abbreviation']):
+            s = game.scene(archive, path)
+            for t in s.textures if s else []:
+                if t.gtf is not None and not t.gtf.cube:
+                    out.setdefault(f'DRIVERS/{d["id"]}/figure/{tex_stem(t.path)}.png', []).append(
+                        (archive, path, tex_stem(t.path)))
+    return out
+
+
+def car_model_stem(team, lod):
+    """Pack path (no extension) of a team's car model file of one detail level: CARS/Honda/model/Honda(_lod1)."""
+    return f'CARS/{team}/model/{team}' + ('' if lod == 'lod0' else f'_{lod}')
+
+
+def car_model_jobs(game, pack, team, model, models_written, lods):
+    """Writes the car model OBJs of the given detail levels (lod0 the close car, lod1 / lod2 the far ones) and
+    returns their glTF jobs, to run once the livery PNGs exist."""
+    jobs, target = [], ('offline.wad', f'Models/{model}/CarParts.sg')
+    (pack / 'CARS' / team / 'model').mkdir(parents=True, exist_ok=True)
+    have = {n.name for n, _, depth, _ in game.scene(*target).walk() if depth == 2}    # the classics: lod0 only
+    for lod in (lod for lod in lods if lod in have):
+        stem = car_model_stem(team, lod)
+        sg.cmd_obj(game.scene(*target), pack / f'{stem}.obj', {lod})
+        models_written[f'{stem}.obj'] = list(target)
+        jobs.append((target, f'{stem}.glb', {lod}, functools.partial(car_texture_png, pack / 'CARS' / team / 'livery')))
+    return jobs
+
+
+def write_reference_models(game, pack, jobs):
+    """Runs glTF jobs of models build does not import: {pack path: sha1} (build says so when one is edited)."""
+    out = {}
+    for (archive, path), rel, only, texture_file in jobs:
+        (pack / rel).parent.mkdir(parents=True, exist_ok=True)
+        sg.cmd_gltf(game.scene(archive, path), pack / rel, only, texture_file=texture_file)
+        out[rel] = sha1(pack / rel)
+    return out
+
+
+def figure_model_jobs(game, pack, ents):
+    """The figure models' glTF jobs (reference for painting: build does not import them), to run once the figure
+    PNGs exist: [((archive, wad path), pack path, None, texture file function)]."""
+    jobs = []
+    for d in ents['drivers']:
+        for archive, path, stem in figure_models(d['abbreviation']) if d.get('abbreviation') else []:
+            if game.scene(archive, path) is not None:
+                jobs.append(((archive, path), f'DRIVERS/{d["id"]}/model/{stem}.glb', None,
+                             functools.partial(steering_texture_png, pack / 'DRIVERS' / d['id'] / 'figure')))
+    return jobs
 
 
 def player_helmet_sources(game):
@@ -579,18 +676,16 @@ def cmd_template(usrdir, pack, models):
             (', garage model' if garage_models(game, model) else '') + ')' +
             ''.join(f', {k} {Path(v).name}' for k, v in team_roles[team].items() if '_lod' not in k))
         if models:
-            mdir = pack / 'CARS' / team / 'model'
-            mdir.mkdir(parents=True, exist_ok=True)
-            sg.cmd_obj(game.scene("offline.wad", f"Models/{model}/CarParts.sg"), mdir / f'{team}.obj',
-                       {'lod0'})
-            models_written[f'CARS/{team}/model/{team}.obj'] = ['offline.wad', f'Models/{model}/CarParts.sg']
-            gltf_jobs.append((('offline.wad', f'Models/{model}/CarParts.sg'), f'CARS/{team}/model/{team}.glb',
-                              {'lod0'}, functools.partial(car_texture_png, pack / 'CARS' / team / 'livery')))
+            gltf_jobs += car_model_jobs(game, pack, team, model, models_written, CAR_LODS)
     progress(len(TEAMS), len(TEAMS), 'car models read')
     found = standalone_sources(game, ents)
     for rel, targets in found.items():
         sources.setdefault(rel, []).extend(targets)
     log(f'{len(found)} other textures with known names (drivers, helmets, crew, wheels, menus)')
+    found = figure_sources(game, ents)
+    for rel, targets in found.items():
+        sources.setdefault(rel, []).extend(targets)
+    log(f'{len(found)} garage and podium figure textures (faces, overalls, caps)')
     for team in team_roles:
         team_roles[team].update(wheel_roles(ents, team, sources))
     if models:
@@ -609,6 +704,7 @@ def cmd_template(usrdir, pack, models):
         gltf_jobs += wheel_model_jobs(game, pack, models_written)
         log('Steering wheels: exporting the models')
         gltf_jobs += steering_model_jobs(game, pack, models_written)
+    figure_jobs = figure_model_jobs(game, pack, ents) if models else []
     found = steering_sources(game)
     for rel, targets in found.items():
         sources.setdefault(rel, []).extend(targets)
@@ -622,6 +718,9 @@ def cmd_template(usrdir, pack, models):
         sg.cmd_gltf(game.scene(archive, path), pack / rel, only, texture_file=texture_file)
         models_written[rel] = [archive, path]
     manifest['models'] = {rel: {'sha1': sha1(pack / rel), 'target': t} for rel, t in models_written.items()}
+    if figure_jobs:
+        log('Exporting the garage and podium figures (glTF, for reference)')
+        manifest['reference_models'] = write_reference_models(game, pack, figure_jobs)
     for rel, info in manifest['files'].items():
         team = Path(rel).parts[1] if rel.startswith('CARS/') else None
         info['used_in'] = used_in(rel, info['targets'], team_roles.get(team))
@@ -761,6 +860,56 @@ def cmd_steering(usrdir, pack, models):
     (pack / 'template.json').write_text(json.dumps(manifest, indent=1), newline='\n')
 
 
+def cmd_carlods(usrdir, pack):
+    """Adds the car model files a season pack lacks (the lod1 / lod2 ones of packs made before them; all of them in a
+    pack made without --models); files already there are kept."""
+    game = Game(usrdir)
+    pack = Path(pack)
+    manifest = json.loads((pack / 'template.json').read_text())
+    if 'teams' not in manifest:
+        raise SystemExit(f'{pack}: not a season pack')
+    known = manifest.setdefault('models', {})
+    written = {}
+    for team, model in TEAMS.items():
+        lods = [lod for lod in CAR_LODS if not any((pack / f'{car_model_stem(team, lod)}{ext}').exists()
+                                                    for ext in ('.obj', '.glb'))]
+        if lods and game.scene('offline.wad', f'Models/{model}/CarParts.sg') is not None:
+            jobs = car_model_jobs(game, pack, team, model, written, lods)
+            for target, rel, only, texture_file in jobs:
+                sg.cmd_gltf(game.scene(*target), pack / rel, only, texture_file=texture_file)
+                written[rel] = list(target)
+            if jobs:
+                log(f'{team}: {", ".join(sorted(next(iter(j[2])) for j in jobs))} written')
+    for rel, t in written.items():
+        known[rel] = {'sha1': sha1(pack / rel), 'target': t}
+    (pack / 'template.json').write_text(json.dumps(manifest, indent=1), newline='\n')
+
+
+def cmd_figures(usrdir, pack, models):
+    """Adds the garage and podium figure textures (DRIVERS/<id>/figure/, and with models the figures as glTF) to a
+    season pack made before them; files already in the pack are kept."""
+    game = Game(usrdir)
+    pack = Path(pack)
+    manifest = json.loads((pack / 'template.json').read_text())
+    if 'teams' not in manifest:
+        raise SystemExit(f'{pack}: not a season pack')
+    # the figures are found by the original abbreviations (the pack's own may be renamed ones)
+    ents = entities.export(entities.parse(game.get('offline.wad', 'entities.bin')))
+    sources = {rel: t for rel, t in figure_sources(game, ents).items() if rel not in manifest['files']}
+    if sources:
+        write_images(pack, sources, game, manifest)
+        for rel in sources:
+            if rel in manifest['files']:
+                manifest['files'][rel]['used_in'] = used_in(rel, manifest['files'][rel]['targets'])
+        log(f'{len(sources)} garage and podium figure textures added')
+    if models:
+        refs = manifest.setdefault('reference_models', {})
+        jobs = [j for j in figure_model_jobs(game, pack, ents) if not (pack / j[1]).exists()]
+        refs.update(write_reference_models(game, pack, jobs))
+        log(f'{len(jobs)} figure models written')
+    (pack / 'template.json').write_text(json.dumps(manifest, indent=1), newline='\n')
+
+
 def cmd_wheelmodels(usrdir, pack):
     """Adds the tyre models to a season pack made without --models (an edited copy already there is kept)."""
     game = Game(usrdir)
@@ -842,14 +991,21 @@ def cmd_build(usrdir, pack):
     imported = {}           # (group, archive, wad path) -> model with the edited OBJ / glTF geometry
     models = dict(manifest.get('models', {}))
     models.update({rel: {'sha1': None, 'target': t} for rel, t in untracked_models(pack, manifest).items()})
-    # glTF first (it carries the decal UVs): an OBJ edited as well for the same model is ignored
+    for rel, digest in manifest.get('reference_models', {}).items():
+        if (pack / rel).exists() and sha1(pack / rel) != digest:
+            print(f'WARNING: {rel}: changed, but the garage / podium figures are skinned with many bones and their '
+                  f'geometry is not imported (only their textures, DRIVERS/<id>/figure/)')
+    # glTF first (it carries the decal UVs): an OBJ edited as well for the same file is ignored; the files of one
+    # model (the car's detail levels) are applied one after the other
+    done = set()
     for rel, info in sorted(models.items(), key=lambda kv: not kv[0].endswith('.glb')):
         if not (pack / rel).exists() or sha1(pack / rel) == info['sha1']:
             continue
         group, (archive, path) = group_of(rel), info['target']
-        if (group, archive, path) in imported:
+        if rel.rsplit('.', 1)[0] in done:
             print(f'{rel}: ignored, the .glb of this model is used')
             continue
+        done.add(rel.rsplit('.', 1)[0])
         print(f'{rel}: ' + ('changed' if info['sha1'] else 'not in template.json (pack made without 3D models): '
                             'imported'))
         if rel.endswith('.glb'):
@@ -858,13 +1014,14 @@ def cmd_build(usrdir, pack):
         else:
             src = (pack / rel).read_text(encoding='utf-8', errors='replace')
             load = lambda data, **kw: sg.import_obj(data, src, **kw)  # noqa: E731
-        race, names = game.get(archive, path), []
+        race, names = imported.get((group, archive, path)) or game.get(archive, path), []
         imported[(group, archive, path)] = load(race, log=lambda m: print('  ' + m), changed=names)
-        if path.endswith('/CarParts.sg') and names:
+        lod0 = {n for n in names if 'lod0' in n.split('.')}
+        if path.endswith('/CarParts.sg') and lod0:
             # the garage model has the same lod0 parts: the same edits, placed by the race model's transforms
             for fe_archive, fe_path in garage_models(game, path.split('/')[1]):
-                fe = load(game.get(fe_archive, fe_path), log=lambda m: print(f'  {fe_path}: ' + m),
-                          ref=race, only=set(names))
+                fe = load(imported.get((group, fe_archive, fe_path)) or game.get(fe_archive, fe_path),
+                          log=lambda m: print(f'  {fe_path}: ' + m), ref=race, only=lod0)
                 if fe != game.get(fe_archive, fe_path):
                     imported[(group, fe_archive, fe_path)] = fe
     for key in sorted(set(sg_changes) | set(imported)):
@@ -881,6 +1038,7 @@ def cmd_build(usrdir, pack):
         if n:
             outputs['DATABASE/offline.wad/entities.bin'] = entities.build(ents)
             print(f'DATABASE/entities.json: {n} change(s)')
+            build_driver_figures(game, json.loads(db.read_text(encoding='utf-8')), outputs)
     db = pack / 'DATABASE' / 'dynamics.json'
     if db.exists() and sha1(db) != manifest.get('dynamics'):
         dyn = dynamics.parse(game.get('offline.wad', 'dynamics.bin'))
@@ -901,6 +1059,24 @@ def cmd_build(usrdir, pack):
     manifest['generated'] = generated
     (pack / 'template.json').write_text(json.dumps(manifest, indent=1), newline='\n')
     print(f'{pack}: {len(outputs)} game file(s)')
+
+
+def build_driver_figures(game, ents, outputs):
+    """Garage and podium figure files for every driver whose abbreviation the pack changed to one the game has no
+    figure for: a copy of the driver's files (with the pack's edited figure textures) under the new name (the game
+    opens them by name hash, so case does not matter)."""
+    original = {d['id']: d for d in entities.export(entities.parse(game.get('offline.wad', 'entities.bin')))['drivers']}
+    for d in ents.get('drivers', []):
+        old, new = (original.get(d.get('id')) or {}).get('abbreviation'), d.get('abbreviation')
+        if not old or not new or new.lower() == old.lower():
+            continue
+        for src, dst in zip(figure_files(old), figure_files(new)):
+            for archive in game.where(src):
+                if game.where(dst):
+                    continue
+                edited = [data for rel, data in outputs.items() if rel.endswith(f'/{archive}/{src}')]
+                outputs[f'DATABASE/{archive}/{dst}'] = edited[0] if edited else game.wads[archive].get(src)
+        print(f'{d["id"]}: abbreviation {old} -> {new}, garage and podium figures copied to the new name')
 
 
 def build_tyre_makers(game, pack, generated, outputs):
@@ -951,6 +1127,10 @@ def main(argv):
         cmd_build(argv[1], argv[2])
     elif argv[0] == 'wheelmodels':
         cmd_wheelmodels(argv[1], argv[2])
+    elif argv[0] == 'carlods':
+        cmd_carlods(argv[1], argv[2])
+    elif argv[0] == 'figures':
+        cmd_figures(argv[1], argv[2], '--models' in argv[3:])
     elif argv[0] == 'steering':
         cmd_steering(argv[1], argv[2], '--models' in argv[3:])
     elif argv[0] == 'tyremaker':

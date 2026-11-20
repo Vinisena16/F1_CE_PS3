@@ -213,7 +213,15 @@ class SceneGraph:
             n = r.u32()
             image = r.bytes(n)
             node.mesh_at = (hdr_at, bounds_at, size_at, r.p)      # for rewriting the geometry
-            r.u32()
+            # morph targets (the front-end drivers' faces: LLipCornerPuller, ...): string name, u32 1, u32 attribute
+            # hash (position), u32 n, n u32 vertex indices, u32 ?, n x 3 float offsets; kept as they are
+            node.morphs = []
+            for _ in range(r.u32()):
+                name = r.string()
+                r.u32(); r.u32()
+                n = r.u32()
+                node.morphs.append((name, n))
+                r.bytes(16 * n + 4)
             try:
                 node.mesh = Mesh(material, header, bounds, image)
                 node.mesh.bones = bones

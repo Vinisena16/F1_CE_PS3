@@ -7,7 +7,7 @@ The launcher folder holds MODS/ (season packs) and PLAYER_HELMETS/ (helmet packs
 Pack contents (see season_pack.py): edits are saved to the pack's files (DATABASE/entities.json, dynamics.json,
 points.txt, the PNGs); Build compiles them into the files the game loads. The original game files are only read.
 Each picture says where the game uses it: in game (the race car in races and time trials, from offline.wad), the
-garage / menu car (stream.wad), or menus (season_pack.used_in).
+garage / menu car (stream.wad), menus, or the podium (season_pack.used_in).
 """
 import configparser
 import json
@@ -388,10 +388,21 @@ class App(tk.Tk):
         imgs.pack(side='right', fill='both', padx=(10, 0))     # first: the form gets what is left
         self.driver_form = Form(cols, DRIVER_FIELDS)
         self.driver_form.pack(side='left', fill='x', expand=True, anchor='n')
-        self.driver_imgs = [ImageSlot(imgs, self, t, 120) for t in ('Helmet paint (in the car)', 'Helmet specular',
-                                                               'Pre-race photo (menus)')]
+        self.driver_imgs = [ImageSlot(imgs, self, t, 90) for t in ('Helmet paint (in the car)', 'Helmet specular',
+                                                               'Pre-race photo (menus)',
+                                                               'Overalls (garage and podium)',
+                                                               'Face (garage and podium)')]
         for i, s in enumerate(self.driver_imgs):
-            s.grid(row=i // 2, column=i % 2, sticky='nsew', padx=4, pady=4)
+            s.grid(row=i // 2, column=i % 2, sticky='nsew', padx=4, pady=2)
+        row = ttk.Frame(imgs)
+        row.grid(row=2, column=1, sticky='nw', padx=4, pady=(20, 2))
+        ttk.Label(row, text='Garage and podium figures: face, hair,\ncap, eyes, teeth and overalls (PNG); the\n'
+                            '3D figures are a reference for painting\n(not imported)', foreground='#555',
+                  justify='left').pack(anchor='w')
+        ttk.Button(row, text='Open figure folder', command=lambda: self.open_figure('figure')).pack(anchor='w',
+                                                                                                 pady=(6, 0))
+        ttk.Button(row, text='Open 3D figure folder', command=lambda: self.open_figure('model')).pack(anchor='w',
+                                                                                                   pady=(4, 0))
 
     def _points_tab(self):
         self.points_tab = ttk.Frame(self.nb, padding=6)
@@ -710,11 +721,41 @@ class App(tk.Tk):
             self.driver_imgs[0].show(base / 'Helmet' / 'Colour.png')
             self.driver_imgs[1].show(base / 'Helmet' / 'Specular.png')
             self.driver_imgs[2].show(base / 'ui' / 'PreRace.png')
+            missing = 'This pack was made before the figures: "Open figure folder" adds them'
+            for slot, part in ((self.driver_imgs[3], '_Body.sg'), (self.driver_imgs[4], '_Eyes.sg')):
+                # the podium body model has only the overalls, the eyes model only the face texture (and normals)
+                f = next((self.pack / rel for rel, info in sorted(self.manifest.get('files', {}).items())
+                          if rel.startswith(f'DRIVERS/{dr["id"]}/figure/') and not rel.endswith('_n.png')
+                          and any(t[1].endswith(part) for t in info['targets'])), None)
+                slot.show(f, '' if f else missing if not (base / 'figure').is_dir() else 'no figure')
+
+    def open_figure(self, sub):
+        dr = getattr(self, 'shown_driver', None)
+        if not dr:
+            return
+        folder = self.pack / 'DRIVERS' / dr['id'] / sub
+        if folder.is_dir():
+            open_path(folder)
+        elif messagebox.askyesno('Content Manager', 'This pack has no garage / podium figures yet. Add them now '
+                                 '(textures' + (' and 3D models' if sub == 'model' else '') + ', every driver)?'):
+            self.run_tool(['figures', str(self.pack)] + (['--models'] if sub == 'model' else []),
+                          lambda: (self.select_pack(), folder.is_dir() and open_path(folder)))
 
     def open_sub(self, sub):
         t = getattr(self, 'shown_team', None)
-        if t and (self.pack / 'CARS' / t['id'] / sub).is_dir():
-            open_path(self.pack / 'CARS' / t['id'] / sub)
+        if not t:
+            return
+        folder = self.pack / 'CARS' / t['id'] / sub
+        # the 2006 cars (models <Team>06) have lod1 / lod2; the classics only the close-up model
+        lods = (sub == 'model' and season_pack.TEAMS.get(t['id'], '').endswith('06')
+                and not any(folder.glob(f'{t["id"]}_lod1.*')))
+        if lods and messagebox.askyesno(
+                'Content Manager', ('This pack has no 3D models of this car yet.' if not folder.is_dir() else
+                                    'This pack has only the close-up (lod0) car models.') +
+                ' Export the missing ones now (lod1 / lod2: the cars seen from further away), for every team?'):
+            self.run_tool(['carlods', str(self.pack)], lambda: folder.is_dir() and open_path(folder))
+        elif folder.is_dir():
+            open_path(folder)
 
     def load_helmets(self):
         self.manifest, self.roles = self.load_json('template.json') or {}, {}
