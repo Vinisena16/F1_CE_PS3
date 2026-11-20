@@ -20,10 +20,14 @@
 // previous car. These four are hidden from the game then (cellPadGetData). When start is pressed the speed control
 // steps aside until the replay moves again (the game's own pause menu may need ticks).
 // The bar (overlay.cpp) shows the time in the replay window, its length, the speed and the car watched; it hides
-// itself 4 s after the last director button.
+// itself 4 s after the last director button and shows while the mouse moves. A click on its timeline seeks: the
+// game's keyframe at or before the target is loaded (as the end of playback does) and the ticks from there are run
+// fast (~100 ms frames, sound off); the play / pause symbol is a button. The sound is faded out while paused.
 // F1CE_REPLAY_LOG=1 logs the world's cameras and cars when a replay starts and what changes during it, with or without
 // the director (reverse-engineering aid).
 #include <algorithm>
+#include <bit>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -35,7 +39,7 @@
 #include "overlay.h"
 
 bool replay_director_on() {
-    static const bool on = getenv("F1CE_REPLAY_DIRECTOR") && atoi(getenv("F1CE_REPLAY_DIRECTOR")) != 0;
+    static const bool on = !g_online_image && getenv("F1CE_REPLAY_DIRECTOR") && atoi(getenv("F1CE_REPLAY_DIRECTOR")) != 0;
     return on;
 }
 
@@ -219,7 +223,13 @@ struct Director {
     u32 last_pos = 0;
     u32 session = 0, world = 0;
     bool car_changed = false;  // the watched car is not the game's choice: back to the player's car at the end
+    u32 seek_left = 0;         // ticks still to run to reach a seek's target (run without sound, as fast as allowed)
+    u32 seek_budget = 60;      // ticks a frame while seeking (adapted to ~100 ms frames)
+    u64 seek_start = 0;
+    bool seek_check = false;   // the target is reached when the ticks of this frame have run: log it next frame
+    u64 last_frame = 0;
 } g;
+std::atomic<bool> g_mute{false};   // read by the audio thread (replay_audio_muted)
 
 constexpr u16 D1_START = 0x08;
 constexpr u16 D2_L2 = 0x01, D2_R2 = 0x02, D2_L1 = 0x04, D2_R1 = 0x08, D2_SQUARE = 0x80;
@@ -281,14 +291,81 @@ std::string speed_text() {
     return s;
 }
 
+// ---- seek ----------------------------------------------------------------------------------------------------------
+// Ticks are counted from the start of the recording (+0x14 = ticks recorded, fixed while playing). The part being
+// played starts at the keyframe last loaded: its tick = recorded - play length (+0x18), so the absolute position is
+// that + play position (+0x1c). The timeline runs from the oldest keyframe still inside the ring to the end.
+// Keyframes: array at +0x3c of +0x08 entries (16 bytes: +0 used, +4 snapshot holder, +8 tick); ring size +0x0c.
+struct Timeline { u32 first = 0, end = 0, now = 0; };
+Timeline timeline(const Replay& r) {
+    Timeline t;
+    const u32 rec = ld32(r.obj + 0x14), size = ld32(r.obj + 0xC), n = ld32(r.obj + 8), arr = ld32(r.obj + 0x3C);
+    t.end = rec;
+    t.now = rec - ld32(r.obj + 0x18) + ld32(r.obj + 0x1C);
+    t.first = rec - ld32(r.obj + 0x18);
+    for (u32 i = 0; i < n && i < 64 && arr; i++) {
+        const u32 e = arr + i * 16, tick = ld32(e + 8);
+        if (ld8(e) && tick + size >= rec && tick <= rec) t.first = std::min(t.first, tick);
+    }
+    return t;
+}
+
+// loads keyframe i as the end of playback does (0x14c8fc, mode 2): world state 0x17e05c(holder +0xc, holder +4), play
+// position 0, play length = recorded - its tick, every car's input ring index (replay list +0x34: node +0 next, +8
+// ring) = its tick modulo the ring size
+void load_keyframe(PPUContext& c, const Replay& r, u32 i) {
+    const u32 e = ld32(r.obj + 0x3C) + i * 16, holder = ld32(e + 4), tick = ld32(e + 8);
+    const u32 size = ld32(r.obj + 0xC), rec = ld32(r.obj + 0x14);
+    const PPUContext saved = c;
+    c.r[3] = ld32(holder + 0xC);
+    c.r[4] = ld32(holder + 4);
+    call_indirect(c, 0x17E05C);   // (by address: f1ce_online links this file too, without that function)
+    c = saved;
+    st32(r.obj + 0x1C, 0);
+    st32(r.obj + 0x18, rec - tick);
+    st32(r.obj, 0);
+    const u32 head = ld32(r.obj + 0x34);
+    for (u32 n = ld32(head), k = 0; n != head && k < 64; n = ld32(n), k++) st32(ld32(n + 8), tick % size);
+}
+
+// to the fraction f of the timeline: from the current position when it lies before the target and nearer than the
+// best keyframe, else from the last keyframe at or before the target; the rest is run as ticks (g.seek_left)
+void seek(PPUContext& c, const Replay& r, float f, bool from_oldest = false) {
+    const Timeline t = timeline(r);
+    if (t.end <= t.first + 1) return;
+    const u32 target = std::min(t.first + (u32)(f * (t.end - t.first)), t.end - 2);
+    const u32 rec = ld32(r.obj + 0x14), size = ld32(r.obj + 0xC), n = ld32(r.obj + 8), arr = ld32(r.obj + 0x3C);
+    int best = -1;
+    u32 best_tick = 0;
+    for (u32 i = 0; i < n && i < 64; i++) {
+        const u32 e = arr + i * 16, tick = ld32(e + 8);
+        if (!ld8(e) || tick + size < rec || tick > target) continue;
+        if (best < 0 || (from_oldest ? tick < best_tick : tick > best_tick)) { best = (int)i; best_tick = tick; }
+    }
+    const char* from = "current position";
+    if (from_oldest || !(t.now <= target && (best < 0 || target - t.now <= target - best_tick))) {
+        if (best < 0) return;
+        load_keyframe(c, r, (u32)best);
+        from = "keyframe";
+    }
+    const Timeline t2 = timeline(r);
+    g.seek_left = target - t2.now;
+    g.seek_start = time_usec();
+    g.acc = 0;
+    LOG_I("replay: seek to %.1f s of %.1f (from the %s at %.1f s, %u ticks to run)", (target - t.first) / 60.0f,
+          (t.end - t.first) / 60.0f, from, (t2.now - t.first) / 60.0f, g.seek_left);
+}
+
 void update_bar(const Replay& r) {
     overlay::ReplayBar b;
+    b.active = g.active;
     b.shown = g.active && time_usec() < g.bar_until;
-    if (b.shown) {
+    if (g.active) {
+        const Timeline t = timeline(r);
         b.paused = g.paused;
-        b.pos = ld32(r.obj + 0x1C) / 60.0f;
-        b.length = ld32(r.obj + 0x18) / 60.0f;
-        b.speed = speed_text();
+        b.pos = (t.now - t.first) / 60.0f;
+        b.length = (t.end - t.first) / 60.0f;
+        b.speed = g.seek_left ? "SEEKING" : speed_text();
         if (const u32 cur = ld32(r.world + 0x21C)) b.driver = car_name(cur);
     }
     overlay::set_replay_bar(b);
@@ -320,6 +397,7 @@ void replay_ticks_probe(PPUContext& c) {
             }
             LOG_I("replay: director off (replay ended%s)", g.car_changed && same ? ", player's car watched again" : "");
             g = Director{};
+            g_mute = false;
             update_bar(r);
         }
         return;
@@ -335,12 +413,82 @@ void replay_ticks_probe(PPUContext& c) {
         LOG_I("replay: director on (length %.1f s)", ld32(r.obj + 0x18) / 60.0f);
         log_world(r);
     }
+    if (g.seek_check) {
+        // the cars' world matrices (physics car +0xb0..+0xf0) and speeds (+0x3c0): an earlier seek to the same tick must
+        // have left the same values if the re-simulation is exact
+        g.seek_check = false;
+        static std::vector<std::pair<u32, std::vector<u32>>> seen;
+        const Timeline t = timeline(r);
+        std::vector<u32> v;
+        for (u32 e : race_cars(r.world)) {
+            const u32 p = ld32(e + 0x1C);
+            for (u32 o = 0xB0; o < 0xF0; o += 4) v.push_back(ld32(p + o));
+            v.push_back(ld32(p + 0x3C0));
+        }
+        LOG_I("replay: seek done in %.2f s at tick %u", (time_usec() - g.seek_start) / 1e6, t.now);
+        for (size_t k = 0; k < seen.size(); k++) {
+            const auto& [tick, old] = seen[k];
+            if (tick != t.now || old.size() != v.size()) continue;
+            int diff = 0, worst = -1;
+            float dmax = 0;
+            for (size_t i = 0; i < v.size(); i++) {
+                diff += old[i] != v[i];
+                if (i % 17 >= 12 && i % 17 < 15) {   // position row
+                    const float d = std::fabs(std::bit_cast<float>(old[i]) - std::bit_cast<float>(v[i]));
+                    if (d > dmax) { dmax = d; worst = (int)(i / 17); }
+                }
+            }
+            LOG_I("replay:   against seek %zu to the same tick: %d of %zu words differ, largest position error %.4f m (car %d)",
+                  k + 1, diff, v.size(), dmax, worst);
+        }
+        if (seen.size() < 64) seen.emplace_back(t.now, v);
+    }
     handle_input(r);
+    overlay::ReplayBarInput mouse = overlay::take_replay_input();
+    bool from_oldest = false;
+    {   // test aid: F1CE_REPLAY_SEEK_TEST=<input time s>:<fraction>[k],... clicks the timeline at those times (k: the
+        // seek starts from the oldest keyframe, to compare the state reached by two ways)
+        static const char* spec = getenv("F1CE_REPLAY_SEEK_TEST");
+        static const char* next = spec;
+        float t, f;
+        int len = 0;
+        if (next && *next && sscanf(next, "%f:%f%n", &t, &f, &len) == 2 && host::input_time() >= t) {
+            mouse.seek = f;
+            from_oldest = next[len] == 'k';
+            next = strchr(next, ',');
+            next = next ? next + 1 : nullptr;
+        }
+    }
+    if (!g.menu) {
+        if (mouse.toggle_pause) {
+            g.paused = !g.paused;
+            LOG_I("replay: %s (mouse)", g.paused ? "paused" : "playing");
+        }
+        if (mouse.seek >= 0) seek(c, r, mouse.seek, from_oldest);
+    }
     const u32 pos = ld32(r.obj + 0x1C);
     if (g.menu && pos != g.menu_pos && pos != g.last_pos) g.menu = false;   // the menu closed and the replay moves
     g.last_pos = pos;
+    const u64 now = time_usec();
+    const u64 frame_us = g.last_frame ? now - g.last_frame : 33000;
+    g.last_frame = now;
+    // silent while paused or seeking (the game keeps playing its last engine sounds); the game's menu has its own
+    g_mute = !g.menu && (g.paused || g.seek_left);
+    if (g.menu) {   // the game's ticks
+        update_bar(r);
+        return;
+    }
+    if (g.seek_left) {   // whatever the pause or speed: frames of ~100 ms, the bar shows the way there
+        if (frame_us < 80000) g.seek_budget = std::min<u32>(g.seek_budget * 3 / 2, 2000);
+        else if (frame_us > 130000) g.seek_budget = std::max<u32>(g.seek_budget * 2 / 3, 8);
+        const u32 n = std::min(g.seek_left, g.seek_budget);
+        g.seek_left -= n;
+        c.r[31] = n;
+        g.seek_check = !g.seek_left;
+        update_bar(r);
+        return;
+    }
     update_bar(r);
-    if (g.menu) return;   // the game's ticks
     const u32 base = (u32)c.r[31];
     if (g.paused) {
         c.r[31] = 0;
@@ -351,6 +499,9 @@ void replay_ticks_probe(PPUContext& c) {
     g.acc -= (float)n;
     c.r[31] = n;
 }
+
+// the audio mixer (hle_misc.cpp): the output fades to silence while a replay is paused or seeking
+bool replay_audio_muted() { return g_mute.load(std::memory_order_relaxed); }
 
 // cellPadGetData: the director's buttons are not the game's while a replay plays
 void replay_pad_filter(host::PadState& s) {

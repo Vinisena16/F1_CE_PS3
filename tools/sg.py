@@ -670,21 +670,40 @@ class _Nearest:
         self.grid = {}
         for i, p in enumerate(pos):
             self.grid.setdefault(self._key(p), []).append(i)
+        self.lo = [min(k[i] for k in self.grid) for i in range(3)]
+        self.hi = [max(k[i] for k in self.grid) for i in range(3)]
 
     def _key(self, p):
         return tuple(int(math.floor(c / self.cell)) for c in p)
 
+    def _ring(self, k, r):
+        """The vertices in the cells at Chebyshev distance r from cell k (the shell only, in dx, dy, dz order)."""
+        get = self.grid.get
+        if r == 0:
+            return list(get(k, ()))
+        out = []
+        for dx in range(-r, r + 1):
+            for dy in range(-r, r + 1):
+                for dz in (range(-r, r + 1) if abs(dx) == r or abs(dy) == r else (-r, r)):
+                    c = get((k[0] + dx, k[1] + dy, k[2] + dz))
+                    if c:
+                        out += c
+        return out
+
     def find(self, p, uv, n=None, uv1=None):
         k = self._key(p)
-        ring = lambda r: [i for dx in range(-r, r + 1) for dy in range(-r, r + 1) for dz in range(-r, r + 1)  # noqa
-                          if max(abs(dx), abs(dy), abs(dz)) == r
-                          for i in self.grid.get((k[0] + dx, k[1] + dy, k[2] + dz), ())]
-        for r in range(0, 64):
-            cands = ring(r)
+        # no vertex is nearer than the occupied cells' box; geometry far from the original part (a new, bigger
+        # shape) would walk thousands of empty cells per ring: once a shell has more cells than there are
+        # vertices, comparing them all is cheaper
+        r = max(0, max(max(self.lo[i] - k[i], k[i] - self.hi[i]) for i in range(3)))
+        cands = None
+        while (2 * r + 3) ** 3 - (2 * r + 1) ** 3 < len(self.pos):
+            cands = self._ring(k, r)
             if cands:
-                cands += ring(r + 1)      # a closer vertex can sit in the next ring of cells
+                cands += self._ring(k, r + 1)      # a closer vertex can sit in the next ring of cells
                 break
-        else:
+            r += 1
+        if not cands:
             cands = range(len(self.pos))
         d2 = {i: sum((self.pos[i][j] - p[j]) ** 2 for j in range(3)) for i in cands}
         best = min(d2.values())

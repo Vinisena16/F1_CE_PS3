@@ -57,6 +57,10 @@ bool quit_requested();
 void request_quit();   // as closing the window (Alt+F4): the game gets CELL_SYSUTIL_REQUEST_EXITGAME and shuts down
 bool audio_push(const float* stereo, u32 frames);   // 48 kHz interleaved stereo; false: dropped (queue full)
 int audio_queued_ms();   // output not yet played, -1 without an audio device
+// The mouse over the window (the replay bar, overlay.cpp): position as a fraction of the window's width and height
+// (-1 outside it), buttons (bit 0 left), time_usec of its last move or button change
+struct MouseState { float x = -1, y = -1; u32 buttons = 0; u64 moved_at = 0; };
+MouseState mouse_state();
 // Presents a guest framebuffer (A8R8G8B8 big-endian in guest memory). CPU path (no GPU renderer).
 void present(u32 ea, u32 pitch, u32 width, u32 height);
 

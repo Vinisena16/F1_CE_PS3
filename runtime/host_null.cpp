@@ -19,6 +19,7 @@ bool quit_requested() { return false; }
 void request_quit() {}
 bool audio_push(const float*, u32) { return true; }
 int audio_queued_ms() { return -1; }
+MouseState mouse_state() { return {}; }
 void present(u32 ea, u32 pitch, u32 width, u32 height) {
     static u32 frames = 0;
     if (++frames % 60 == 1) LOG_I("present #%u: fb %08x %ux%u pitch %u", frames, ea, width, height, pitch);
@@ -37,6 +38,8 @@ void dump_frame(const u32*, u32, u32) {}
 namespace overlay {
 bool frame(u32, u32, Image*) { return false; }
 bool input_captured() { return false; }
+void set_replay_bar(const ReplayBar&) {}
+ReplayBarInput take_replay_input() { return {}; }
 int save_list(SaveMode, const std::vector<SaveEntry>&, int) { return UNAVAILABLE; }
 bool message(const std::string&) { return false; }
 }  // namespace overlay

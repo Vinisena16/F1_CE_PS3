@@ -110,8 +110,9 @@ std::vector<Option> make_options() {
                        "The right stick turns the chase cameras around the car."));
     v.push_back(choice(GENERAL, "Advanced replay mode", "F1CE_REPLAY_DIRECTOR", {{"Off (original)", nullptr}, {"On", "1"}}, 0,
                        "Replay controls over the game's replay: square play / pause, L2 / R2 slower / faster (1/4x "
-                       "to 8x), L1 / R1 the car watched, with a time bar. Triangle (camera) and select (TV mode) stay "
-                       "the game's. Off: the original replay."));
+                       "to 8x), L1 / R1 the car watched, with a time bar: click or drag its timeline with the mouse to "
+                       "jump there. Sound off while paused. Triangle (camera) and select (TV mode) stay the game's. "
+                       "Off: the original replay."));
     v.push_back(choice(GENERAL, "Language", "F1CE_LANGUAGE",
                        {{"English", nullptr}, {"Français", "french"}, {"Deutsch", "german"}, {"Italiano", "italian"},
                         {"Español", "spanish"}, {"Português", "portuguese"}, {"Suomi", "finnish"}},

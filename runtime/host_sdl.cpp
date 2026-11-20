@@ -11,6 +11,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include <array>
 #include <cstring>
 #include <vector>
 void set_thread_name(const char* name);   // core.cpp
@@ -24,6 +25,7 @@ std::mutex g_pad_mutex;
 PadState g_pad;
 std::atomic<u32> g_rumble{0};   // low << 16 | high, 0..0xFFFF each (pad_rumble), applied on the UI thread
 std::atomic<u32> g_debug_keys{0};   // DK_* bits (debug_keys), sampled with the pad
+host::MouseState g_mouse;   // (g_pad_mutex)
 std::atomic<bool> g_quit{false};
 
 std::mutex g_win_mutex;
@@ -159,6 +161,25 @@ void ui_thread() {
             if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat &&
                 (e.key.key == SDLK_F11 || (e.key.key == SDLK_RETURN && (e.key.mod & SDL_KMOD_ALT))))
                 SDL_SetWindowFullscreen(win, (SDL_GetWindowFlags(win) & SDL_WINDOW_FULLSCREEN) == 0);
+            if (e.type == SDL_EVENT_MOUSE_MOTION || e.type == SDL_EVENT_MOUSE_BUTTON_DOWN || e.type == SDL_EVENT_MOUSE_BUTTON_UP ||
+                e.type == SDL_EVENT_WINDOW_MOUSE_LEAVE) {
+                // (the event's own position and button: window coordinates, as SDL_GetWindowSize)
+                int w = 0, h = 0;
+                SDL_GetWindowSize(win, &w, &h);
+                std::lock_guard lk(g_pad_mutex);
+                if (e.type == SDL_EVENT_WINDOW_MOUSE_LEAVE || w <= 0 || h <= 0) {
+                    g_mouse.x = g_mouse.y = -1;
+                    g_mouse.buttons = 0;
+                } else if (e.type == SDL_EVENT_MOUSE_MOTION) {
+                    g_mouse.x = e.motion.x / w;
+                    g_mouse.y = e.motion.y / h;
+                } else {
+                    g_mouse.x = e.button.x / w;
+                    g_mouse.y = e.button.y / h;
+                    if (e.button.button == SDL_BUTTON_LEFT) g_mouse.buttons = e.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 1 : 0;
+                }
+                g_mouse.moved_at = time_usec();
+            }
             if (e.type == SDL_EVENT_GAMEPAD_ADDED && !gp && !wheel_owns(e.gdevice.which)) gp = SDL_OpenGamepad(e.gdevice.which);
             if (e.type == SDL_EVENT_GAMEPAD_REMOVED && gp && SDL_GetGamepadID(gp) == e.gdevice.which) {
                 SDL_CloseGamepad(gp);
@@ -338,6 +359,33 @@ PadState pad_state() {
 
 bool quit_requested() { return g_quit; }
 void request_quit() { g_quit = true; }
+
+MouseState mouse_state() {
+    // F1CE_MOUSE_INPUT="<t>:<x>:<y>:<button>,..." for automated tests: from input time t (F1CE_INPUT's clock) the mouse
+    // is at x, y (fractions of the window) with the left button 0/1, until the next entry
+    static const std::vector<std::array<float, 4>> script = [] {
+        std::vector<std::array<float, 4>> v;
+        for (const char* p = getenv("F1CE_MOUSE_INPUT"); p && *p;) {
+            std::array<float, 4> a{};
+            if (sscanf(p, "%f:%f:%f:%f", &a[0], &a[1], &a[2], &a[3]) == 4) v.push_back(a);
+            p = strchr(p, ',');
+            if (p) p++;
+        }
+        return v;
+    }();
+    if (!script.empty()) {
+        const double now = input_time();
+        MouseState m;
+        for (const auto& a : script)
+            if (now >= a[0]) {
+                m.x = a[1]; m.y = a[2]; m.buttons = a[3] != 0;
+                m.moved_at = input_clock_start.load() + (u64)(a[0] * 1e6);
+            }
+        return m;
+    }
+    std::lock_guard lk(g_pad_mutex);
+    return g_mouse;
+}
 
 bool audio_push(const float* stereo, u32 frames) {
     if (!g_audio) return true;

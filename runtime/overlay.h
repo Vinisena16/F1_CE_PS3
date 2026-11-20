@@ -35,12 +35,19 @@ int save_list(SaveMode mode, const std::vector<SaveEntry>& entries, int focus);
 // A message with an OK button. False: no dialog can be shown (it returns at once).
 bool message(const std::string& text);
 
-// ---- Advanced Replay Mode bar (hle_replay.cpp): drawn while no dialog is up; it never takes the pad
+// ---- Advanced Replay Mode bar (hle_replay.cpp): drawn while no dialog is up; it never takes the pad. The mouse
+// shows it (moving over the window), seeks (a click or drag on the timeline) and plays / pauses (the symbol).
 struct ReplayBar {
-    bool shown = false;
+    bool active = false;   // a replay plays with the director on: the mouse may show the bar
+    bool shown = false;    // shown for the pad (a director button was pressed lately)
     bool paused = false;
     float pos = 0, length = 0;   // seconds
     std::string speed, driver;
 };
 void set_replay_bar(const ReplayBar& bar);   // (any thread)
+struct ReplayBarInput {
+    float seek = -1;            // a click on the timeline: the fraction of its length (0..1), -1 none
+    bool toggle_pause = false;  // a click on the play / pause symbol
+};
+ReplayBarInput take_replay_input();   // what the mouse asked since the last call (and clears it)
 }  // namespace overlay

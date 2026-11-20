@@ -354,6 +354,15 @@ def merged_pixels(pack, rel, mrel, mask_changed):
     return w, h, bytes(px)
 
 
+def encode_texture(job):
+    """GTF bytes of one changed pack texture in the format of the original `like` (a process pool job)."""
+    pack, rel, mrel, mask_changed, src, like = job
+    if src.suffix == '.png':
+        w, h, px = merged_pixels(pack, rel, mrel, mask_changed)
+        return gtf.gtf_from_rgba(w, h, gtf.flip_rows(w, h, px), like)
+    return sg.texture_from_file(src, like, flip=True)
+
+
 def car_of(ents, team):
     """A team's car record in entities.json (Honda -> Honda2006; the classics share the team id)."""
     return next((c for c in ents['cars'] if c['id'] in (team + '2006', team)), None)
@@ -961,6 +970,8 @@ def cmd_build(usrdir, pack):
     masks = {info['alpha_of']: rel for rel, info in manifest['files'].items() if info.get('alpha_of')}
     sg_changes = {}         # (group, archive, wad path) -> [(texture key, GTF bytes)]
     outputs = {}            # pack-relative output path -> bytes
+    jobs = {}               # (pack path, format) -> encode_texture job
+    placed = []             # (job key, group, archive, wad path, texture key or None for a standalone GTF)
     for rel, info in manifest['files'].items():
         if info.get('alpha_of'):
             continue        # merged into the map it was taken from, below
@@ -974,20 +985,22 @@ def cmd_build(usrdir, pack):
                 print(f'{mrel}: ignored, {dds.name} is used as it is')
         elif not src.exists() or (sha1(src) == info['sha1'] and not mask_changed):
             continue
-        if src.suffix == '.png':
-            w, h, px = merged_pixels(pack, rel, mrel, mask_changed)
-            encode = lambda like: gtf.gtf_from_rgba(w, h, gtf.flip_rows(w, h, px), like)  # noqa: E731
-        else:
-            encode = lambda like: sg.texture_from_file(src, like, flip=True)  # noqa: E731
         group = group_of(rel)
         for archive, path, key in info['targets']:
             if key is None:
-                orig = gtf.Gtf(game.get(archive, path))
-                outputs[f'{group}/{archive}/{path}'] = encode(orig)
+                like = gtf.Gtf(game.get(archive, path))
             else:
-                orig = sg.find_texture(game.scene(archive, path), key).gtf
-                sg_changes.setdefault((group, archive, path), []).append((key, encode(orig)))
+                like = sg.find_texture(game.scene(archive, path), key).gtf
+            # what the encoding takes from the original: one job per format (race and garage copies share one)
+            fmt = (rel, like.kind, like.mips > 1, like.remap)
+            jobs.setdefault(fmt, (pack, rel, mrel, mask_changed, src, like))
+            placed.append((fmt, group, archive, path, key))
         print(f'{rel}: changed' + (f' (alpha from {Path(mrel).name})' if mask_changed else ''))
+    # the textures are encoded in other processes while the models are imported here
+    pool = concurrent.futures.ProcessPoolExecutor() if jobs else None
+    encoded = {fmt: pool.submit(encode_texture, job) for fmt, job in jobs.items()}
+    if jobs:
+        print(f'encoding {len(jobs)} texture(s)...')
     imported = {}           # (group, archive, wad path) -> model with the edited OBJ / glTF geometry
     models = dict(manifest.get('models', {}))
     models.update({rel: {'sha1': None, 'target': t} for rel, t in untracked_models(pack, manifest).items()})
@@ -1024,6 +1037,14 @@ def cmd_build(usrdir, pack):
                           log=lambda m: print(f'  {fe_path}: ' + m), ref=race, only=lod0)
                 if fe != game.get(fe_archive, fe_path):
                     imported[(group, fe_archive, fe_path)] = fe
+    for fmt, group, archive, path, key in placed:
+        data = encoded[fmt].result()
+        if key is None:
+            outputs[f'{group}/{archive}/{path}'] = data
+        else:
+            sg_changes.setdefault((group, archive, path), []).append((key, data))
+    if pool:
+        pool.shutdown()
     for key in sorted(set(sg_changes) | set(imported)):
         group, archive, path = key
         data = imported.get(key) or game.get(archive, path)

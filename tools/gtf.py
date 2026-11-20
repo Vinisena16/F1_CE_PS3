@@ -18,6 +18,7 @@ original had). Build makes a new header from the DDS instead (DXT1/3/5 or 32-bit
 taking the channel remap from like.gtf when given. Embedded copies (textures inside .sg models) start the data at
 0x80; the header's size field is the data size rounded up to 128 bytes.
 """
+import array
 import struct
 import sys
 import zlib
@@ -294,30 +295,52 @@ def read_png(path) -> tuple:
         raise ValueError('PNG must be 8-bit RGB, RGBA or grey, not interlaced')
     raw = zlib.decompress(idat)
     stride = w * ch
-    prev = bytearray(stride)
-    out = bytearray(w * h * 4)
+    full = (1 << (8 * stride)) - 1
+    high = int.from_bytes(b'\x80' * stride, 'little')
+    low = full ^ high
+
+    def add(x, y):
+        # byte-wise (x + y) & 255 of two rows held as integers: the low 7 bits add, the top bit is a carry-less xor
+        return ((x & low) + (y & low)) ^ ((x ^ y) & high)
+    prev = bytes(stride)
+    rows = []
     for y in range(h):
-        f = raw[y * (stride + 1)]
-        row = bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
-        for i in range(stride):
-            a = row[i - ch] if i >= ch else 0
-            b = prev[i]
-            c = prev[i - ch] if i >= ch else 0
-            if f == 1:
-                row[i] = (row[i] + a) & 255
-            elif f == 2:
-                row[i] = (row[i] + b) & 255
-            elif f == 3:
-                row[i] = (row[i] + (a + b) // 2) & 255
-            elif f == 4:
-                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
-                row[i] = (row[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
-        for x in range(w):
-            px = row[x * ch:(x + 1) * ch]
-            rgba = (px[0],) * 3 + (255,) if ch == 1 else (px[0],) * 3 + (px[1],) if ch == 2 else \
-                tuple(px) + (255,) if ch == 3 else tuple(px)
-            out[(y * w + x) * 4:(y * w + x) * 4 + 4] = bytes(rgba)
+        o = y * (stride + 1)
+        f = raw[o]
+        row = raw[o + 1:o + 1 + stride]
+        if f == 1:
+            # prefix sum per byte lane, ch bytes apart: doubling steps (Hillis-Steele) on the whole row
+            s, k = int.from_bytes(row, 'little'), ch
+            while k < stride:
+                s = add(s, (s << (8 * k)) & full)
+                k *= 2
+            row = s.to_bytes(stride, 'little')
+        elif f == 2:
+            row = add(int.from_bytes(row, 'little'), int.from_bytes(prev, 'little')).to_bytes(stride, 'little')
+        elif f in (3, 4):
+            row = bytearray(row)
+            for i in range(ch):
+                row[i] = (row[i] + (prev[i] >> 1 if f == 3 else prev[i])) & 255
+            if f == 3:
+                for i in range(ch, stride):
+                    row[i] = (row[i] + ((row[i - ch] + prev[i]) >> 1)) & 255
+            else:
+                for i in range(ch, stride):
+                    a, b, c = row[i - ch], prev[i], prev[i - ch]
+                    pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                    row[i] = (row[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+            row = bytes(row)
+        rows.append(row)
         prev = row
+    data = b''.join(rows)
+    if ch == 4:
+        return w, h, data
+    out = bytearray(w * h * 4)
+    if ch == 3:
+        out[0::4], out[1::4], out[2::4] = data[0::3], data[1::3], data[2::3]
+    else:
+        out[0::4] = out[1::4] = out[2::4] = data[0::ch]
+    out[3::4] = data[1::2] if ch == 2 else b'\xff' * (w * h)
     return w, h, bytes(out)
 
 
@@ -361,8 +384,9 @@ def _encode_colour_block(px, punch):
         if punch and p[3] < 128:
             k = 3
         else:
-            k = min(range(len(pal)), key=lambda j: (p[0] - pal[j][0]) ** 2 + (p[1] - pal[j][1]) ** 2 +
-                    (p[2] - pal[j][2]) ** 2)
+            r, g, b = p[0], p[1], p[2]
+            d = [(r - q[0]) ** 2 + (g - q[1]) ** 2 + (b - q[2]) ** 2 for q in pal]
+            k = d.index(min(d))
         bits |= k << (2 * i)
     return struct.pack('<HHI', c0, c1, bits)
 
@@ -374,7 +398,8 @@ def _encode_alpha_block(alphas):
     pal = [a0, a1] + [((7 - k) * a0 + k * a1) // 7 for k in range(1, 7)]
     bits = 0
     for i, a in enumerate(alphas):
-        bits |= min(range(8), key=lambda j: abs(a - pal[j])) << (3 * i)
+        d = [abs(a - q) for q in pal]
+        bits |= d.index(min(d)) << (3 * i)
     return bytes((a0, a1)) + bits.to_bytes(6, 'little')
 
 
@@ -386,13 +411,23 @@ def encode_level(w, h, rgba: bytes, kind: str) -> bytes:
             bgra[i:i + 4] = bytes((rgba[i + 2], rgba[i + 1], rgba[i], rgba[i + 3]))
         return argb_level(bytes(bgra), w, h, True, False)
     out = bytearray()
+    memo = {}           # 16 pixels -> their block: flat paint and repeated patterns are encoded once
+    s = w * 4
     for by in range(0, h, 4):
         for bx in range(0, w, 4):
-            px = []
-            for i in range(16):
-                x, y = min(w - 1, bx + (i & 3)), min(h - 1, by + (i >> 2))
-                o = (y * w + x) * 4
-                px.append(tuple(rgba[o:o + 4]))
+            o = (by * w + bx) * 4
+            if bx + 4 <= w and by + 4 <= h:
+                key = rgba[o:o + 16] + rgba[o + s:o + s + 16] + rgba[o + 2 * s:o + 2 * s + 16] + \
+                    rgba[o + 3 * s:o + 3 * s + 16]
+            else:
+                key = b''.join(rgba[p:p + 4] for p in ((min(h - 1, by + (i >> 2)) * w + min(w - 1, bx + (i & 3))) * 4
+                                                       for i in range(16)))
+            blk = memo.get(key)
+            if blk is not None:
+                out += blk
+                continue
+            px = [tuple(key[i:i + 4]) for i in range(0, 64, 4)]
+            start = len(out)
             if kind == 'DXT1':
                 out += _encode_colour_block(px, any(p[3] < 128 for p in px))
             elif kind == 'DXT3':
@@ -402,6 +437,7 @@ def encode_level(w, h, rgba: bytes, kind: str) -> bytes:
                 out += a.to_bytes(8, 'little') + _encode_colour_block(px, False)
             else:
                 out += _encode_alpha_block([p[3] for p in px]) + _encode_colour_block(px, False)
+            memo[key] = bytes(out[start:])
     return bytes(out)
 
 
@@ -426,18 +462,17 @@ def mip_chain(w, h, rgba: bytes):
     levels = [(w, h, rgba)]
     while w > 1 or h > 1:
         nw, nh = max(1, w // 2), max(1, h // 2)
-        src = levels[-1][2]
-        dst = bytearray(nw * nh * 4)
+        src = array.array('I', levels[-1][2])         # one pixel per item
+        rows = []
         for y in range(nh):
             y0, y1 = min(h - 1, 2 * y), min(h - 1, 2 * y + 1)
-            for x in range(nw):
-                x0, x1 = min(w - 1, 2 * x), min(w - 1, 2 * x + 1)
-                a, b, c, d = (y0 * w + x0) * 4, (y0 * w + x1) * 4, (y1 * w + x0) * 4, (y1 * w + x1) * 4
-                o = (y * nw + x) * 4
-                for k in range(4):
-                    dst[o + k] = (src[a + k] + src[b + k] + src[c + k] + src[d + k] + 2) >> 2
+            r0, r1 = src[y0 * w:(y0 + 1) * w], src[y1 * w:(y1 + 1) * w]
+            # even / odd columns (a 1 pixel wide level uses its one column twice)
+            ev0, ev1 = r0[0:2 * nw:2].tobytes(), r1[0:2 * nw:2].tobytes()
+            od0, od1 = (ev0, ev1) if w == 1 else (r0[1:2 * nw:2].tobytes(), r1[1:2 * nw:2].tobytes())
+            rows.append(bytes((a + b + c + d + 2) >> 2 for a, b, c, d in zip(ev0, od0, ev1, od1)))
         w, h = nw, nh
-        levels.append((w, h, bytes(dst)))
+        levels.append((w, h, b''.join(rows)))
     return levels
 
 

@@ -1216,3 +1216,17 @@ when no dialog is up, never takes the pad), director buttons masked in cellPadGe
 (camera) and select (TV mode) are untouched. Scripted tests (Silverstone, AI drive, pause menu -> REPLAY): pause, all
 speeds (8x at 30 fps), car changes followed by the camera and the game's caption, replay menu continue / save / back,
 watched car restored after BACK. F1CE_REPLAY_LOG=1 dumps the camera stack and cars.
+
+**2026-11-20 (later)** – replay bar with the mouse and silence while paused: host::mouse_state (SDL event positions;
+`SDL_GetMouseState` and posted window messages report the real cursor, so tests use `F1CE_MOUSE_INPUT`), overlay hit
+tests (timeline click / drag with a time tooltip, play / pause symbol), seek = load the keyframe at or before the target
+as the end of playback does + fast ticks (MODDING_IDEAS.md "Advanced Replay Mode" / Status), mixer fade while paused or
+seeking. Checked with scripted mouse and seek runs: seeks land on the target, same-keyframe seeks bit-identical.
+
+**2026-11-20 (later)** - season pack build hang with a new McLaren model (2007 pack): `sg._Nearest.find` searched up
+to 64 rings of cells, each ring walking the whole (2r+1)^3 cube, for vertices far from the original part (the edited
+`pushrodfl` reaches 90 cells away) - hours per mesh. Now the search starts at the occupied cells' box and compares all
+vertices once a shell would hold more cells than there are vertices; results identical where the old search finished.
+Build speed: `gtf.read_png` filters whole rows (Up / Sub as integer byte lanes), mip chain by row slices, DXT blocks
+memoised, faster palette search (all byte-identical to before); `season_pack build` encodes each changed texture once
+per format (race + garage copies shared) in a process pool while the models import. The McLaren pack builds in 21 s.

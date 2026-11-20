@@ -28,6 +28,7 @@ HLE_FUNC(cellPadGetInfo) {
 void quick_race_overrides(u32 digital1, u32 lx, u32 ly);   // hle_quickrace.cpp (F1CE_QR_*)
 void rumble_update();                                        // hle_rumble.cpp
 void replay_pad_filter(host::PadState& s);                   // hle_replay.cpp (F1CE_REPLAY_DIRECTOR)
+bool replay_audio_muted();                                   // hle_replay.cpp
 // CellPadData: s32 len; u16 button[64]
 HLE_FUNC(cellPadGetData) {
     u32 port = (u32)ARG(0), p = (u32)ARG(1);
@@ -332,6 +333,16 @@ void audio_loop() {
                 st64(g_tag_addr + (i * 16 + idx) * 8, p.tag);
                 st64(g_read_index_addr + i * 8, (idx + 1) % p.nblock);
             }
+        }
+        {   // a paused or seeking replay (F1CE_REPLAY_DIRECTOR): faded out and back in over ~20 ms
+            static float gain = 1;
+            const float target = replay_audio_muted() ? 0.0f : 1.0f, step = 1.0f / (48 * 20);
+            if (gain != target || target == 0)
+                for (u32 s = 0; s < BLOCK_SAMPLES; s++) {
+                    gain = gain < target ? std::min(target, gain + step) : std::max(target, gain - step);
+                    mix[s * 2] *= gain;
+                    mix[s * 2 + 1] *= gain;
+                }
         }
         wav_write(mix.data(), BLOCK_SAMPLES);
         const int q = host::audio_queued_ms();

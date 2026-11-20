@@ -515,7 +515,14 @@ void draw(ImDrawList* dl, float W, float H) {
 
 // ------------------------------------------------------------------ replay director bar
 ReplayBar g_bar;   // (g_m)
-std::atomic<bool> g_bar_shown{false};
+std::atomic<bool> g_bar_active{false};
+ReplayBarInput g_bar_input;   // (g_m) clicks not yet taken
+struct BarMouse {
+    float x = -1, y = -1;      // pixels, -1 outside the window
+    bool down = false;         // left button
+    bool drag = false;         // pressed on the timeline: the knob follows the mouse, released = seek
+    bool press_play = false;   // pressed on the play / pause symbol
+} g_bm;   // (g_m)
 
 std::string clock_text(float s) {
     const int t = (int)(s * 10 + 0.5f);
@@ -525,39 +532,111 @@ std::string clock_text(float s) {
 }
 
 // a strip at the bottom of the central 16:9 rect: play state, speed, timeline, time code, car watched, button hints
+struct BarLayout {
+    float S, l, r, y0, y1;   // the strip
+    float sx, sy, ss;        // play / pause symbol: centre and half size
+    float tl, tr, ty;        // timeline ends and height
+};
+BarLayout bar_layout(float W, float H) {
+    BarLayout L;
+    L.S = std::min(W / 1280.0f, H / 720.0f);
+    const float S = L.S, cw = 1280 * S, x0 = (W - cw) / 2;
+    // (below the game's own replay captions: the driver's name box ends at y 630 of 720)
+    const float bh = 70 * S;
+    L.y0 = H - (H - 720 * S) / 2 - bh - 8 * S;
+    L.y1 = L.y0 + bh;
+    L.l = x0 + 40 * S;
+    L.r = x0 + cw - 40 * S;
+    L.sx = L.l + 30 * S;
+    L.sy = L.y0 + 24 * S;
+    L.ss = 12 * S;
+    // (a fixed width for the time code, so the timeline does not move with its digits)
+    const float tcw = text_w(F.semi, 18 * S, "88:88.8 / 88:88.8");
+    L.tl = L.sx + 130 * S;
+    L.tr = L.r - 300 * S - tcw;
+    L.ty = L.sy;
+    return L;
+}
+bool on_timeline(const BarLayout& L, float x, float y) {
+    return x >= L.tl - 10 * L.S && x <= L.tr + 10 * L.S && std::fabs(y - L.ty) <= 14 * L.S;
+}
+bool on_play(const BarLayout& L, float x, float y) { return std::fabs(x - L.sx) <= 22 * L.S && std::fabs(y - L.sy) <= 18 * L.S; }
+bool on_bar(const BarLayout& L, float x, float y) { return x >= L.l && x <= L.r && y >= L.y0 && y <= L.y1; }
+
+// the mouse of this frame (g_m held): presses and releases on the bar become g_bar_input
+void bar_mouse(float W, float H) {
+    const host::MouseState m = host::mouse_state();
+    const BarLayout L = bar_layout(W, H);
+    const bool down = (m.buttons & 1) != 0, in = m.x >= 0;
+    const float x = m.x * W, y = m.y * H;
+    if (down && !g_bm.down && in && g_bar.active) {   // press
+        if (on_timeline(L, x, y)) g_bm.drag = true;
+        else if (on_play(L, x, y)) g_bm.press_play = true;
+        LOG_I("overlay: replay bar press at %.0f, %.0f of %.0fx%.0f (%s)", x, y, W, H,
+              g_bm.drag ? "timeline" : g_bm.press_play ? "play / pause" : "elsewhere");
+    }
+    if (!down && g_bm.down) {   // release
+        if (g_bm.drag && in) g_bar_input.seek = std::clamp((x - L.tl) / (L.tr - L.tl), 0.0f, 1.0f);
+        if (g_bm.press_play && in && on_play(L, x, y)) g_bar_input.toggle_pause = true;
+        g_bm.drag = g_bm.press_play = false;
+    }
+    if (!in) g_bm.drag = g_bm.press_play = false;
+    g_bm.down = down;
+    g_bm.x = in ? x : -1;
+    g_bm.y = in ? y : -1;
+}
+
+// shown for the pad (a director button lately), while the mouse moves over the window or rests on the bar, while dragging
+bool bar_visible(float W, float H) {
+    if (!g_bar.active) return false;
+    if (g_bar.shown || g_bm.drag) return true;
+    const host::MouseState m = host::mouse_state();
+    if (m.x < 0) return false;
+    if (time_usec() - m.moved_at < 3000000) return true;
+    return on_bar(bar_layout(W, H), m.x * W, m.y * H);
+}
+
 void draw_bar(ImDrawList* dl, float W, float H) {
     const ReplayBar& b = g_bar;
-    const float S = std::min(W / 1280.0f, H / 720.0f), cw = 1280 * S, x0 = (W - cw) / 2;
-    // (below the game's own replay captions: the driver's name box ends at y 630 of 720)
-    const float bh = 70 * S, y0 = H - (H - 720 * S) / 2 - bh - 8 * S, x1 = x0 + cw;
-    const float l = x0 + 40 * S, r = x1 - 40 * S;
-    dl->AddRectFilled(ImVec2(l, y0), ImVec2(r, y0 + bh), IM_COL32(16, 16, 16, 200));
-    dl->AddRectFilled(ImVec2(l, y0), ImVec2(l + 6 * S, y0 + bh), RED);
-    // play / pause symbol
-    const float sx = l + 30 * S, sy = y0 + 24 * S, ss = 12 * S;
+    const BarLayout L = bar_layout(W, H);
+    const float S = L.S, sx = L.sx, sy = L.sy, ss = L.ss, tl = L.tl, tr = L.tr, ty = L.ty, r = L.r;
+    dl->AddRectFilled(ImVec2(L.l, L.y0), ImVec2(r, L.y1), IM_COL32(16, 16, 16, 200));
+    dl->AddRectFilled(ImVec2(L.l, L.y0), ImVec2(L.l + 6 * S, L.y1), RED);
+    // play / pause symbol (red under the mouse)
+    const ImU32 sym = g_bm.x >= 0 && on_play(L, g_bm.x, g_bm.y) ? RED : WHITE;
     if (b.paused) {
-        dl->AddRectFilled(ImVec2(sx - ss * 0.8f, sy - ss), ImVec2(sx - ss * 0.25f, sy + ss), WHITE);
-        dl->AddRectFilled(ImVec2(sx + ss * 0.25f, sy - ss), ImVec2(sx + ss * 0.8f, sy + ss), WHITE);
+        dl->AddRectFilled(ImVec2(sx - ss * 0.8f, sy - ss), ImVec2(sx - ss * 0.25f, sy + ss), sym);
+        dl->AddRectFilled(ImVec2(sx + ss * 0.25f, sy - ss), ImVec2(sx + ss * 0.8f, sy + ss), sym);
     } else {
-        dl->AddTriangleFilled(ImVec2(sx - ss * 0.7f, sy - ss), ImVec2(sx + ss, sy), ImVec2(sx - ss * 0.7f, sy + ss), WHITE);
+        dl->AddTriangleFilled(ImVec2(sx - ss * 0.7f, sy - ss), ImVec2(sx + ss, sy), ImVec2(sx - ss * 0.7f, sy + ss), sym);
     }
     text(dl, F.black, 22 * S, ImVec2(sx + 26 * S, sy - 14 * S), WHITE, b.speed);
-    // timeline
-    const std::string tc = clock_text(b.pos) + " / " + clock_text(b.length);
-    const float tcw = text_w(F.semi, 18 * S, tc.c_str());
-    const float tl = sx + 130 * S, tr = r - 300 * S - tcw, ty = sy;
+    // timeline; while dragging, the knob and the time code follow the mouse
+    float f = b.length > 0 ? std::clamp(b.pos / b.length, 0.0f, 1.0f) : 0;
+    if (g_bm.drag && g_bm.x >= 0) f = std::clamp((g_bm.x - tl) / (tr - tl), 0.0f, 1.0f);
+    const std::string tc = clock_text(g_bm.drag ? f * b.length : b.pos) + " / " + clock_text(b.length);
     dl->AddRectFilled(ImVec2(tl, ty - 3 * S), ImVec2(tr, ty + 3 * S), IM_COL32(90, 90, 90, 255));
-    const float f = b.length > 0 ? std::clamp(b.pos / b.length, 0.0f, 1.0f) : 0;
     const float px = std::floor(tl + (tr - tl) * f);   // (whole pixels: the image is rasterised again only when it changes)
     dl->AddRectFilled(ImVec2(tl, ty - 3 * S), ImVec2(px, ty + 3 * S), RED);
-    dl->AddCircleFilled(ImVec2(px, ty), 8 * S, WHITE, 24);
+    // the time under the mouse, above the bar
+    if (!g_bm.drag && g_bm.x >= 0 && on_timeline(L, g_bm.x, g_bm.y) && b.length > 0) {
+        const float hx = std::floor(std::clamp(g_bm.x, tl, tr));
+        const std::string ht = clock_text((hx - tl) / (tr - tl) * b.length);
+        const float hw = text_w(F.semi, 15 * S, ht.c_str());
+        dl->AddRectFilled(ImVec2(hx - 1 * S, ty - 9 * S), ImVec2(hx + 1 * S, ty + 9 * S), WHITE);
+        dl->AddRectFilled(ImVec2(hx - hw / 2 - 6 * S, L.y0 - 26 * S), ImVec2(hx + hw / 2 + 6 * S, L.y0 - 4 * S),
+                          IM_COL32(16, 16, 16, 220));
+        text(dl, F.semi, 15 * S, ImVec2(hx - hw / 2, L.y0 - 24 * S), WHITE, ht);
+    }
+    dl->AddCircleFilled(ImVec2(px, ty), (g_bm.drag ? 10 : 8) * S, WHITE, 24);
     text(dl, F.semi, 18 * S, ImVec2(tr + 16 * S, ty - 11 * S), WHITE, tc);
     // car watched
     const float dw = text_w(F.semi, 20 * S, b.driver.c_str());
     text(dl, F.semi, 20 * S, ImVec2(r - 24 * S - dw, ty - 13 * S), WHITE, b.driver);
     // hints
-    const char* h = "SQUARE  play / pause      L2 / R2  speed      L1 / R1  car      TRIANGLE  camera      SELECT  TV mode";
-    text(dl, F.medium, 14 * S, ImVec2(sx - ss, y0 + bh - 24 * S), IM_COL32(180, 180, 180, 255), h);
+    const char* h = "SQUARE  play / pause      L2 / R2  speed      L1 / R1  car      TRIANGLE  camera      SELECT  TV mode"
+                    "      MOUSE  click the timeline";
+    text(dl, F.medium, 14 * S, ImVec2(sx - ss, L.y1 - 24 * S), IM_COL32(180, 180, 180, 255), h);
 }
 
 // ------------------------------------------------------------------ frame
@@ -588,7 +667,7 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
     const u64 now = time_usec();
     g_last_frame = now;
     if (!win_w || !win_h) return false;
-    if (!g_open.load() && !g_bar_shown.load()) return false;
+    if (!g_open.load() && !g_bar_active.load()) return false;
     std::lock_guard lk(g_m);
     static bool inited = false;
     bool dialog = g_open.load() && g_st.kind != Kind::None;
@@ -597,7 +676,11 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
         update(pressed(g_st.serial));
         dialog = g_st.kind != Kind::None;   // (answered)
     }
-    if (!dialog && !g_bar.shown) return false;
+    if (!dialog) {
+        if (!inited) { imgui_init(); inited = true; }   // (the layout measures text)
+        bar_mouse((float)win_w, (float)win_h);
+        if (!bar_visible((float)win_w, (float)win_h)) return false;
+    }
     if (!inited) { imgui_init(); inited = true; }
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)win_w, (float)win_h);
@@ -675,6 +758,14 @@ bool message(const std::string& text) {
 void set_replay_bar(const ReplayBar& bar) {
     std::lock_guard lk(g_m);
     g_bar = bar;
-    g_bar_shown = bar.shown;
+    g_bar_active = bar.active;
+    if (!bar.active) g_bar_input = {};
+}
+
+ReplayBarInput take_replay_input() {
+    std::lock_guard lk(g_m);
+    const ReplayBarInput in = g_bar_input;
+    g_bar_input = {};
+    return in;
 }
 }  // namespace overlay
