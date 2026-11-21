@@ -84,7 +84,8 @@ LoadedProcess load_elf(const std::vector<u8>& d) {
     }
     LOG_I("TLS image %08x filesz=%x memsz=%x", g_tls_addr, g_tls_filesz, g_tls_memsz);
     if (getenv("F1CE_60FPS")) {
-        // game ticks per frame, read by the main loop (0x2494a4, ONLINE.BIN 0x1a2674) every frame; 2 on the 01.00 disc.
+        // game ticks per frame, read by the main loop (0x2494a4) every frame; 2 on the 01.00 disc. (ONLINE.BIN's game
+        // loop has a constant 2 instead: online_ticks_probe gives it this value)
         // do_flip sets it from the time each frame took and the vblank thread doubles its rate for the game's frame limiter
         const u32 ticks_per_frame = g_online_image ? 0x101DCB5C : 0x10044288;
         u32 v = ld32(ticks_per_frame);

@@ -1251,3 +1251,11 @@ f1ce_online started without `--guest-arg` gets `{<F1CE_LANGUAGE code>}`, what th
 the ImGui launcher's MULTIPLAYER section has a "Start in Multiplayer" button (bottom right; click, F6, square / Xbox X) that starts
 f1ce_online that way (Windows GPU preference set for both executables). Checked: f1ce_online alone at 60 fps, LAN
 host with two AI cars in Bahrain: 60.0 ticks/s in menus and racing, shake filter on; the launcher row starts it.
+
+**2026-11-21 (later)** - multiplayer still at double speed at 60 fps (user test): the "60.0 ticks/s" above is only the
+value pace_ticks writes. ONLINE.BIN never runs the main loop 0x1a2674: its game loop 0x341e10 (menus and races) does
+`li r3,2` and calls 0x2cb404 -> tick loop 0x1a192c with that count (car tick stack 0x1a1998 / 0x2cb4a0 / 0x342218),
+so the cars got 120 ticks/s. Measured on a LAN race in Bahrain, first-lap record: 30 fps 1:46.171, 60 fps 0:53.723.
+`online_ticks_probe` (hle_gcm.cpp, probe 0x342214) puts the frame's tick count in r3; the shake filter probes moved
+to that loop (0x1a1974 / 0x1a19ac; the old 0x1a26e4 / 0x1a271c kept). After: 60 fps lap record 1:46.219. Lesson: count
+the game's own calls (a hook on the tick function) instead of trusting the value written.

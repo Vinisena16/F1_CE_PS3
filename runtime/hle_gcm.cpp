@@ -1068,6 +1068,13 @@ void gcm_callback(PPUContext& c) {
 }
 }  // namespace
 
+// ONLINE.BIN's game loop 0x341e10 (menus and races) does not go through the main loop 0x1a2674: it passes a constant
+// 2 ticks (li r3,2) to 0x2cb404, which runs the tick loop 0x1a192c that many times. Before that call, r3 becomes the
+// frame's tick count, so a 60 fps race runs 60 ticks per second instead of 120.
+void online_ticks_probe(PPUContext& c) {
+    if (g_ticks_per_frame_ea) c.r[3] = ld32(g_ticks_per_frame_ea);
+}
+
 // _cellGcmInitBody(CellGcmContextData** ctx, cmdSize, ioSize, ioAddress)
 HLE_FUNC(_cellGcmInitBody) {
     u32 cmd_size = (u32)ARG(1), io_size = (u32)ARG(2), io_addr = (u32)ARG(3);

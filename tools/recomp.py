@@ -813,7 +813,10 @@ if __name__ == "__main__":
         # of the engine, so none of EBOOT's hook, probe or spin-loop addresses apply to it; its own are below
         OUT = ROOT / "generated_online"
         HOOKS = {0x139900: "car_tick_hook", 0xD6218: "wheel_update_hook"}   # hle_physics.cpp: 60 fps shake filter
-        PROBES = {0x1A26E4: "shake_tick_probe", 0x1A271C: "shake_frame_probe"}   # (main loop 0x1a2674)
+        # game loop 0x341e10 -> tick loop 0x1a192c (the main loop 0x1a2674 is not used): ticks per frame (hle_gcm.cpp),
+        # shake filter before each tick and after the frame's last one
+        PROBES = {0x342214: "online_ticks_probe", 0x1A1974: "shake_tick_probe", 0x1A19AC: "shake_frame_probe",
+                  0x1A26E4: "shake_tick_probe", 0x1A271C: "shake_frame_probe"}
         SPIN_LOOPS = set()
         Recompiler(ps3elf.load(ROOT / "input" / "ONLINE.elf")).run()
     else:
