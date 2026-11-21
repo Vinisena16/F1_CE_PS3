@@ -12,7 +12,7 @@ IN="9:start"
 # DRIVE=1: menus by 41 s, then cross (accelerate) held for the whole race instead of a press every 4 s
 if [ -n "$DRIVE" ]; then
     for t in $(seq 13 4 41); do IN="$IN,$t:cross"; done
-    IN="$IN,47:cross:900"   # throttle held for the race
+    IN="$IN,47:cross:900${EXTRA_IN:+,$EXTRA_IN}"   # throttle held for the race (EXTRA_IN: more presses)
 else
     for t in $(seq 13 4 137); do IN="$IN,$t:cross"; done
 fi

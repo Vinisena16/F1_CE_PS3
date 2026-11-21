@@ -35,6 +35,7 @@ HOOKS = {0x3FB310: "camera_projection_hook",   # camera projection and frustum, 
          0x1F9EBC: "boot_attract_hook",
          0x11C150: "tyre_forces_hook", 0x117ED0: "wheel_update_hook",
          0x17B200: "car_tick_hook",   # hle_physics.cpp
+         0x112818: "steer_input_hook", 0x1177F4: "suspension_hook",   # hle_handling.cpp
          0x3574C0: "controller_update_hook",   # hle_rumble.cpp
          0x36F0E8: "playercam_update_hook", 0x36F79C: "playercam_setcam_hook",   # hle_camera.cpp
          0x36DEFC: "camshake_hook", 0x36C764: "camshake2_hook", 0x36DA0C: "camshake3_hook", 0x36DC3C: "camshake3_hook",

@@ -94,6 +94,18 @@ std::vector<Option> make_options() {
                        "Gamepad motors: update 02.00's DualShock 3 vibration, ported to this version of the game."));
     v.push_back(choice(GAMEPAD, "Chase cam look-around", "F1CE_CAM_ORBIT", {{"On", nullptr}, {"Off", "0"}}, 0,
                        "The right stick turns the chase cameras around the car."));
+    v.push_back(header(GENERAL, "Handling"));
+    v.push_back(choice(GENERAL, "Pad steering response", "F1CE_STEER_RESPONSE",
+                       {{"Responsive", nullptr}, {"Direct", "2"}, {"Original", "0"}}, 0,
+                       "How fast the front wheels follow the stick (and the keyboard). The game turns them slowly on a "
+                       "gamepad: almost a second to full lock at speed. Responsive: about three times faster. Direct: as "
+                       "fast as on a steering wheel. Original: the game's own. Steering wheels are not affected."));
+    v.push_back(choice(GENERAL, "Kerb handling", "F1CE_KERBS",
+                       {{"Improved low", nullptr}, {"Improved high", "2"}, {"Original", "0"}}, 0,
+                       "Improved low: the suspension absorbs kerb hits (a damper limit), so an aggressive kerb no longer "
+                       "throws the car in the air and spins it. Improved high: also no tyre grip while a wheel is off "
+                       "the ground, so a car that jumps a kerb no longer twists in the air and spins on landing. "
+                       "Original: the game's own suspension."));
     v.push_back(header(GENERAL, "Custom camera"));
     v.push_back(choice(GENERAL, "Onboard TV camera", "F1CE_TVCAM",
                        {{"On", nullptr}, {"On, tune with the numpad", "tune"}, {"Off (original camera)", "0"}}, 0,
