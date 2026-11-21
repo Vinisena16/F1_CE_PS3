@@ -1259,3 +1259,12 @@ so the cars got 120 ticks/s. Measured on a LAN race in Bahrain, first-lap record
 `online_ticks_probe` (hle_gcm.cpp, probe 0x342214) puts the frame's tick count in r3; the shake filter probes moved
 to that loop (0x1a1974 / 0x1a19ac; the old 0x1a26e4 / 0x1a271c kept). After: 60 fps lap record 1:46.219. Lesson: count
 the game's own calls (a hook on the tick function) instead of trusting the value written.
+
+**2026-11-21 (later)** - Advanced Replay Mode fixes after the user's report (MODDING_IDEAS.md "Advanced Replay Mode" /
+Status): F1TV Watch a race replay crash (session +0x18FC is no world pointer there: director without car choice),
+bar left alive in the menus after F1TV Watch a replay -> Quit (probe-liveness check, overlay drops a stale bar),
+start while paused (menu state now ends only after the position stood still), and frozen effects while paused: the
+frame clock's real time (probes after 0x56E738 in 0x345D70 / 0x346A94 / 0x346BB4) and the crowd's per-frame step
+(probes 0x2FB998 / 0x2FBCB8) follow the director's speed, camera shakes 0x36DEFC / 0x36C764 / 0x36DA0C / 0x36DC3C rest
+while paused. Checked on the user's saved replay (F1TV menu path by script: `down:0.12` presses, the hold time is
+in seconds) and a Watch a race session: paused frames differ only by a sub-pixel helmet shimmer.

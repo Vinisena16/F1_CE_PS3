@@ -25,6 +25,9 @@
 // itself 4 s after the last director button and shows while the mouse moves. A click on its timeline seeks: the
 // game's keyframe at or before the target is loaded (as the end of playback does) and the ticks from there are run
 // fast (~100 ms frames, sound off); the play / pause symbol is a button. The sound is faded out while paused.
+// The per-frame effects (real clock, crowd step, camera shakes) follow the speed, so a paused replay stands still.
+// Everything here acts only while the probe ran lately: F1TV Watch a replay -> Quit leaves the session's replay state
+// as it is in the menus, where the main loop (and so the probe) does not run.
 // F1CE_REPLAY_LOG=1 logs the world's cameras and cars when a replay starts and what changes during it, with or without
 // the director (reverse-engineering aid).
 #include <algorithm>
@@ -62,8 +65,12 @@ Replay find_replay() {
     r.session = session();
     if (!r.session || !ld32(r.session + 0x28)) return r;
     r.obj = ld32(r.session + 0x10);
-    r.world = ld32(r.session + 0x18FC);
-    r.playing = r.obj && r.world && ld32(r.obj + 0x2C) == 2;
+    if (!r.obj || !mem::readable(r.obj, 0x40)) return r;
+    // F1TV's Watch a race has no driver of its own and its world word is no pointer (fault at world +0x21c,
+    // 2026-11-21): the director runs without a world there (no car choice)
+    const u32 w = ld32(r.session + 0x18FC);
+    r.world = w && !(w & 3) && mem::readable(w, 0x230) ? w : 0;
+    r.playing = ld32(r.obj + 0x2C) == 2;
     return r;
 }
 
@@ -81,8 +88,8 @@ const std::vector<u32>& race_cars(u32 world) {
     if (world == g_cars_world && !g_cars.empty()) return g_cars;
     g_cars_world = world;
     g_cars.clear();
-    const u32 player = ld32(world + 0x220);
-    const u32 pphys = player ? ld32(player + 0x1C) : 0;
+    const u32 player = world ? ld32(world + 0x220) : 0;
+    const u32 pphys = player && mem::readable(player, 0x70) ? ld32(player + 0x1C) : 0;
     if (!pphys || !mem::readable(pphys, 4)) return g_cars;
     const u32 pvt = ld32(pphys), evt = ld32(player);
     const u64 t0 = time_usec();
@@ -119,6 +126,7 @@ bool printable(u32 ea, std::string* out) {   // a NUL-terminated ASCII string of
 
 // "Car <n>  <team>": the team object is entity +4, its name at +0xc (the game's own caption shows the driver)
 std::string car_name(u32 entity) {
+    if (!mem::readable(entity, 0x70)) return "";
     char s[24];
     snprintf(s, sizeof s, "Car %d", (s32)ld32(entity + 0x6C) + 1);
     std::string team;
@@ -176,6 +184,7 @@ void log_changes(const Replay& r) {
         d2 = p.digital2;
         LOG_I("replay: pad %04x %04x at %.2f s (position %u)", d1, d2, time_usec() / 1e6, ld32(r.obj + 0x1C));
     }
+    if (!r.world) return;
     const u32 w = ld32(r.world + 0x21C), c = top_camera(r.world);
     if (w == watched && c == cam) return;
     watched = w;
@@ -186,6 +195,11 @@ void log_changes(const Replay& r) {
 
 void log_world(const Replay& r) {
     if (!log_on()) return;
+    if (!r.world) {
+        LOG_I("replay: session %08x object %08x, no world", r.session, r.obj);
+        hex_line("object", r.obj, 0x40);
+        return;
+    }
     LOG_I("replay: session %08x object %08x world %08x watched %08x (index %d) player %08x", r.session, r.obj, r.world,
           ld32(r.world + 0x21C), (s32)ld32(r.world + 0x208), ld32(r.world + 0x220));
     hex_line("object", r.obj, 0x40);
@@ -220,6 +234,7 @@ struct Director {
     float acc = 0;            // ticks owed
     bool menu = false;        // start was pressed: the game's ticks until the replay moves again
     u32 menu_pos = 0;
+    u32 menu_still = 0;       // frames the position stood still since start (the game's menu is open)
     u64 bar_until = 0;        // the bar hides itself after a while without director input
     u16 prev1 = 0, prev2 = 0;
     u32 last_pos = 0;
@@ -239,6 +254,8 @@ const struct { int id; const char* name; } kCameras[] = {
     {-1, "REPLAY CAMERA"}, {0, "CHASE"}, {1, "FAR CHASE"}, {2, "TV POD"}, {3, "ONBOARD TV"}, {4, "COCKPIT"}, {5, "NOSE"},
 };
 std::atomic<bool> g_mute{false};   // read by the audio thread (replay_audio_muted)
+std::atomic<u64> g_alive{0};       // the probe's last replay frame: the hooks elsewhere act only while it is recent
+bool alive() { return g.active && time_usec() - g_alive.load(std::memory_order_relaxed) < 500000; }
 
 constexpr u16 D1_START = 0x08;
 constexpr u16 D2_L2 = 0x01, D2_R2 = 0x02, D2_L1 = 0x04, D2_R1 = 0x08, D2_TRIANGLE = 0x10, D2_CIRCLE = 0x20,
@@ -278,8 +295,8 @@ void handle_input(const Replay& r) {
         else g.speed = std::max(g.speed - 1, 0);
         any = true;
     }
-    if (pressed2(D2_R1)) { step_car(r, 1); any = g.car_changed = true; }
-    if (pressed2(D2_L1)) { step_car(r, -1); any = g.car_changed = true; }
+    if (pressed2(D2_R1) && r.world) { step_car(r, 1); any = g.car_changed = true; }
+    if (pressed2(D2_L1) && r.world) { step_car(r, -1); any = g.car_changed = true; }
     if (pressed2(D2_CIRCLE)) {
         g.cam = (g.cam + 1) % (int)std::size(kCameras);
         any = true;
@@ -293,6 +310,7 @@ void handle_input(const Replay& r) {
     if (pressed1(D1_START)) {
         g.menu = true;
         g.menu_pos = ld32(r.obj + 0x1C);
+        g.menu_still = 0;
     }
     if (any) {
         show_bar();
@@ -386,7 +404,7 @@ void update_bar(const Replay& r) {
         b.pos = (t.now - t.first) / 60.0f;
         b.length = (t.end - t.first) / 60.0f;
         b.speed = g.seek_left ? "SEEKING" : speed_text();
-        if (const u32 cur = ld32(r.world + 0x21C)) b.driver = car_name(cur);
+        if (const u32 cur = r.world ? ld32(r.world + 0x21C) : 0) b.driver = car_name(cur);
         b.camera = kCameras[g.cam].name;
     }
     overlay::set_replay_bar(b);
@@ -407,10 +425,18 @@ void replay_ticks_probe(PPUContext& c) {
     }
     const Replay r = find_replay();
     if (r.playing && log_on()) log_changes(r);
+    // the replay's race loop was left without the replay ending (F1TV Watch a replay -> Quit: the session keeps its
+    // replay state in the menus, where this probe is not called): a new start
+    const bool left = g.active && g.last_frame && time_usec() - g.last_frame > 1000000;
+    if (left) {
+        LOG_I("replay: director off (race loop left)");
+        g = Director{};
+        g_mute = false;
+    }
     if (!r.playing) {
         if (g.active) {
             // stop replay (0x5eb6d4) leaves the watched car as it is; the replay's start had set the player's
-            const bool same = session() == g.session && ld32(g.session + 0x18FC) == g.world;
+            const bool same = g.world && session() == g.session && ld32(g.session + 0x18FC) == g.world;
             if (g.car_changed && same && ld32(g.world + 0x220)) {
                 const u32 e = ld32(g.world + 0x220);
                 st32(g.world + 0x21C, e);
@@ -488,11 +514,17 @@ void replay_ticks_probe(PPUContext& c) {
         if (mouse.seek >= 0) seek(c, r, mouse.seek, from_oldest);
     }
     const u32 pos = ld32(r.obj + 0x1C);
-    if (g.menu && pos != g.menu_pos && pos != g.last_pos) g.menu = false;   // the menu closed and the replay moves
+    // the menu closed and the replay moves: the position stood still while it was open (the game runs a tick or two
+    // after start before it opens, also while paused); a start that opened nothing ends after a second of replay
+    if (g.menu) {
+        if (pos == g.last_pos) g.menu_still++;
+        else if (g.menu_still >= 10 || pos - g.menu_pos > 60) g.menu = false;
+    }
     g.last_pos = pos;
     const u64 now = time_usec();
     const u64 frame_us = g.last_frame ? now - g.last_frame : 33000;
     g.last_frame = now;
+    g_alive = now;
     // silent while paused or seeking (the game keeps playing its last engine sounds); the game's menu has its own
     g_mute = !g.menu && (g.paused || g.seek_left);
     if (g.menu) {   // the game's ticks
@@ -523,15 +555,43 @@ void replay_ticks_probe(PPUContext& c) {
 
 // hle_camera.cpp: the race camera id to show in place of the replay's own cameras, -1 = theirs
 int replay_standard_camera() {
-    return replay_director_on() && g.active ? kCameras[g.cam].id : -1;
+    return replay_director_on() && alive() ? kCameras[g.cam].id : -1;
 }
 
 // the audio mixer (hle_misc.cpp): the output fades to silence while a replay is paused or seeking
-bool replay_audio_muted() { return g_mute.load(std::memory_order_relaxed); }
+bool replay_audio_muted() { return g_mute.load(std::memory_order_relaxed) && alive(); }
+
+// hle_camera.cpp: the cameras' per-frame shakes rest while the replay is paused (they would go on without ticks)
+bool replay_paused() { return replay_director_on() && alive() && g.paused && !g.menu && !g.seek_left; }
+
+namespace {
+// how fast the per-frame effects run while a replay plays: the director's speed, 0 while paused, else 1
+double effects_rate() {
+    if (!replay_director_on() || !alive() || g.menu || g.seek_left) return 1;
+    return g.paused ? 0 : kSpeeds[g.speed];
+}
+}  // namespace
+
+// The crowd's animation frames move by a fixed step each drawn frame (0x431688 f1, called at 0x2fb998 and 0x2fbcb8
+// with a TOC constant), not by time: scaled with the director's speed, so the crowd rests while paused.
+void replay_crowd_probe(PPUContext& c) { c.f[1].d *= effects_rate(); }
+
+// The game's frame clock (0x345d70, 0x346a94, 0x346bb4) fills a record {u8, game time, game dt, real time, real dt}:
+// game time from the tick count, real time from the system clock 0x56e738. A replay runs with game dt 0 and animates
+// the crowd, the drivers' heads and other per-frame effects with the real dt, so they went on in a paused replay
+// (2026-11-21). The probes after the system clock call slow the real clock down with the director's speed (stopped
+// while paused). The offset is kept for good: the game keeps the last real time and must never see it go back.
+void replay_clock_probe(PPUContext& c) {
+    static double last = -1, offset = 0;
+    const double rate = effects_rate(), raw = c.f[1].d;
+    if (last >= 0 && raw > last) offset += (raw - last) * (1 - rate);
+    last = raw;
+    c.f[1].d = raw - offset;
+}
 
 // cellPadGetData: the director's buttons are not the game's while a replay plays
 void replay_pad_filter(host::PadState& s) {
-    if (!replay_director_on() || !g.active) return;
+    if (!replay_director_on() || !alive()) return;
     s.digital2 &= (u16)~kMask2;
     // pressures: [5] circle, [7] square, [8] L1, [9] R1, [10] L2, [11] R2
     s.pressure[5] = 0;

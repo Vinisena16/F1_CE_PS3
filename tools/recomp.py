@@ -37,7 +37,7 @@ HOOKS = {0x3FB310: "camera_projection_hook",   # camera projection and frustum, 
          0x17B200: "car_tick_hook",   # hle_physics.cpp
          0x3574C0: "controller_update_hook",   # hle_rumble.cpp
          0x36F0E8: "playercam_update_hook", 0x36F79C: "playercam_setcam_hook",   # hle_camera.cpp
-         0x36DEFC: "camshake_hook",
+         0x36DEFC: "camshake_hook", 0x36C764: "camshake2_hook", 0x36DA0C: "camshake3_hook", 0x36DC3C: "camshake3_hook",
          0x5C8260: "audio_src_hook",   # hle_misc.cpp: 3D update of a sound source (distance, pan, Doppler)
          0x4C6280: "engine_snd_hook",   # hle_misc.cpp: a car's engine sound (grain engine inputs and update)
          0x5A9120: "lua_os_exit_hook", 0x5A566C: "lua_print_hook",
@@ -49,6 +49,8 @@ PROBES = {0x1187EC: "probe_1187ec", 0x11B05C: "probe_11b05c",   # hle_physics.cp
           0x249518: "shake_tick_probe", 0x249B38: "shake_tick_probe",   # hle_physics.cpp: before a main loop tick
           0x249550: "shake_frame_probe", 0x249B40: "shake_frame_probe",   # and after the frame's last tick
           0x249504: "replay_ticks_probe", 0x249654: "replay_ticks_probe",   # hle_replay.cpp: the frame's tick count
+          0x345DDC: "replay_clock_probe", 0x346B28: "replay_clock_probe", 0x346C48: "replay_clock_probe",   # real time
+          0x2FB998: "replay_crowd_probe", 0x2FBCB8: "replay_crowd_probe",   # the crowd's animation step
           0x489AAC: "flip_label_written",   # hle_gcm.cpp: the flip handler set a label the RSX may wait for
           0x48B054: "put_written",   # hle_gcm.cpp: libgcm wrote PUT
           0x55165C: "joblist_job", 0x5516F0: "joblist_job", 0x551780: "joblist_entry",   # hle_joblist.cpp

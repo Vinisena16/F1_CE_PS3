@@ -516,6 +516,7 @@ void draw(ImDrawList* dl, float W, float H) {
 // ------------------------------------------------------------------ replay director bar
 ReplayBar g_bar;   // (g_m)
 std::atomic<bool> g_bar_active{false};
+std::atomic<u64> g_bar_at{0};   // last set_replay_bar: the director updates the bar every frame of a replay
 ReplayBarInput g_bar_input;   // (g_m) clicks not yet taken
 struct BarMouse {
     float x = -1, y = -1;      // pixels, -1 outside the window
@@ -670,6 +671,12 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
     const u64 now = time_usec();
     g_last_frame = now;
     if (!win_w || !win_h) return false;
+    if (g_bar_active.load() && now - g_bar_at.load() > 500000) {   // no update: the race loop was left (menus)
+        std::lock_guard lk(g_m);
+        g_bar = {};
+        g_bar_active = false;
+        g_bar_input = {};
+    }
     if (!g_open.load() && !g_bar_active.load()) return false;
     std::lock_guard lk(g_m);
     static bool inited = false;
@@ -762,6 +769,7 @@ void set_replay_bar(const ReplayBar& bar) {
     std::lock_guard lk(g_m);
     g_bar = bar;
     g_bar_active = bar.active;
+    g_bar_at = time_usec();
     if (!bar.active) g_bar_input = {};
 }
 

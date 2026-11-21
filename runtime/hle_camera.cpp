@@ -47,6 +47,7 @@
 void sub_0036F0E8(PPUContext& __restrict c);
 void sub_0036F79C(PPUContext& __restrict c);
 int replay_standard_camera();   // hle_replay.cpp (F1CE_REPLAY_DIRECTOR): a race camera id in place of the replay's, or -1
+bool replay_paused();           // hle_replay.cpp: a replay paused by the director
 
 namespace {
 constexpr float kPi = 3.14159265358979f;
@@ -358,11 +359,22 @@ bool playercam_update_hook(PPUContext& c) {
 
 // camera shake 0x36defc: r3 PlayerCam, r4 camera matrix, r5 the controller's no-shake byte
 bool camshake_hook(PPUContext& c) {
+    if (replay_paused()) return true;   // (random each frame, ticks or not)
     if (tvpod_shake_on()) return false;
     const u32 pc = (u32)c.r[3];
     const u32 list = ld32(pc + 0x168), idx = ld32(pc + 0x80);
     const u32 id = list ? ld32(list + idx * 4) : ~0u;
     return id == 2 || id == 3 || id == 0xc;
+}
+
+// the other camera shake 0x36c764 (camera record +0x34 set)
+bool camshake2_hook(PPUContext&) { return replay_paused(); }
+
+// the camera offsets 0x36da0c / 0x36dc3c (random each frame; the TV pod's moved the helmet below it): r5 is the
+// controller's no-shake byte, set they return at once without writing their output (the game's own path)
+bool camshake3_hook(PPUContext& c) {
+    if (replay_paused()) c.r[5] = 1;
+    return false;
 }
 
 // PlayerCam::SetCamera (vtable slot 10): r3 PlayerCam, r4 index
