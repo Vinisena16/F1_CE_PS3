@@ -42,6 +42,12 @@ int language() {
 }
 }  // namespace
 
+// F1CE_LANGUAGE's game code, English when unset (the system language reported here)
+int boot_language_code() {
+    const int code = language();
+    return code < 0 ? 0 : code;
+}
+
 // 0x48F88: system language -> game language code (called once by the boot code)
 bool boot_language_hook(PPUContext& c) {
     static const int code = language();

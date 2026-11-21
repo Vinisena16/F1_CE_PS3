@@ -92,12 +92,27 @@ std::vector<Option> make_options() {
     v.push_back(choice(GAMEPAD, "Controller vibration", "F1CE_RUMBLE",
                        {{"Off", "0"}, {"Light", "50"}, {"Normal", nullptr}, {"Strong", "150"}}, 2,
                        "Gamepad motors: update 02.00's DualShock 3 vibration, ported to this version of the game."));
+    v.push_back(choice(GAMEPAD, "Chase cam look-around", "F1CE_CAM_ORBIT", {{"On", nullptr}, {"Off", "0"}}, 0,
+                       "The right stick turns the chase cameras around the car."));
+    v.push_back(header(GENERAL, "Custom camera"));
     v.push_back(choice(GENERAL, "Onboard TV camera", "F1CE_TVCAM",
                        {{"On", nullptr}, {"On, tune with the numpad", "tune"}, {"Off (original camera)", "0"}}, 0,
                        "The second TV pod view of the camera cycle as a broadcast T-cam. Off: the game's own TV pod "
                        "offset camera. Tune: the numpad moves it, values on the console, saved in tvcam_tune.ini."));
     v.push_back(choice(GENERAL, "TV pod camera shake", "F1CE_TVPOD_SHAKE", {{"On (original)", nullptr}, {"Off", "0"}}, 0,
                        "The speed shake of both TV pod views of the camera cycle (also the onboard TV camera)."));
+    v.push_back(header(GENERAL, "Replay"));
+    {
+        Option o = choice(GENERAL, "Advanced replay mode", "F1CE_REPLAY_DIRECTOR", {{"Off (original)", nullptr}, {"On", "1"}}, 0,
+                          "Replay controls over the game's replay: square play / pause, L2 / R2 slower / faster (1/4x "
+                          "to 8x), L1 / R1 the car watched, with a time bar: click or drag its timeline with the mouse to "
+                          "jump there. Circle the standard cameras (chase, TV pod, cockpit, nose...) on that car. Sound off "
+                          "while paused. Triangle (replay camera) and select (TV mode) stay the game's. "
+                          "Off: the original replay.");
+        o.experimental = true;
+        v.push_back(o);
+    }
+    v.push_back(header(GENERAL, "Environment"));
     v.push_back(choice(GENERAL, "Race environment", "F1CE_RACE_ENV",
                        {{"Early afternoon (original)", nullptr}, {"Sunset", "sunset"}}, 0,
                        "The light of races, Grands Prix and practice: sun, sky, fog and post effects. The folders of "
@@ -106,25 +121,21 @@ std::vector<Option> make_options() {
                        {{"Sunset (original)", nullptr}, {"Early afternoon", "afternoon"}}, 0,
                        "The light of Time Trial and tests. The folders of ENVIRONMENTS next to the launcher are your "
                        "own presets (see ENVIRONMENTS/README.txt)."));
-    v.push_back(choice(GAMEPAD, "Chase cam look-around", "F1CE_CAM_ORBIT", {{"On", nullptr}, {"Off", "0"}}, 0,
-                       "The right stick turns the chase cameras around the car."));
-    v.push_back(choice(GENERAL, "Advanced replay mode", "F1CE_REPLAY_DIRECTOR", {{"Off (original)", nullptr}, {"On", "1"}}, 0,
-                       "Replay controls over the game's replay: square play / pause, L2 / R2 slower / faster (1/4x "
-                       "to 8x), L1 / R1 the car watched, with a time bar: click or drag its timeline with the mouse to "
-                       "jump there. Circle the standard cameras (chase, TV pod, cockpit, nose...) on that car. Sound off "
-                       "while paused. Triangle (replay camera) and select (TV mode) stay the game's. "
-                       "Off: the original replay."));
-    v.push_back(choice(GENERAL, "Language", "F1CE_LANGUAGE",
-                       {{"English", nullptr}, {"Français", "french"}, {"Deutsch", "german"}, {"Italiano", "italian"},
-                        {"Español", "spanish"}, {"Português", "portuguese"}, {"Suomi", "finnish"}},
-                       0, "The game's language when its language menu is skipped; otherwise the one the menu starts on."));
+    v.push_back(header(GENERAL, "Intro"));
+    v.push_back(toggle(GENERAL, "Skip intro", "F1CE_SKIP_INTRO",
+                       "Skips the language menu and the intro movies: the game starts at Press Start."));
+    v.push_back(greyed(choice(GENERAL, "Language", "F1CE_LANGUAGE",
+                              {{"English", nullptr}, {"Français", "french"}, {"Deutsch", "german"}, {"Italiano", "italian"},
+                               {"Español", "spanish"}, {"Português", "portuguese"}, {"Suomi", "finnish"}},
+                              0, "With Skip intro: the game's language, in place of its language menu."),
+                       "F1CE_SKIP_INTRO", nullptr));
+    v.push_back(header(GENERAL, "Mods"));
     v.push_back(choice(GENERAL, "Season pack", "F1CE_MOD_PACK", {{"None (original game)", nullptr}}, 0,
                        "The folders of MODS next to the launcher: a pack replaces the game's files with its own."));
     v.push_back(choice(GENERAL, "Player helmets", "F1CE_HELMET_PACK", {{"Original", nullptr}}, 0,
                        "The folders of PLAYER_HELMETS next to the launcher: your own helmet designs for the profile, "
                        "used with every season pack."));
-    v.push_back(toggle(GENERAL, "Skip intro", "F1CE_SKIP_INTRO",
-                       "Skips the language menu and the intro movies: the game starts at Press Start."));
+    v.push_back(header(GENERAL, "Debug"));
     v.push_back(toggle(GENERAL, "No log file", "F1CE_NO_LOG",
                        "No f1ce_recomp.log. Keep it off when reporting a bug: the log is what tells what went wrong."));
 
@@ -685,15 +696,17 @@ std::string gpu_summary() {
     return r.choices[r.sel].label + (gpu.empty() ? "" : " · " + gpu);
 }
 
-std::string start_game(Ini& ini, std::function<void(unsigned)> exited) {
+std::string start_game(Ini& ini, std::function<void(unsigned)> exited, bool online) {
     if (const std::string m = missing_cpu_features(); !m.empty())
         return "This CPU cannot run the game: it lacks " + m +
                ".\nF1 CE needs a processor with AVX2 (Intel Core 4th generation \"Haswell\" / AMD Ryzen or newer).";
     if (std::string p = game_path_problem(); !p.empty()) return p;
     save(ini);
 #ifdef _WIN32
-    const std::wstring exe = W(g_exe_dir) + L"\\f1ce.exe";
-    set_gpu_preference(exe, ini);
+    const std::wstring exe = W(g_exe_dir) + (online ? L"\\f1ce_online.exe" : L"\\f1ce.exe");
+    // (both: the game hands over between them)
+    set_gpu_preference(W(g_exe_dir) + L"\\f1ce.exe", ini);
+    set_gpu_preference(W(g_exe_dir) + L"\\f1ce_online.exe", ini);
 #endif
     ini.save(ini_path());
     std::vector<std::string> args;
@@ -772,7 +785,7 @@ std::string start_game(Ini& ini, std::function<void(unsigned)> exited) {
         exited(code);
     }).detach();
 #else
-    const std::string exe = g_exe_dir + "/f1ce";
+    const std::string exe = g_exe_dir + (online ? "/f1ce_online" : "/f1ce");
     std::vector<std::string> argv_s = {exe, g_game_path};
     argv_s.insert(argv_s.end(), args.begin(), args.end());
     std::vector<char*> argv;

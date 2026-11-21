@@ -58,7 +58,8 @@ std::string game_path_problem();   // empty: a PS3_GAME folder whose executable 
 std::string gpu_summary();         // "Vulkan · AMD Radeon RX 6600"
 
 // starts the game with the options; returns an error message, or empty when it runs (exited: from another thread)
-// (saves the options in the ini first)
-std::string start_game(Ini& ini, std::function<void(unsigned code)> exited);
+// (saves the options in the ini first). online: straight into Multiplayer (f1ce_online, as the game's own menu entry
+// starts it; leaving it goes on to the main game)
+std::string start_game(Ini& ini, std::function<void(unsigned code)> exited, bool online = false);
 std::string exit_message(unsigned code);   // why the game stopped (empty: normal exit)
 }  // namespace opts

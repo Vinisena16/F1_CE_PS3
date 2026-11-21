@@ -83,10 +83,10 @@ LoadedProcess load_elf(const std::vector<u8>& d) {
         }
     }
     LOG_I("TLS image %08x filesz=%x memsz=%x", g_tls_addr, g_tls_filesz, g_tls_memsz);
-    if (getenv("F1CE_60FPS") && !g_online_image) {
-        // game ticks per frame, read by the main loop (0x2494a4) every frame; 2 on the 01.00 disc. do_flip sets it
-        // from the time each frame took and the vblank thread doubles its rate for the game's frame limiter
-        const u32 ticks_per_frame = 0x10044288;
+    if (getenv("F1CE_60FPS")) {
+        // game ticks per frame, read by the main loop (0x2494a4, ONLINE.BIN 0x1a2674) every frame; 2 on the 01.00 disc.
+        // do_flip sets it from the time each frame took and the vblank thread doubles its rate for the game's frame limiter
+        const u32 ticks_per_frame = g_online_image ? 0x101DCB5C : 0x10044288;
         u32 v = ld32(ticks_per_frame);
         if (v == 2) { g_ticks_per_frame_ea = ticks_per_frame; LOG_I("60 fps: adaptive ticks per frame"); }
         else LOG_W("60 fps: unexpected ticks per frame %08x (not the 01.00 executable?): not patched", v);
@@ -187,6 +187,12 @@ int main(int argc, char** argv) {
         if (a == "--trace") g_log_trace = true;
         else if (a == "--guest-arg" && i + 1 < argc) guest_args.push_back(args[++i]);
         else game = a;
+    }
+    // f1ce_online started on its own (the launcher's Multiplayer button): the argument the front end's exitspawn passes,
+    // {language code}, which ONLINE.BIN's main looks for and hands back to EBOOT.BIN when the player leaves
+    if (g_online_image && guest_args.empty()) {
+        int boot_language_code();   // hle_boot.cpp
+        guest_args.push_back("{" + std::to_string(boot_language_code()) + "}");
     }
     if (!fs::exists(fs::u8path(game) / "USRDIR"))
         fatal("PS3_GAME folder not found at '%s'. Pass it as first argument.", game.c_str());

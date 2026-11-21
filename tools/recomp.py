@@ -767,7 +767,7 @@ class Recompiler:
         for s, nm, imp in stub_names:
             # the original stub saves the caller's TOC at 40(r1); callers reload r2 from there
             stub_src.append(f"PPU_FUNC({nm}) {{ st64((u32)c.r[1] + 40, c.r[2]); hle_call(c, {imp_index[id(imp)]}); }}")
-        # the runtime calls a few EBOOT functions by name from its EBOOT hooks (never run in another image): defined
+        # the runtime calls a few guest functions by name from its hooks (each only from its own image): defined
         # here when this image has no function at that address, so the shared runtime links
         defined = {nm for _, nm in names}
         refs = set()
@@ -777,7 +777,7 @@ class Recompiler:
         if refs - defined:
             stub_src.append("[[noreturn]] void fatal(const char* fmt, ...);")
         for nm in sorted(refs - defined):
-            stub_src.append(f'PPU_FUNC({nm}) {{ fatal("{nm}: an EBOOT function, not in this executable"); }}')
+            stub_src.append(f'PPU_FUNC({nm}) {{ fatal("{nm}: a function of the other executable, not in this one"); }}')
         stub_src.append("")
         stub_src.append("const ImportInfo g_imports[] = {")
         for imp in self.elf.imports:
@@ -810,9 +810,11 @@ class Recompiler:
 if __name__ == "__main__":
     if sys.argv[1:] == ["online"]:
         # ONLINE.BIN, the multiplayer executable the game exitspawns into (built as f1ce_online): another build
-        # of the engine, so none of EBOOT's hook, probe or spin-loop addresses apply to it
+        # of the engine, so none of EBOOT's hook, probe or spin-loop addresses apply to it; its own are below
         OUT = ROOT / "generated_online"
-        HOOKS, PROBES, SPIN_LOOPS = {}, {}, set()
+        HOOKS = {0x139900: "car_tick_hook", 0xD6218: "wheel_update_hook"}   # hle_physics.cpp: 60 fps shake filter
+        PROBES = {0x1A26E4: "shake_tick_probe", 0x1A271C: "shake_frame_probe"}   # (main loop 0x1a2674)
+        SPIN_LOOPS = set()
         Recompiler(ps3elf.load(ROOT / "input" / "ONLINE.elf")).run()
     else:
         Recompiler(ps3elf.load(ROOT / "input" / "EBOOT.elf")).run()

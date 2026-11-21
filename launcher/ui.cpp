@@ -155,7 +155,7 @@ void chevron(ImDrawList* dl, ImVec2 o, float w, float h, ImU32 col) {
 }
 
 // ---------------------------------------------------------------- button prompts
-enum Action { A_SECTION, A_CHANGE, A_SELECT, A_FOLDER, A_QUIT, A_START };
+enum Action { A_SECTION, A_CHANGE, A_SELECT, A_FOLDER, A_QUIT, A_START, A_ONLINE };   // A_ONLINE: Start in Multiplayer
 // draws the prompt at p (vertically centred on p.y); returns its width
 float prompt(ImDrawList* dl, Action a, ImVec2 p) {
     const float r = 13 * S;
@@ -185,6 +185,7 @@ float prompt(ImDrawList* dl, Action a, ImVec2 p) {
             case A_SELECT: return cap("ENTER", cap_c, WHITE);
             case A_FOLDER: return cap("F2", cap_c, WHITE);
             case A_QUIT: return cap("ESC", cap_c, WHITE);
+            case A_ONLINE: return cap("F6", cap_c, WHITE);
             default: return cap("F5", cap_c, WHITE);
         }
     }
@@ -194,6 +195,7 @@ float prompt(ImDrawList* dl, Action a, ImVec2 p) {
             case A_SELECT: return ball(IM_COL32(16, 124, 16, 255), "A");
             case A_FOLDER: return ball(IM_COL32(196, 160, 0, 255), "Y");
             case A_QUIT: return ball(IM_COL32(200, 40, 40, 255), "B");
+            case A_ONLINE: return ball(IM_COL32(30, 100, 210, 255), "X");
             default: {   // the menu button: three lines
                 const float w = 2 * r;
                 dl->AddRect(ImVec2(p.x, p.y - r * 0.8f), ImVec2(p.x + w, p.y + r * 0.8f), cap_c, 4 * S, 0, 2 * S);
@@ -224,6 +226,13 @@ float prompt(ImDrawList* dl, Action a, ImVec2 p) {
             const ImU32 c = IM_COL32(229, 115, 115, 255);
             ring(c);
             dl->AddCircle(ImVec2(p.x + r, p.y), r * 0.45f, c, 0, 2 * S);
+            return 2 * r;
+        }
+        case A_ONLINE: {
+            const ImU32 c = IM_COL32(240, 143, 191, 255);
+            ring(c);
+            const float k = r * 0.42f;
+            dl->AddRect(ImVec2(p.x + r - k, p.y - k), ImVec2(p.x + r + k, p.y + k), c, 0, 0, 2 * S);
             return 2 * r;
         }
         default: return cap("OPTIONS", cap_c, WHITE);
@@ -533,7 +542,7 @@ void save_all() {
     g_ini.save(opts::ini_path());
 }
 
-void start_game() {
+void start_game(bool online = false) {
     save_all();
     wheel::release();   // (the game opens the wheel's force feedback itself; one process at a time)
     const std::string err = opts::start_game(g_ini, [](unsigned code) {
@@ -541,7 +550,7 @@ void start_game() {
         e.type = g_exit_event;
         e.user.code = (Sint32)code;
         SDL_PushEvent(&e);
-    });
+    }, online);
     if (!err.empty()) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "F1 CE", err.c_str(), g_window);
         wheel::resume();
@@ -646,9 +655,11 @@ void frame() {
     g_help.clear();
     g_help_hover = nullptr;
     const float rx = 420 * S, rw = W - rx - 56 * S, ry = body_y + 22 * S, help_h = 74 * S;
+    const bool online_button = g_page == opts::MULTIPLAYER;
+    const float button_h = online_button ? 64 * S : 0;   // (under the rows, bottom right)
     ImGui::SetCursorScreenPos(ImVec2(rx, ry));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 3 * S));
-    ImGui::BeginChild(SECTION_NAMES[g_page], ImVec2(rw, body_y1 - ry - help_h), ImGuiChildFlags_None,
+    ImGui::BeginChild(SECTION_NAMES[g_page], ImVec2(rw, body_y1 - ry - help_h - button_h), ImGuiChildFlags_None,
                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
     int rows = 0;
     const bool focus_first = g_focus_request && g_focus[g_page] == 0;
@@ -662,6 +673,29 @@ void frame() {
     ImGui::EndChild();
     ImGui::PopStyleVar();
     if (g_focus_request && rows == 0) g_focus_request = false;
+    if (online_button) {   // Start in Multiplayer: a click, F6 / □ (X on Xbox pads)
+        const char* label = "START IN MULTIPLAYER";
+        const float pw = prompt_width(dl, A_ONLINE), bh = 48 * S, slant = 12 * S;
+        const float bw = pw + 14 * S + text_w(F.xbold, 19, label) + 2 * 26 * S;
+        const float x1 = rx + rw - 18 * S, x0 = x1 - bw, y1 = body_y1 - help_h - 8 * S, y0 = y1 - bh;
+        ImGui::SetCursorScreenPos(ImVec2(x0, y0));
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
+        const bool clicked = ImGui::InvisibleButton("start_online", ImVec2(bw, bh));
+        ImGui::PopItemFlag();
+        const bool hv = ImGui::IsItemHovered();
+        if (hv) g_help_hover = "Starts the game straight in its Multiplayer menu, with the settings above. Leaving "
+                               "Multiplayer goes on to the main game.";
+        carbon(dl, ImVec2(x0, y0), ImVec2(x1, y1), 1);
+        dl->AddTriangleFilled(ImVec2(x0, y0), ImVec2(x0 + slant, y0), ImVec2(x0, y1), WHITE);
+        dl->AddTriangleFilled(ImVec2(x1, y0), ImVec2(x1, y1), ImVec2(x1 - slant, y1), WHITE);
+        dl->AddLine(ImVec2(x0 + slant, y1 - 2 * S), ImVec2(x1 - slant - 2 * S, y1 - 2 * S), RED, 3 * S);
+        if (hv) dl->AddRectFilled(ImVec2(x0 + slant, y0), ImVec2(x1 - slant, y1 - 4 * S), IM_COL32(255, 255, 255, 28));
+        const float cy = (y0 + y1) / 2 - 1 * S, px = x0 + 26 * S;
+        prompt(dl, A_ONLINE, ImVec2(px, cy));
+        text(dl, F.xbold, 19, ImVec2(px + pw + 14 * S, cy - 12 * S), WHITE, label);
+        const bool key = !modal && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceLeft, false) || ImGui::IsKeyPressed(ImGuiKey_F6, false));
+        if (clicked || key) start_game(true);
+    }
     {
         const float hy = body_y1 - help_h + 6 * S;
         char pos[32];

@@ -55,11 +55,12 @@ bool shake_filter_on() {
 }
 
 namespace {
-constexpr u32 CAR_SIZE = 0x1390;
+// (ONLINE.BIN's car object has 0x30 more bytes before the sound ring: 0x13C0 bytes, ring at 0x11A0)
+const u32 CAR_SIZE = g_online_image ? 0x13C0 : 0x1390;
 // Not filtered: the engine sound ring (16 entries of 32 bytes, one pushed per substep by 0x10F444; write index +0x1370,
 // read index +0x1374), which the audio thread reads between ticks (0x4C6280, 187.5 times a second). Filtering its
 // entries mixed unrelated samples: the other cars' throttle and revs chattered at 60 fps (pit stop sound, 2026-11-08).
-constexpr u32 SOUND_RING = 0x1170, SOUND_RING_END = 0x1370;
+const u32 SOUND_RING = g_online_image ? 0x11A0 : 0x1170, SOUND_RING_END = SOUND_RING + 0x200;
 struct ShakeCar {
     u32 car = 0;
     int substeps = 0;                 // substeps seen in this tick
@@ -143,21 +144,23 @@ void shake_apply() {
 }  // namespace
 
 void sub_0017B200(PPUContext& __restrict c);
+void sub_00139900(PPUContext& __restrict c);
 
 // the cars' physics of a tick (3 substeps each through 0x116d38); also called outside the main loop's ticks (0x140030:
-// many in a row when a session starts or restarts)
+// many in a row when a session starts or restarts). ONLINE.BIN: 0x139900 (substeps 0xd575c, wheels 0xd6218)
 bool car_tick_hook(PPUContext& c) {
     if (g_in_tick || !shake_filter_on()) return false;
     shake_restore();
     g_in_tick = true;
-    sub_0017B200(c);
+    if (g_online_image) sub_00139900(c);
+    else sub_0017B200(c);
     g_in_tick = false;
     for (ShakeCar& s : g_shake)
         if (s.substeps) memcpy(s.s3.data(), gmem(s.car), CAR_SIZE);
     return true;
 }
 
-// main loop 0x2494a4 (and its first frame in 0x249950): before each tick and after the frame's last one
+// main loop 0x2494a4 (and its first frame in 0x249950; ONLINE.BIN 0x1a2674): before each tick and after the frame's last one
 void shake_tick_probe(PPUContext&) {
     if (shake_filter_on()) shake_restore();
 }

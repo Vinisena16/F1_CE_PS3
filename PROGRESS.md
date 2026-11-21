@@ -1238,3 +1238,16 @@ vertices once a shell would hold more cells than there are vertices; results ide
 Build speed: `gtf.read_png` filters whole rows (Up / Sub as integer byte lanes), mip chain by row slices, DXT blocks
 memoised, faster palette search (all byte-identical to before); `season_pack build` encodes each changed texture once
 per format (race + garage copies shared) in a process pool while the models import. The McLaren pack builds in 21 s.
+
+**2026-11-21** - multiplayer at 60 fps and the launcher's Start in Multiplayer (user's internet test with a friend:
+online works, but F1CE_60FPS ran ONLINE.BIN at double speed). The vblank thread doubles its rate in that mode while
+ONLINE.BIN's ticks per frame stayed 2: 120 ticks/s. Its main loop is 0x1a2674 (ticks per frame read through TOC-20996
+= 0x101dcb5c, value 2), so `loader.cpp` sets adaptive ticks there too. The grid-shake filter is ported as well
+(`tools/recomp.py online`: car tick 0x139900 = EBOOT 0x17b200, wheels 0xd6218 = 0x117ed0, tick / frame probes
+0x1a26e4 / 0x1a271c): ONLINE.BIN's car object is 0x13c0 bytes with the engine sound ring at +0x11a0 (EBOOT 0x1390,
++0x1170). Functions matched by normalised generated code (substep 0xd575c and sound push 0xcdbf8 are identical apart
+from offsets). Not ported (EBOOT addresses only): 30 Hz reflection cube, aspect / cameras, replay director, audio hooks.
+f1ce_online started without `--guest-arg` gets `{<F1CE_LANGUAGE code>}`, what the front end's exitspawn passes, and
+the ImGui launcher's MULTIPLAYER section has a "Start in Multiplayer" button (bottom right; click, F6, square / Xbox X) that starts
+f1ce_online that way (Windows GPU preference set for both executables). Checked: f1ce_online alone at 60 fps, LAN
+host with two AI cars in Bahrain: 60.0 ticks/s in menus and racing, shake filter on; the launcher row starts it.
