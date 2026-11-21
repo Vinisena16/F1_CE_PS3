@@ -17,6 +17,7 @@
 #include <cstring>
 #include <string>
 
+#include "host.h"
 #include "kernel.h"
 
 namespace {
@@ -92,6 +93,22 @@ int steer_response() {   // 0 original, 1 responsive, 2 direct
     return r;
 }
 
+// Wheel steering ratio ([wheel] constant_ratio, launcher Steering Wheel page "Wheel steering ratio"; F1CE_WHEEL_RATIO=0/1
+// overrides it for tests): the wheel's set loses lock with speed
+// like the pad's (+0x5dc, 0.011 a m/s: 60% of the lock at 200 km/h), so a turn of the real wheel steers less the faster
+// the car goes. 1 = constant: the lock loss word is 0 for the call (only for a wheel's set, rate >= 10), so the
+// steering ratio is fixed as on the real car. Default off (original).
+bool wheel_ratio_constant() {
+    static const char* env = getenv("F1CE_WHEEL_RATIO");
+    const bool v = env ? atoi(env) == 1 : host::wheel_constant_ratio();
+    static int logged = -1;
+    if (logged != (int)v) {
+        logged = v;
+        LOG_I("handling: wheel steering ratio %s", v ? "constant" : "original");
+    }
+    return v;
+}
+
 bool steer_input_hook(PPUContext& c) {
     static thread_local bool inside = false;
     if (inside) return false;
@@ -109,9 +126,17 @@ bool steer_input_hook(PPUContext& c) {
             st32(car + 0x5e0 + 4 * i, mine[i]);
         }
     }
+    // lock loss per m/s (+0x5dc) of a wheel's set
+    u32 loss_orig = 0;
+    const bool constant = ldf(car + 0x5e4) >= 10.0f && wheel_ratio_constant();
+    if (constant) {
+        loss_orig = ld32(car + 0x5dc);
+        st32(car + 0x5dc, 0);
+    }
     inside = true;
     sub_00112818(c);
     inside = false;
+    if (constant && ld32(car + 0x5dc) == 0) st32(car + 0x5dc, loss_orig);
     if (swap)
         for (int i = 0; i < 4; i++)
             if (ld32(car + 0x5e0 + 4 * i) == mine[i]) st32(car + 0x5e0 + 4 * i, orig[i]);

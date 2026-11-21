@@ -50,6 +50,7 @@ struct WheelForces {
 };
 void wheel_forces(const WheelForces& f);
 void wheel_lock_deg(int degrees);   // a steering lock the game chose (Logitech range command); 0: none
+bool wheel_constant_ratio();        // [wheel] constant_ratio of the wheel in use
 bool wheel_ffb();                   // a wheel with force feedback is in use (and the settings want it)
 void input_clock_reset();   // scripted input times count from this call (end of the start-up shader phase)
 double input_time();         // seconds since then

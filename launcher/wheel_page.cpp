@@ -538,6 +538,14 @@ int rows() {
                "wheel's rotation is the soft lock).");
     }
     slider("Steering dead zone", g_cfg.steer_deadzone, 0, 10, 1, "%", "Wheel movement around the centre that does nothing.");
+    {
+        static const char* const RATIOS[] = {"Less lock at speed (original)", "Constant (real car)"};
+        choice("Wheel steering ratio", g_cfg.constant_ratio ? 1 : 0, 2, [](int i) { return std::string(RATIOS[i]); },
+               [](int i) { g_cfg.constant_ratio = i == 1; },
+               "The game gives less steering for the same turn of the wheel the faster you go (60% at 200 km/h). "
+               "Constant: a turn of the wheel always steers the front wheels the same, as on the real car (with a "
+               "Steering lock of 180 degrees the cockpit wheel turns exactly like yours).");
+    }
 
     ui::header_widget("Pedals");
     {

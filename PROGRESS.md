@@ -1293,3 +1293,9 @@ in seconds) and a Watch a race session: paused frames differ only by a sub-pixel
   spring load smoothed over ~0.5 s. v2 drops v1's spring / damper changes and fades +0x4c0 by 20% a substep for a wheel
   hanging two substeps in a row (+0x690 and +0x3b0 both 0), catching up 20% a substep (not 1%) after touch-down while
   under half the spring load. AI laps: no +0x4c0 lane under 500 N in normal driving.
+- User confirmed high v2 (no crazy spins). Added `F1CE_WHEEL_RATIO=1` (launcher "Wheel steering ratio"): a wheel's set
+  keeps its full lock at any speed (+0x5dc = 0 during 0x112818); scripted wheel at 36-40 m/s: lock 1.600 (original
+  1.6 - 0.011 v), input -0.3 -> angle -0.48.
+- Cockpit steering animation (F1CE_CAMERA=4, scripted wheel held at 0 / -0.5 / -1, standing): the wheel turns ~45 deg
+  at half and ~90 deg at full game steering, linear, the driver's right arm crossing over the top at full lock (baked
+  in Steer.anim). So the game's animation is 180 deg lock to lock; a real wheel set to Steering lock 180 matches it 1:1.
