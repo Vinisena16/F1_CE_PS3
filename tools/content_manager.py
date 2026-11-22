@@ -10,6 +10,7 @@ Each picture says where the game uses it: in game (the race car in races and tim
 garage / menu car (stream.wad), menus, or the podium (season_pack.used_in).
 """
 import configparser
+import copy
 import json
 import os
 import queue
@@ -159,7 +160,7 @@ class Form(ttk.Frame):
 
     def __init__(self, master, fields, choices=(), columns=1, width=44):
         super().__init__(master)
-        self.fields, self.vars, self.data, self.combos = fields, {}, None, {}
+        self.fields, self.vars, self.data, self.combos, self.names = fields, {}, None, {}, {}
         rows = -(-len(fields) // columns)
         for i, (key, label) in enumerate(fields):
             r, c = i % rows, i // rows * 2
@@ -174,13 +175,21 @@ class Form(ttk.Frame):
         for c in range(columns):
             self.columnconfigure(c * 2 + 1, weight=1)
 
-    def set_choices(self, key, values):
-        self.combos[key].configure(values=values)
+    def set_choices(self, key, values, names=None):
+        """names: value -> the text shown for it."""
+        self.names[key] = names or {}
+        self.combos[key].configure(values=[self.names[key].get(v, v) for v in values])
 
     def load(self, data, get=lambda d, k: d.get(k)):
         self.data = data
         for key, _ in self.fields:
-            self.vars[key].set(fmt(get(data, key)) if data is not None else '')
+            v = get(data, key) if data is not None else ''
+            self.vars[key].set(self.names[key].get(v) or fmt(v) if key in self.names else fmt(v))
+
+    def text(self, key):
+        """The edited text (the value, for a name of set_choices)."""
+        shown = self.vars[key].get()
+        return next((v for v, name in self.names.get(key, {}).items() if name == shown), shown)
 
     def store(self, get=lambda d, k: d.get(k), put=lambda d, k, v: d.__setitem__(k, v)):
         if self.data is None:
@@ -188,12 +197,12 @@ class Form(ttk.Frame):
         n = 0
         for key, label in self.fields:
             old = get(self.data, key)
-            if old is None and not self.vars[key].get().strip():
+            if old is None and not self.text(key).strip():
                 continue
             try:
-                new = parse_like(self.vars[key].get(), old)
+                new = parse_like(self.text(key), old)
             except ValueError:
-                raise ValueError(f'{label}: "{self.vars[key].get()}" is not a valid value')
+                raise ValueError(f'{label}: "{self.text(key)}" is not a valid value')
             if new != old and fmt(new) != fmt(old):
                 put(self.data, key, new)
                 n += 1
@@ -270,21 +279,33 @@ class App(tk.Tk):
 
 
 
-    def _list_and_detail(self, title):
+    def _list_and_detail(self, title, buttons=(), note=''):
+        """A tab with a list and the selected row's detail; buttons [(text, command)] and a note below the list."""
         tab = ttk.Frame(self.nb, padding=6)
         self.nb.add(tab, text=title)
-        lst = tk.Listbox(tab, width=24, exportselection=False)
-        lst.pack(side='left', fill='y')
+        left = ttk.Frame(tab)
+        left.pack(side='left', fill='y')
+        # bottom first, so the buttons keep their place when the window is small
+        if note:
+            ttk.Label(left, text=note, foreground='#555', wraplength=165, justify='left').pack(side='bottom', anchor='w')
+        for text, cmd in reversed(buttons):
+            ttk.Button(left, text=text, command=cmd).pack(side='bottom', fill='x')
+        lst = tk.Listbox(left, width=24, exportselection=False)
+        lst.pack(fill='both', expand=True)
         detail = ttk.Frame(tab, padding=(10, 0))
         detail.pack(side='left', fill='both', expand=True)
         return tab, lst, detail
 
     def _teams_tab(self):
-        self.teams_tab, self.team_list, d = self._list_and_detail('Teams')
+        self.teams_tab, self.team_list, d = self._list_and_detail(
+            'Teams', [('Move up', lambda: self.move_team(-1)), ('Move down', lambda: self.move_team(1))],
+            'Order of the teams in the menus and the pit lane (the classic cars stay last). Save and Build to apply.')
         self.team_list.bind('<<ListboxSelect>>', lambda e: self.show_team())
         cols = ttk.Frame(d)
         cols.pack(fill='x')
-        self.team_form = Form(cols, TEAM_FIELDS)
+        self.team_form = Form(cols, TEAM_FIELDS, choices=('driver1', 'driver2'))
+        for key in ('driver1', 'driver2'):
+            self.team_form.combos[key].bind('<<ComboboxSelected>>', lambda e, k=key: self.change_seat(k))
         self.team_form.pack(side='left', fill='x', expand=True, anchor='n')
         perf = ttk.LabelFrame(cols, text='dynamics.bin values (meanings unconfirmed: no pace change seen in a test)', padding=6)
         perf.pack(side='left', fill='x', expand=True, anchor='n', padx=(10, 0))
@@ -397,7 +418,11 @@ class App(tk.Tk):
             self.run_tool(['steering', str(self.pack), '--models'], self.select_pack)
 
     def _drivers_tab(self):
-        self.drivers_tab, self.driver_list, d = self._list_and_detail('Drivers')
+        self.drivers_tab, self.driver_list, d = self._list_and_detail(
+            'Drivers', [('Move up', lambda: self.move_driver(-1)), ('Move down', lambda: self.move_driver(1)),
+                        ('Arrange by team', self.arrange_drivers)],
+            'Order of the 22 race drivers on the entry list, and in the standings before the first race. Save and '
+            'Build to apply.')
         self.driver_list.bind('<<ListboxSelect>>', lambda e: self.show_driver())
         # small windows: the statistics box goes below the bottom, the pictures past the right edge
         d = self._scrolled(d, fit_width=True, min_width=790)
@@ -597,21 +622,18 @@ class App(tk.Tk):
         return info.get('used_in') or season_pack.used_in(rel, info['targets'], (self.roles or {}).get(team))
 
     def load_season(self):
+        self.shown_team = self.shown_driver = None     # the pack shown before
         self.ents = self.load_json('DATABASE/entities.json')
         self.load_manifest()
         self.dyn = self.load_json('DATABASE/dynamics.json')
-        self.team_list.delete(0, 'end')
-        self.driver_list.delete(0, 'end')
-        self.teams = [t for t in (self.ents or {}).get('teams', []) if t['id'] in season_pack.TEAMS]
+        self.load_original()
+        self.check_lineup()
         self.drivers = (self.ents or {}).get('drivers', [])
-        self.load_original_drivers()
+        for d in self.drivers:      # packs made before 2026-11-21 have no driver nationality: the game's
+            if 'nationality' not in d and self.orig_drivers.get(d['id'], {}).get('nationality'):
+                d['nationality'] = self.orig_drivers[d['id']]['nationality']
         self.driver_form.set_choices('nationality', sorted(c['id'] for c in (self.ents or {}).get('countries', [])))
-        self.rim_list.delete(0, 'end')
-        for t in self.teams:
-            self.team_list.insert('end', t.get('name') or t['id'])
-            self.rim_list.insert('end', t.get('name') or t['id'])
-        for dr in self.drivers:
-            self.driver_list.insert('end', f'{dr.get("car_number", "")}  {dr.get("display_name") or dr["id"]}')
+        self.fill_lists()
         self.steer_list.delete(0, 'end')
         names = {t['id']: t.get('name') or t['id'] for t in self.teams}
         for t in self.steering_teams():
@@ -635,15 +657,118 @@ class App(tk.Tk):
             self.driver_list.selection_set(0)
             self.show_driver()
 
-    def load_original_drivers(self):
-        """The game's own driver records (for the Drivers tab's reference line). Packs made before 2026-11-21 have
-        no driver nationality in entities.json: take the game's."""
+    def load_original(self):
+        """The game's own database (None without the game folder), and the ids of the season's teams and drivers."""
         usr = self.usrdir()
-        self.orig_drivers = {} if not usr else {d['id']: d for d in season_pack.entities.export(
-            season_pack.entities.parse(season_pack.Game(usr).get('offline.wad', 'entities.bin')))['drivers']}
-        for d in self.drivers:
-            if 'nationality' not in d and self.orig_drivers.get(d['id'], {}).get('nationality'):
-                d['nationality'] = self.orig_drivers[d['id']]['nationality']
+        self.original = season_pack.entities.export(season_pack.entities.parse(
+            season_pack.Game(usr).get('offline.wad', 'entities.bin'))) if usr else None
+        self.orig_drivers = {d['id']: d for d in (self.original or {}).get('drivers', [])}
+        self.race_teams, self.race_drivers = season_pack.entities.race_ids(self.original) if self.original else ([], [])
+
+    def check_lineup(self):
+        """A database whose rows are not a valid season (edited by hand) makes cars overlap in the game: offer to
+        repair it."""
+        if not self.ents or not self.original:
+            return
+        problems = season_pack.entities.lineup_problems(self.ents, self.original)
+        if not problems:
+            return
+        for p in problems:
+            self.log(f'{self.pack.name}: {p}')
+        fixed = copy.deepcopy(self.ents)
+        done = season_pack.entities.repair(fixed, self.original)
+        if messagebox.askyesno('Content Manager', 'The driver line-up of this pack is not valid: each of the 22 race '
+                               'drivers needs one row and exactly one seat.\n\n' + '\n'.join(problems) +
+                               '\n\nRepair it like this? (Save to keep it)\n\n' + '\n'.join(done)):
+            self.ents = fixed
+            for d in done:
+                self.log(f'{self.pack.name}: {d}')
+
+    def fill_lists(self):
+        """The team, rim and driver lists, in the order of the database (keeps the selected rows)."""
+        self.teams = [t for t in (self.ents or {}).get('teams', []) if t['id'] in season_pack.TEAMS]
+        for lst, rows, shown, text in (
+                (self.team_list, self.teams, getattr(self, 'shown_team', None), lambda t: t.get('name') or t['id']),
+                (self.rim_list, self.teams, getattr(self, 'shown_rims', None), lambda t: t.get('name') or t['id']),
+                (self.driver_list, self.drivers, getattr(self, 'shown_driver', None),
+                 lambda d: f'{d.get("car_number", "")}  {d.get("display_name") or d["id"]}')):
+            lst.delete(0, 'end')
+            for n, r in enumerate(rows):
+                lst.insert('end', text(r))
+                if r is shown:
+                    lst.selection_set(n)
+                    lst.see(n)
+        race = [d for d in self.drivers if d['id'] in self.race_drivers]
+        names = {d['id']: f'{d.get("last_name") or d.get("display_name") or ""} ({d["id"]})' for d in race}
+        for key in ('driver1', 'driver2'):
+            self.team_form.set_choices(key, [d['id'] for d in race], names)
+
+    # ------------------------------------------------------------------ order and seats
+    def move_row(self, section, ids, row, step):
+        """Swaps a row with the next / previous one of the season's rows (ids)."""
+        rows = self.ents[section]
+        pos = [n for n, r in enumerate(rows) if r['id'] in ids]
+        i = next((k for k, n in enumerate(pos) if rows[n] is row), None)
+        if i is None or not 0 <= i + step < len(pos):
+            return False
+        a, b = pos[i], pos[i + step]
+        rows[a], rows[b] = rows[b], rows[a]
+        return True
+
+    def number_drivers(self):
+        for n, d in enumerate([d for d in self.drivers if d['id'] in self.race_drivers]):
+            d['order'] = n
+
+    def stored(self):
+        """The open forms into the loaded data; False (with a message) when a value is not valid."""
+        try:
+            self.store_forms()
+        except ValueError as e:
+            messagebox.showerror('Content Manager', str(e))
+            return False
+        return True
+
+    def move_team(self, step):
+        t = self.cur(self.team_list, self.teams) if self.kind == 'season' else None
+        if t is not None and self.stored() and self.move_row('teams', self.race_teams, t, step):
+            self.fill_lists()
+
+    def move_driver(self, step):
+        d = self.cur(self.driver_list, self.drivers) if self.kind == 'season' else None
+        if d is not None and self.stored() and self.move_row('drivers', self.race_drivers, d, step):
+            self.number_drivers()
+            self.fill_lists()
+
+    def arrange_drivers(self):
+        """The race drivers in the order of the teams: driver 1 and driver 2 of the first team, ..."""
+        if self.kind != 'season' or not self.ents or not self.original or not self.stored():
+            return
+        order = [t.get(k) for t, k in season_pack.entities.seats(self.ents['teams'], self.race_teams)]
+        place = [n for n, d in enumerate(self.drivers) if d['id'] in self.race_drivers]
+        race = sorted((self.drivers[n] for n in place),
+                      key=lambda d: order.index(d['id']) if d['id'] in order else len(order))
+        for n, d in zip(place, race):
+            self.drivers[n] = d
+        self.number_drivers()
+        self.fill_lists()
+        self.log('drivers arranged in the order of the teams (Save and Build to apply)')
+
+    def change_seat(self, key):
+        """Another driver chosen for a seat: the driver who had it takes the chosen one's seat (one seat each)."""
+        t = self.shown_team
+        if not t:
+            return
+        old = t.get(key)
+        if not self.stored():
+            return
+        new = t.get(key)
+        for other, k in season_pack.entities.seats(self.ents['teams'], self.race_teams):
+            if other.get(k) == new and not (other is t and k == key):
+                other[k] = old
+                names = self.team_form.names[key]
+                self.log(f'{names.get(new, new)}: {t.get("name") or t["id"]}; {names.get(old, old)}: '
+                         f'{other.get("name") or other["id"]}')
+        self.team_form.load(t)
 
     def show_driver_ref(self):
         """The driver's database id (the name Teams > Driver 1 / Driver 2 use), original name and current teams."""
@@ -660,7 +785,7 @@ class App(tk.Tk):
         self.driver_ref.configure(text=f'Teams tab name: {dr["id"]}' +
                                   (f'      originally {orig} in the game' if orig else '') +
                                   f'\nIn the Teams tab: {", ".join(teams) or "no team"}   (to move this driver, '
-                                  f'write {dr["id"]} as Driver 1 or Driver 2 of the new team)')
+                                  f'choose it as Driver 1 or Driver 2 of the new team: the two drivers swap seats)')
 
     def cur(self, lst, items):
         s = lst.curselection()
@@ -673,6 +798,9 @@ class App(tk.Tk):
         self.store_forms()
         t = self.cur(self.team_list, self.teams)
         self.shown_team = t
+        for key in ('driver1', 'driver2'):      # the classic cars' own drivers stay
+            self.team_form.combos[key].configure(
+                state='readonly' if t and t['id'] in self.race_teams else 'disabled')
         self.team_form.load(t)
         self.perf_form.load(self.perf_of(t), get=lambda d, k: d.get(k.split('.')[0], {}).get(k.split('.')[1]))
         if not t:
@@ -702,7 +830,7 @@ class App(tk.Tk):
         self.team_imgs[7].show(next(iter(sorted(drv.glob('InCarOveralls*.png'))), None) if drv.is_dir() else None)
 
     def show_rims(self):
-        t = self.cur(self.rim_list, self.teams)
+        t = self.shown_rims = self.cur(self.rim_list, self.teams)
         if not t:
             return
         roles = (self.roles or {}).get(t['id'], {})

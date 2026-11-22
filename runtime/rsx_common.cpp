@@ -894,7 +894,7 @@ std::vector<ProgEntry> load_program_db() {
 // ------------------------------------------------------------------ hashes and small helpers
 // change-detection hash of guest memory: 64-byte stripes in two AVX2 accumulators (data times data, as xxh3, with a key
 // that moves on per stripe so that swapped stripes differ), then four independent multiply chains for what is left;
-// step > 8 samples one 8-byte word per step
+// step > 8 (a power of two) samples one 8-byte word per step
 u64 hash_range(const u8* p, u32 bytes, u32 step) {
     u64 h0 = 1469598103934665603ull, h1 = 0x9E3779B97F4A7C15ull, h2 = 0xC2B2AE3D27D4EB4Full, h3 = 0x165667B19E3779F9ull;
     constexpr u64 M = 1099511628211ull;
@@ -927,7 +927,15 @@ u64 hash_range(const u8* p, u32 bytes, u32 step) {
         for (; k + 8 <= bytes; k += 8) { u64 x; memcpy(&x, p + k, 8); h0 = (h0 ^ x) * M; }
         for (; k < bytes; k++) h1 = (h1 ^ p[k]) * M;
     } else {
-        for (; k + 8 <= bytes; k += step) { u64 x; memcpy(&x, p + k, 8); h0 = (h0 ^ x) * M; }
+        // the word moves around inside its 64-byte line: at a fixed place it would only ever be the alpha half of the
+        // DXT5 blocks (the menus' photos of two team mates have the same alpha: the old photo stayed on the screen)
+        const u32 mask = std::min(step, 64u) - 8;
+        for (u32 n = 0; k + 8 <= bytes; k += step, n++) {
+            const u32 at = k + (n * 0x9E3779B1u >> 26 & mask);
+            u64 x;
+            memcpy(&x, p + (at + 8 <= bytes ? at : k), 8);
+            h0 = (h0 ^ x) * M;
+        }
     }
     return h0 ^ (h1 * 3) ^ (h2 * 5) ^ (h3 * 7) ^ bytes;
 }

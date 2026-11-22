@@ -14,6 +14,17 @@ Format (big endian): sections, each {u32 version, u32 record size, u32 count} th
 String fields are recognised per section: the word positions that hold a pool string start (or -1) in every record.
 Pool texts are UTF-8 (the game draws accented names such as Räikkönen from them).
 Import rewrites the strings and numbers given in the JSON; the record ids (id, key) stay.
+
+Order (arrange): the game lists the first 11 team records and the first 22 driver records in record order (menus,
+pit lane, standings before the first race), so import moves those records into the order of the JSON rows. With them:
+  teams    word 23 = the record position: the pit lane slot of a team is word 23 (0xCD42C) or the position (0xCC8CC)
+  cars     the garage shows team record n with car record n: the first 11 cars move with their teams
+  drivers  word 29 'order' = the driver's slot (0-21) on the entry list (0x1C15B0: of two drivers with one order the
+           second overwrites the first) and the radio's "better / worse than expected" limit (0x662514). The JSON
+           rows decide when they were moved, else the 'order' numbers; the original has three pairs swapped.
+           The game also takes the engine sound (order / 2) and the spoken names from it: runtime/lineup.cpp keeps
+           those with their team and driver.
+Every one of the 22 drivers needs exactly one seat (teams driver1 / driver2): lineup_problems, repair.
 """
 import json
 import struct
@@ -46,6 +57,8 @@ TEAM_FIELDS = {
     16: 'stat_b', 17: 'points', 18: 'note', 19: 'folder', 20: 'key',
 }
 KNOWN = {'drivers': DRIVER_FIELDS, 'teams': TEAM_FIELDS}
+RACE_TEAMS, RACE_DRIVERS = 11, 22   # the season's teams / drivers: the first records (fixed counts in the game)
+TEAM_ORDER_WORD, DRIVER_ORDER_WORD = 23, 29
 
 
 def decode_text(b: bytes) -> str:
@@ -221,6 +234,126 @@ def apply(sections, edits):
     return changed
 
 
+def seats(teams, ids):
+    """[(team row, 'driver1' or 'driver2')] of the season's teams, in the order of the rows."""
+    return [(t, k) for t in teams if t['id'] in ids for k in ('driver1', 'driver2')]
+
+
+def race_ids(original):
+    """The ids of the season's teams and drivers, in the game's order."""
+    return ([t['id'] for t in original['teams'][:RACE_TEAMS]], [d['id'] for d in original['drivers'][:RACE_DRIVERS]])
+
+
+def lineup_problems(edits, original):
+    """What keeps the rows from being a season: ids given twice or missing, drivers with two seats or none."""
+    out = []
+    if 'teams' not in edits or 'drivers' not in edits:
+        return out
+    team_ids, driver_ids = race_ids(original)
+    for what, ids, rows in (('team', team_ids, edits['teams']), ('driver', driver_ids, edits['drivers'])):
+        have = [r['id'] for r in rows]
+        out += [f'{what} {i}: {have.count(i)} rows have this id' for i in dict.fromkeys(have) if have.count(i) > 1]
+        out += [f'{what} {i}: no row has this id' for i in ids if i not in have]
+    taken = {}
+    for t, k in seats(edits['teams'], team_ids):
+        taken.setdefault(t.get(k), []).append(f'{t["id"]} {k}')
+    for d, where in taken.items():
+        if d not in driver_ids:
+            out.append(f'{", ".join(where)}: "{d}" is not one of the {RACE_DRIVERS} race drivers')
+        elif len(where) > 1:
+            out.append(f'driver {d} has {len(where)} seats: {", ".join(where)}')
+    out += [f'driver {d} has no seat' for d in driver_ids if d not in taken]
+    return out
+
+
+def repair(edits, original):
+    """Changes the rows so that lineup_problems finds nothing; returns what it did. A driver row with an id used
+    twice (a copied row) gets a free race driver's id, and the seat nearest to its place in the list."""
+    done = []
+    team_ids, driver_ids = race_ids(original)
+    for what, ids in (('teams', team_ids), ('drivers', driver_ids)):
+        rows, by_id = edits[what], {r['id']: r for r in original[what]}
+        name = 'last_name' if what == 'drivers' else 'name'
+        have = [r['id'] for r in rows]
+        free = [i for i in ids if i not in have]
+        for i in [i for i in dict.fromkeys(have) if have.count(i) > 1]:
+            same = [r for r in rows if r['id'] == i]
+            keep = next((r for r in same if r.get(name) == by_id.get(i, {}).get(name)), same[-1])
+            for r in [r for r in same if r is not keep]:
+                label = f'{r.get("first_name") or ""} {r.get(name) or ""}'.strip()
+                at = next(n for n, x in enumerate(rows) if x is r)
+                if what == 'teams' or not free:
+                    del rows[at]
+                    done.append(f'{what[:-1]} {i}: the second row ({label}) is removed')
+                    continue
+                new = free.pop(0)
+                # its seat: the one nearest to the row among the seats that name the id
+                named = [(abs(n - at), n) for n, (t, k) in enumerate(seats(edits['teams'], team_ids)) if t.get(k) == i]
+                r.update({k: by_id[new][k] for k in ('id', 'key', 'folder', 'field20') if k in by_id[new]})
+                done.append(f'{label}: gets the free driver id {new} (was a second {i})')
+                if len(named) > 1:
+                    t, k = seats(edits['teams'], team_ids)[min(named)[1]]
+                    t[k] = new
+                    done.append(f'{t["id"]} {k}: {i} -> {new} ({label})')
+        for i in [i for i in ids if i not in [r['id'] for r in rows]]:
+            last = max([n for n, r in enumerate(rows) if r['id'] in ids], default=-1)
+            rows.insert(last + 1, dict(by_id[i]))
+            done.append(f'{what[:-1]} {i}: the row is added back from the game')
+    taken, open_seats = set(), []
+    for t, k in seats(edits['teams'], team_ids):
+        if t.get(k) in driver_ids and t[k] not in taken:
+            taken.add(t[k])
+        else:
+            open_seats.append((t, k))
+    free = [r['id'] for r in edits['drivers'] if r['id'] in driver_ids and r['id'] not in taken]
+    for (t, k), d in zip(open_seats, free):
+        done.append(f'{t["id"]} {k}: {t.get(k)} -> {d}')
+        t[k] = d
+    return done
+
+
+def wanted_drivers(edits, original):
+    """The race driver ids in the order the rows ask for, or None when they ask for the game's order."""
+    ids, game = race_ids(original)[1], {d['id']: d['order'] for d in original['drivers']}
+    rows = [r for r in edits.get('drivers', []) if r['id'] in ids]
+    listed = [r['id'] for r in rows]
+    if listed != ids:
+        return listed
+    orders = [r.get('order', game[r['id']]) for r in rows]
+    if orders == [game[i] for i in ids]:
+        return None
+    return [ids[n] for n in sorted(range(len(ids)), key=lambda n: (orders[n], n))]
+
+
+def arrange(sections, edits, original):
+    """Moves the season's team, car and driver records into the order of the edits (see the top). original = export
+    of the unedited sections."""
+    if 'teams' not in edits or 'drivers' not in edits:
+        return 0
+    problems = lineup_problems(edits, original)
+    if problems:
+        raise ValueError('the season line-up is not valid:\n  ' + '\n  '.join(problems))
+    teams, cars, drivers = (sections[SECTION_NAMES.index(n)].records for n in ('teams', 'cars', 'drivers'))
+    changed = 0
+    team_ids = race_ids(original)[0]
+    want = [t['id'] for t in edits['teams'] if t['id'] in team_ids]
+    if want != team_ids:
+        pick = [team_ids.index(i) for i in want]
+        teams[:RACE_TEAMS] = [teams[n] for n in pick]
+        cars[:RACE_TEAMS] = [cars[n] for n in pick]
+        for n, r in enumerate(teams[:RACE_TEAMS]):
+            r.words[TEAM_ORDER_WORD] = n
+        changed += 1
+    want = wanted_drivers(edits, original)
+    if want:
+        by_id = {r.id: r for r in drivers[:RACE_DRIVERS]}
+        drivers[:RACE_DRIVERS] = [by_id[i] for i in want]
+        for n, r in enumerate(drivers[:RACE_DRIVERS]):
+            r.words[DRIVER_ORDER_WORD] = n
+        changed += 1
+    return changed
+
+
 def main(argv):
     if len(argv) < 2:
         print(__doc__); return 1
@@ -236,7 +369,8 @@ def main(argv):
     elif argv[0] == 'export' and len(argv) > 2:
         Path(argv[2]).write_text(json.dumps(export(sections), indent=1, ensure_ascii=False), encoding='utf-8')
     elif argv[0] == 'import' and len(argv) > 3:
-        n = apply(sections, json.loads(Path(argv[2]).read_text(encoding='utf-8')))
+        edits, original = json.loads(Path(argv[2]).read_text(encoding='utf-8')), export(sections)
+        n = apply(sections, edits) + arrange(sections, edits, original)
         new = build(sections)
         parse(new)
         Path(argv[3]).write_bytes(new)

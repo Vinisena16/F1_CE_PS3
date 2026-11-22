@@ -16,6 +16,8 @@ template writes (folders named by the database ids: CARS/Honda, DRIVERS/jbutton,
   pack.ini                          name and description shown by the launcher / Content Manager
   DATABASE/entities.json            drivers, teams, cars, tracks: names, texts, car numbers, ratings, driver
                                     nationality (a countries id) (tools/entities.py)
+                                    The first 11 team rows and 22 driver rows are in the order of the game (menus,
+                                    pit lane, entry list); each of the 22 drivers needs exactly one seat
   DATABASE/dynamics.json            per-team car performance: aero, engine, gearbox, failure rates (tools/dynamics.py)
   DATABASE/points.txt               the points of 1st, 2nd, ... (read by the game itself, runtime/mods.cpp)
   CARS/<team>/livery/*.png          base paint (uv0) and sponsor decals (uv1) of the race model, their low-detail
@@ -958,6 +960,14 @@ def cmd_build(usrdir, pack):
     game = Game(usrdir)
     pack = Path(pack)
     manifest = json.loads((pack / 'template.json').read_text())
+    db = pack / 'DATABASE' / 'entities.json'
+    if db.exists():
+        problems = entities.lineup_problems(json.loads(db.read_text(encoding='utf-8')),
+                                            entities.export(entities.parse(game.get('offline.wad', 'entities.bin'))))
+        if problems:      # before the slow part and before any built file changes
+            print('DATABASE/entities.json: the line-up is not valid, nothing built:\n  ' + '\n  '.join(problems) +
+                  '\nOpen the pack in the Content Manager to repair it.')
+            return 1
     if 'teams' in manifest and not manifest.get('specular_maps'):
         # season packs made before 2026-11-17: name the specular maps and add the reflection mask PNGs
         reflections = set()
@@ -1056,11 +1066,12 @@ def cmd_build(usrdir, pack):
     db = pack / 'DATABASE' / 'entities.json'
     if db.exists() and sha1(db) != manifest.get('database'):
         ents = entities.parse(game.get('offline.wad', 'entities.bin'))
-        n = entities.apply(ents, json.loads(db.read_text(encoding='utf-8')))
+        edits, original = json.loads(db.read_text(encoding='utf-8')), entities.export(ents)
+        n = entities.apply(ents, edits) + entities.arrange(ents, edits, original)
         if n:
             outputs['DATABASE/offline.wad/entities.bin'] = entities.build(ents)
             print(f'DATABASE/entities.json: {n} change(s)')
-            build_driver_figures(game, json.loads(db.read_text(encoding='utf-8')), outputs)
+            build_driver_figures(game, edits, outputs)
     db = pack / 'DATABASE' / 'dynamics.json'
     if db.exists() and sha1(db) != manifest.get('dynamics'):
         dyn = dynamics.parse(game.get('offline.wad', 'dynamics.bin'))
@@ -1081,6 +1092,7 @@ def cmd_build(usrdir, pack):
     manifest['generated'] = generated
     (pack / 'template.json').write_text(json.dumps(manifest, indent=1), newline='\n')
     print(f'{pack}: {len(outputs)} game file(s)')
+    return 0
 
 
 def build_driver_figures(game, ents, outputs):
@@ -1146,7 +1158,7 @@ def main(argv):
     elif argv[0] == 'helmets':
         cmd_helmets(argv[1], argv[2])
     elif argv[0] == 'build':
-        cmd_build(argv[1], argv[2])
+        return cmd_build(argv[1], argv[2])
     elif argv[0] == 'wheelmodels':
         cmd_wheelmodels(argv[1], argv[2])
     elif argv[0] == 'carlods':

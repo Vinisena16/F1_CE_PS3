@@ -60,6 +60,7 @@ set(RUNTIME_SOURCES
   runtime/lv2.cpp
   runtime/fs.cpp
   runtime/mods.cpp
+  runtime/lineup.cpp
   runtime/hle_sys.cpp
   runtime/hle_misc.cpp
   runtime/hle_aspect.cpp
