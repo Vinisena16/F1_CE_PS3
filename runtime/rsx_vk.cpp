@@ -1401,19 +1401,41 @@ Img* cube_texture(u32 u) {
     u32 offset = reg(base), rect = reg(base + 0x18);
     u32 w = rect >> 16, h = rect & 0xFFFF;
     if (!w || w != h || w > 4096) return nullptr;
-    struct CubeEntry { Img* tex = nullptr; u32 w = 0, pw = 0; u64 seq[6] = {}, checked_seq = ~0ull; };
+    struct CubeEntry { Img* tex = nullptr; u32 w = 0, pw = 0; u64 seq[6] = {}, checked_seq = ~0ull; CubeCheck check; bool rendered = false; };
     static std::unordered_map<u32, CubeEntry> cubes;
     CubeEntry& ce = cubes[offset];
-    const u32 pw = scaled(w, std::max(target_scale_x(w, w), target_scale_y(w, w)));
-    if (!ce.tex || ce.w != w) {
+    if (!ce.rendered && ce.checked_seq != g_square_write_seq)
+        for (u32 f = 0; f < 6; f++) {
+            auto it = g_surfaces.find(offset + f * w * w * 4);
+            if (it != g_surfaces.end() && it->second.tex && it->second.width == w && it->second.height == w) ce.rendered = true;
+        }
+    const u32 pw = ce.rendered ? scaled(w, std::max(target_scale_x(w, w), target_scale_y(w, w))) : w;
+    const CubeSource src = !ce.rendered && ce.check.frame != g_frame ? cube_source(u) : CubeSource{};
+    const bool upload = cube_source_changed(src, ce.check);
+    if (!ce.tex || ce.w != w || ce.pw != pw || upload) {   // (changed: a new image, as in upload_texture)
         if (ce.tex) destroy_image(ce.tex);
         ce.tex = make_image(pw, pw, 1, COLOR_FMT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT, true);
-        clear_new(ce.tex);
+        if (!upload) clear_new(ce.tex);
+        if (ce.w != w || ce.pw != pw)
+            LOG_I("rsx: cube map at %08x (%ux%u%s) format=%08x address=%08x remap=%08x filter=%08x control=%08x pitch=%x", offset, w, w, ce.rendered ? "" : ", from memory",
+                  reg(base + 4), reg(base + 8), reg(base + 0x10), reg(base + 0x14), reg(base + 0xC), reg(0x1840 + u * 4) & 0xFFFFF);
         ce.w = w;
+        ce.pw = pw;
         std::fill(ce.seq, ce.seq + 6, 0);
         ce.checked_seq = ~0ull;
-        LOG_I("rsx: cube map at %08x (%ux%u)", offset, w, w);
     }
+    if (upload)
+        for (u32 f = 0; f < 6; f++) {
+            VkBuffer buf;
+            ptrdiff_t soff;
+            u8* p = staging(w * w * 4, &buf, &soff);
+            cube_face_rgba(src, f, (u32*)p);
+            VkBufferImageCopy c{};
+            c.bufferOffset = (VkDeviceSize)soff;
+            c.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, f, 1};
+            c.imageExtent = {w, w, 1};
+            vkCmdCopyBufferToImage(g_ucb, buf, ce.tex->img, VK_IMAGE_LAYOUT_GENERAL, 1, &c);
+        }
     if (ce.checked_seq == g_square_write_seq) return ce.tex;
     ce.checked_seq = g_square_write_seq;
     u32 face_bytes = w * w * 4;
@@ -1667,7 +1689,6 @@ void draw(bool indexed) {
 
     static thread_local VkDrawParams dp;
     memset(&dp, 0, sizeof(dp));
-    bool reads_gamma = false, reads_raw_target = false;   // (the sRGB rule of draw() in rsx_gl.cpp)
     for (float& r : dp.remap) r = (float)0xaae4;
     std::fill(dp.tex_scale, dp.tex_scale + 32, 1.0f);
     static int stale_slot[16] = {};   // a disabled unit keeps its last texture, as an OpenGL binding does
@@ -1679,7 +1700,6 @@ void draw(bool indexed) {
         {
             u32 a = reg(0x1A08 + u * 0x20);
             conv |= (a >> 20) & 0xF;
-            if ((conv & 0x7) && (p->tex_used >> u & 1)) reads_gamma = true;
             if (((a >> 12) & 0xF) == 1) conv |= 16;
         }
         if (reg(0x1A04 + u * 0x20) & 4) {
@@ -1723,11 +1743,6 @@ void draw(bool indexed) {
         if (t && from_surface && (p->tex_used >> u & 1)) sampled(t);
         dp.slot[u] = stale_slot[u] = um.slot;
         dp.tex_flip[u] = from_surface ? 1.0f : 0.0f;
-        if (from_surface && depth_func == 0 && !(conv & 0xF) && (p->tex_used >> u & 1)) {
-            if ((reg(0x1A18 + u * 0x20) >> 16) >= target->width && (reg(0x1A18 + u * 0x20) & 0xFFFF) >= target->height)
-                reads_raw_target = true;
-            else if (reg(0x0A74) & 1) reads_gamma = true;
-        }
         if (reg(0x1A04 + u * 0x20) & 0x4000) {
             u32 rect = reg(0x1A18 + u * 0x20);
             dp.tex_scale[u * 2] = 1.0f / (float)std::max(1u, rect >> 16);
@@ -1759,8 +1774,7 @@ void draw(bool indexed) {
     u64 tun = prof_usec();
     g_prof.t_pre += tun - tat;
 
-    bool cube_face = g_cube_faces.count(target->offset) != 0;
-    bool encode = (reg(0x1FD8) & 1) && reads_gamma && !reads_raw_target && !cube_face;
+    const bool encode = srgb_output();
     memcpy(dp.vp_scale, &R[0x0A20 >> 2], 16);
     memcpy(dp.vp_offset, &R[0x0A30 >> 2], 16);
     dp.surface[0] = (float)target->width;

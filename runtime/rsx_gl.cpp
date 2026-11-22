@@ -148,7 +148,7 @@ struct DepthSurface {
 // written last (a depth-only pass also creates an unwritten colour surface at its offset)
 u64 g_write_seq = 0;
 u64 g_square_write_seq = 0;
-// sRGB output (SHADER_PACKER 0x1FD8 bit 0): colour surfaces are sRGB textures, so with GL_FRAMEBUFFER_SRGB the GPU
+// sRGB output (SHADER_PACKER 0x1FEC bit 0): colour surfaces are sRGB textures, so with GL_FRAMEBUFFER_SRGB the GPU
 // encodes and blends in linear space as the RSX does (encoding in the shader broke additive passes: the menu video
 // composites its planes with ONE/ONE blending and came out washed out and magenta). Clears, blits and readbacks
 // move raw values: conversion off for them.
@@ -1343,19 +1343,25 @@ GLuint upload_texture(u32 unit, bool* is_surface, int* depth_func) {
 // Cube map of texture unit u (format bit 2). The game renders its environment map each frame into six 256x256
 // targets (+X, -X, +Y, -Y, +Z, -Z, one face size apart; double-buffered) and samples them as a cube for the car and
 // cockpit reflections: the faces are blitted from the surfaces into a GL cube map when they were redrawn (flipped:
-// surfaces are stored bottom-up, cube faces top row first like guest memory).
+// surfaces are stored bottom-up, cube faces top row first like guest memory). A cube map none of whose faces was ever
+// a render target is a texture loaded from disc (the driver garage's reflections) and is uploaded from guest memory.
 std::set<u32> g_cube_faces;   // surfaces sampled as cube map faces (written without sRGB encoding)
 GLuint cube_texture(u32 u) {
     u32 base = 0x1A00 + u * 0x20;
     u32 offset = reg(base), rect = reg(base + 0x18);
     u32 w = rect >> 16, h = rect & 0xFFFF;
     if (!w || w != h || w > 4096) return 0;
-    struct CubeEntry { GLuint tex = 0; u32 w = 0, pw = 0; u64 seq[6] = {}, checked_seq = ~0ull; };
+    struct CubeEntry { GLuint tex = 0; u32 w = 0, pw = 0; u64 seq[6] = {}, checked_seq = ~0ull; CubeCheck check; bool rendered = false; };
     static std::unordered_map<u32, CubeEntry> cubes;
     static GLuint blit_fbo = 0;
     CubeEntry& ce = cubes[offset];
-    const u32 pw = scaled(w, std::max(target_scale_x(w, w), target_scale_y(w, w)));   // faces at the scale of the render targets they come from (square)
-    if (!ce.tex || ce.w != w) {
+    if (!ce.rendered && ce.checked_seq != g_square_write_seq)
+        for (u32 f = 0; f < 6; f++) {
+            auto it = g_surfaces.find(offset + f * w * w * 4);
+            if (it != g_surfaces.end() && it->second.tex && it->second.width == w && it->second.height == w) ce.rendered = true;
+        }
+    const u32 pw = ce.rendered ? scaled(w, std::max(target_scale_x(w, w), target_scale_y(w, w))) : w;   // faces at the scale of the render targets they come from (square)
+    if (!ce.tex || ce.w != w || ce.pw != pw) {
         if (!ce.tex) glGenTextures(1, &ce.tex);
         glBindTexture(GL_TEXTURE_CUBE_MAP, ce.tex);
         for (int f = 0; f < 6; f++)
@@ -1368,9 +1374,24 @@ GLuint cube_texture(u32 u) {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         glEnable(0x884F /*GL_TEXTURE_CUBE_MAP_SEAMLESS*/);
         ce.w = w;
+        ce.pw = pw;
         std::fill(ce.seq, ce.seq + 6, 0);
         ce.checked_seq = ~0ull;
-        LOG_I("rsx: cube map at %08x (%ux%u)", offset, w, w);
+        ce.check = CubeCheck{};
+        LOG_I("rsx: cube map at %08x (%ux%u%s) format=%08x address=%08x remap=%08x filter=%08x control=%08x pitch=%x", offset, w, w, ce.rendered ? "" : ", from memory",
+              reg(base + 4), reg(base + 8), reg(base + 0x10), reg(base + 0x14), reg(base + 0xC), reg(0x1840 + u * 4) & 0xFFFFF);
+    }
+    if (!ce.rendered && ce.check.frame != g_frame) {
+        const CubeSource src = cube_source(u);
+        if (cube_source_changed(src, ce.check)) {
+            std::vector<u32> rgba((size_t)w * w);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, ce.tex);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            for (u32 f = 0; f < 6; f++) {
+                cube_face_rgba(src, f, rgba.data());
+                glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + (GLenum)f, 0, 0, 0, (GLsizei)w, (GLsizei)w, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+            }
+        }
     }
     if (ce.checked_seq == g_square_write_seq) return ce.tex;   // no square target written since the last look
     ce.checked_seq = g_square_write_seq;
@@ -1863,8 +1884,6 @@ void draw(bool indexed) {
 
     // textures
     float flips[16] = {}, depth_funcs[16] = {}, tex_scale[32], remaps[16];
-    bool reads_gamma = false;   // the program samples a texture decoded from sRGB
-    bool reads_raw_target = false;   // ... or a colour render target without decode (a copy of raw colour)
     std::fill(remaps, remaps + 16, (float)0xaae4);
     std::fill(tex_scale, tex_scale + 32, 1.0f);
     u64 tu0 = prof_usec();   // (the whole unit loop: a clock read per unit cost ~1 ms per frame)
@@ -1882,10 +1901,6 @@ void draw(bool indexed) {
             static const bool no_gamma = getenv("F1CE_NO_TEXGAMMA") != nullptr;   // debug
             static const bool no_bias = getenv("F1CE_NO_TEXBIAS") != nullptr;     // debug
             if (!no_gamma) conv |= (a >> 20) & 0xF;
-            // only a decoded colour channel makes the output sRGB: the cars' shadow decals decode alpha only (gamma
-            // 8) and subtract from the scene; encoding their colour (0.2 -> 0.48) made the shadows black
-            static const bool alpha_gamma_encodes = getenv("F1CE_ALPHA_GAMMA_ENCODE") != nullptr;   // debug: old rule
-            if ((conv & (alpha_gamma_encodes ? 0xF : 0x7)) && (p->tex_used >> u & 1)) reads_gamma = true;
             if (!no_bias && ((a >> 12) & 0xF) == 1) conv |= 16;
         }
         if ((reg(0x1A04 + u * 0x20) & 4) && !no_cube) {   // cube map: the program declares a samplerCube here
@@ -1925,17 +1940,6 @@ void draw(bool indexed) {
             um.t = t; um.surf = from_surface; um.dfunc = depth_func;
         }
         flips[u] = from_surface ? 1.0f : 0.0f;
-        // a raw read of a colour target at least as large as the destination is a copy (motion blur, the video's
-        // copy to the display buffer, the heat haze that refracts the scene into a 640x360 buffer: encoding it
-        // washed the haze out into white clouds); a smaller one feeds a material (the mirror glass shades the
-        // 256x128 rear view with fog, exposure and tone mapping, and its result is encoded like any other material)
-        if (from_surface && depth_func == 0 && !(conv & 0xF) && (p->tex_used >> u & 1)) {
-            if ((reg(0x1A18 + u * 0x20) >> 16) >= target->width && (reg(0x1A18 + u * 0x20) & 0xFFFF) >= target->height)
-                reads_raw_target = true;
-            // the glass samples nothing else with gamma bits, so this read alone must select the encode (depth test
-            // on: bloom and glare also read smaller targets raw, in passes that stay unencoded)
-            else if (reg(0x0A74) & 1) reads_gamma = true;
-        }
         if (reg(0x1A04 + u * 0x20) & 0x4000) {   // CELL_GCM_TEXTURE_UN: coordinates in texels
             u32 rect = reg(0x1A18 + u * 0x20);
             tex_scale[u * 2] = 1.0f / (float)std::max(1u, rect >> 16);
@@ -2343,28 +2347,14 @@ void draw(bool indexed) {
         dump_surface(target->offset, "_pre");
         glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
     }
-    static const bool no_srgb = getenv("F1CE_NO_TEXGAMMA") != nullptr;   // debug (with the texture decode)
     {   // debug: F1CE_SRGB_LOG logs changes of SHADER_PACKER
         static const bool sl = getenv("F1CE_SRGB_LOG") != nullptr;
         static u32 last = ~0u, n = 0;
-        if (sl && reg(0x1FD8) != last && n++ < 300)
-            LOG_I("srgb: frame %llu 0x1FD8=%x fp=%08x target=%08x", (unsigned long long)g_frame, reg(0x1FD8), reg(0x08E4), target->offset);
-        last = reg(0x1FD8);
+        if (sl && reg(0x1FEC) != last && n++ < 300)
+            LOG_I("srgb: frame %llu 0x1FEC=%x fp=%08x target=%08x", (unsigned long long)g_frame, reg(0x1FEC), reg(0x08E4), target->offset);
+        last = reg(0x1FEC);
     }
-    // SHADER_PACKER bit 0 is set for the whole game, yet the menu video (YUV planes, no gamma bits) and its copy
-    // to the display buffer must not be encoded (washed-out video): encoding is applied to draws that sample
-    // sRGB-decoded textures, which keeps both chains consistent (3D passes write encoded colour that the post
-    // passes read back with gamma bits; the video chain stays raw). Passes that copy a render target read without
-    // decode (motion blur: a gamma-flagged distortion map + the raw scene) are not encoded either, or the blurred
-    // layer comes out brighter than the scene.
-    // cube map faces stay linear: the car shaders read the cube without decode and add the reflection to linear
-    // lighting (encoded faces made the reflections far too strong, most visibly on cars in shadow)
-    bool cube_face = g_cube_faces.count(target->offset) != 0;
-    {   // debug: F1CE_SRGB_TARGET_OFF=<offset hex> writes that target without sRGB encoding (experiments)
-        static const u32 off_t = getenv("F1CE_SRGB_TARGET_OFF") ? (u32)strtoul(getenv("F1CE_SRGB_TARGET_OFF"), nullptr, 16) : ~0u;
-        if (target->offset == off_t) cube_face = true;
-    }
-    bool encode = (reg(0x1FD8) & 1) && reads_gamma && !reads_raw_target && !cube_face && !no_srgb;
+    const bool encode = srgb_output();
     // The encode happens in the fragment shader and blending works on the encoded values, as on the RSX (its
     // generation blends in sRGB space). GL_FRAMEBUFFER_SRGB blends in linear space: multiplicative decals such as the
     // rubber marks on the racing line came out much darker. F1CE_SRGB_FB=1 uses the framebuffer path (comparison).
@@ -2408,8 +2398,9 @@ void draw(bool indexed) {
             std::string tex;
             for (u32 u = 0; u < 16; u++)
                 if (reg(0x1A0C + u * 0x20) & 0x80000000) {
-                    char b[48];
-                    snprintf(b, sizeof(b), " t%u=%08x/%02x/g%x", u, reg(0x1A00 + u * 0x20), (reg(0x1A04 + u * 0x20) >> 8) & 0xFF, (reg(0x1A08 + u * 0x20) >> 20) & 0xF);
+                    char b[96];
+                    snprintf(b, sizeof(b), " t%u=%08x/%02x/g%x/a%08x/r%04x/f%08x/c%08x", u, reg(0x1A00 + u * 0x20), (reg(0x1A04 + u * 0x20) >> 8) & 0xFF, (reg(0x1A08 + u * 0x20) >> 20) & 0xF,
+                             reg(0x1A08 + u * 0x20), reg(0x1A10 + u * 0x20) & 0xFFFF, reg(0x1A14 + u * 0x20), reg(0x1A1C + u * 0x20));
                     tex += b;
                 }
             static int ndraw = 0;
@@ -2420,10 +2411,15 @@ void draw(bool indexed) {
                 LOG_I("trace regs:%s", rs.c_str());
             }
             static const int fc_prog = getenv("F1CE_TRACE_FC") ? atoi(getenv("F1CE_TRACE_FC")) : -1;   // debug
-            if ((int)p->prog == fc_prog) {
+            static const bool fc_all = fc_prog == 0;   // F1CE_TRACE_FC=0: every draw
+            if (fc_all || (int)p->prog == fc_prog) {
                 std::string fc;
                 for (size_t i = 0; i < fp_consts.size(); i++) { char b[24]; snprintf(b, sizeof(b), "%s%g", i % 4 ? "," : " | ", fp_consts[i]); fc += b; }
                 LOG_I("trace fc prog %u:%s", p->prog, fc.c_str());
+                for (u32 c = 256; c < 272; c += 4)
+                    LOG_I("trace vp c[%u..] = %g %g %g %g | %g %g %g %g | %g %g %g %g | %g %g %g %g", c, vp_consts[c * 4], vp_consts[c * 4 + 1], vp_consts[c * 4 + 2],
+                          vp_consts[c * 4 + 3], vp_consts[c * 4 + 4], vp_consts[c * 4 + 5], vp_consts[c * 4 + 6], vp_consts[c * 4 + 7], vp_consts[c * 4 + 8], vp_consts[c * 4 + 9],
+                          vp_consts[c * 4 + 10], vp_consts[c * 4 + 11], vp_consts[c * 4 + 12], vp_consts[c * 4 + 13], vp_consts[c * 4 + 14], vp_consts[c * 4 + 15]);
                 LOG_I("trace vp c[464..467] = %g %g %g %g | %g %g %g %g | %g %g %g %g | %g %g %g %g", vp_consts[464 * 4], vp_consts[464 * 4 + 1],
                       vp_consts[464 * 4 + 2], vp_consts[464 * 4 + 3], vp_consts[465 * 4], vp_consts[465 * 4 + 1], vp_consts[465 * 4 + 2],
                       vp_consts[465 * 4 + 3], vp_consts[466 * 4], vp_consts[466 * 4 + 1], vp_consts[466 * 4 + 2], vp_consts[466 * 4 + 3],
@@ -2437,8 +2433,8 @@ void draw(bool indexed) {
                 LOG_I("trace attr%u fmt=%08x first vertices: %08x %08x %08x", a, fmt, ld32(ea), ld32(ea + ((fmt >> 8) & 0xFF)),
                       ld32(ea + 2 * ((fmt >> 8) & 0xFF)));
             }
-            LOG_I("trace draw %d: fp=%08x prog %u -> %08x (%ux%u pitch %x) blend=%x sf=%08x df=%08x cmask=%08x depth=%x/%x aa=%x poff=%x/%08x/%08x stencil=%x/%08x/%08x cull=%x/%x/%x prim=%u n=%zu%s", ndraw, reg(0x08E4), p->prog,
-                  target->offset, target->width, target->height, reg(0x020C) & 0xFFFF, reg(0x0310), reg(0x0314), reg(0x0318), reg(0x0324), reg(0x0A74), reg(0x0A70), reg(0x1D7C), reg(0x0A68), reg(0x0A78), reg(0x0A7C), reg(0x0348), reg(0x0350), reg(0x0364), reg(0x183C), reg(0x1830), reg(0x1834), g_prim,
+            LOG_I("trace draw %d: fp=%08x (fp_%016llx) prog %u -> %08x (%ux%u pitch %x) blend=%x sf=%08x df=%08x cmask=%08x depth=%x/%x/%x aa=%x srgb=%x/%d zc=%x clip=%g/%g vpz=%g/%g poff=%x/%08x/%08x stencil=%x/%08x/%08x cull=%x/%x/%x prim=%u n=%zu%s", ndraw, reg(0x08E4), (unsigned long long)p->fh, p->prog,
+                  target->offset, target->width, target->height, reg(0x020C) & 0xFFFF, reg(0x0310), reg(0x0314), reg(0x0318), reg(0x0324), reg(0x0A74), reg(0x0A70), reg(0x0A6C), reg(0x1D7C), reg(0x1FEC), (int)encode, reg(0x1D78), regf(0x0394), regf(0x0398), regf(0x0A28), regf(0x0A38), reg(0x0A68), reg(0x0A78), reg(0x0A7C), reg(0x0348), reg(0x0350), reg(0x0364), reg(0x183C), reg(0x1830), reg(0x1834), g_prim,
                   (size_t)idx_count, tex.c_str());
             // also save the target after each draw (frame_s<off>_d<k>); F1CE_TRACE_DUMP=<from>,<to> limits the draws
             static const char* td = getenv("F1CE_TRACE_DUMP");

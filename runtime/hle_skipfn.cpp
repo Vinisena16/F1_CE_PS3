@@ -39,8 +39,22 @@ struct Counter {
 bool skip_2f141c_hook(PPUContext&) { static Counter c(0x2f141c); return c.hit(); }
 // foaLightingManager::RenderBlurredShadows
 bool skip_2f1bec_hook(PPUContext&) { static Counter c(0x2f1bec); return c.hit(); }
-// RenderShadowMap
-bool skip_43f620_hook(PPUContext&) { static Counter c(0x43f620); return c.hit(); }
+// RenderShadowMap. The pass never sets a depth function: it runs with the one the frame left, LEQUAL after the reflection
+// cube map's faces, but ALWAYS (the depth reductions of the post effects) when no faces were drawn before it, as in the
+// driver garage (the last caster drawn won: the rear wing, a rear tyre and the wall pillars were lit through the roof)
+// and on 60 fps frames that skip the faces (flickering shadows, hle_cubemap.cpp). LEQUAL is written to the game's command
+// list (0x10C3E1AC: begin, end, current) before the pass.
+bool skip_43f620_hook(PPUContext&) {
+    static Counter c(0x43f620);
+    if (c.hit()) return true;
+    const u32 ctx = 0x10C3E1AC, cur = ld32(ctx + 8);
+    if (cur && cur + 8 <= ld32(ctx + 4)) {
+        st32(cur, 0x00040A6C);       // NV4097_SET_DEPTH_FUNC
+        st32(cur + 4, 0x00000203);   // LEQUAL
+        st32(ctx + 8, cur + 8);
+    }
+    return false;
+}
 // RenderShadowToAlpha
 bool skip_43ffa0_hook(PPUContext&) { static Counter c(0x43ffa0); return c.hit(); }
 // foaCarModelManagerPS3::Render

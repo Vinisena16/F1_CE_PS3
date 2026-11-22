@@ -58,11 +58,10 @@ bool cube_render_hook(PPUContext&) {
     if (now - g_last_call > 1000000) g_scene_start = now;
     g_last_call = now;
     g_skipped = g_never || (g_static ? now - g_scene_start > 2000000 : g_interval && now - g_last_render < g_interval);
-    // Known issue: a skipped pass changes the main view's shadows. The shadow map and scene passes start from RSX state
-    // the faces leave behind (texture unit 2, depth function, blend), which differs when they did not run: at a steady
-    // 60 fps (updates every other frame) shadows flicker on alternate frames, most visibly thin ones under a low sun
-    // (guardrail at Bahrain turn 1 with Golden Hour). F1CE_CUBE_HZ=0 avoids it. Debug: F1CE_CUBE_ALT=1 skips every
-    // other pass whatever the timing, which reproduces it with F1CE_TICKS_FIXED=1 and frame dumps.
+    // The shadow map passes start from the state the faces leave behind: without them the depth function was ALWAYS and
+    // shadows flickered on alternate frames at a steady 60 fps (thin ones under a low sun most of all: guardrail at
+    // Bahrain turn 1 with Golden Hour). RenderShadowMap now gets LEQUAL whatever ran before (hle_skipfn.cpp, 2026-11-22).
+    // Debug: F1CE_CUBE_ALT=1 skips every other pass whatever the timing (with F1CE_TICKS_FIXED=1 and frame dumps).
     static const bool alt = getenv("F1CE_CUBE_ALT") != nullptr;
     static u32 calls = 0;
     if (alt) g_skipped = calls++ & 1;

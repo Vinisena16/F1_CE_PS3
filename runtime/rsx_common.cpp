@@ -777,7 +777,7 @@ FPInfo translate_fp(u32 ea, u32 shader_control, u32 cube_mask) {
            "  else if (f == 3) pass = a <= r; else if (f == 4) pass = a > r; else if (f == 5) pass = a != r;\n"
            "  else if (f == 6) pass = a >= r;\n"
            "  if (!pass) discard;\n }\n"
-           // SHADER_PACKER (0x1FD8) bit 0: sRGB output (the game lights in linear space: textures are decoded on fetch
+           // SHADER_PACKER (0x1FEC) bit 0: sRGB output (the game lights in linear space: textures are decoded on fetch
            // by their TEXTURE_ADDRESS gamma bits and the result is encoded when written)
            " if (u_alpha_test.w > 0.5) {\n"
            "  vec3 c = clamp(frag_color.rgb, 0.0, 1.0);\n"
@@ -1039,6 +1039,63 @@ u32 morton(u32 x, u32 y, u32 log_w, u32 log_h) {
 }
 
 u32 ilog2(u32 v) { u32 r = 0; while ((1u << r) < v) r++; return r; }
+
+CubeSource cube_source(u32 unit) {
+    const u32 base = 0x1A00 + unit * 0x20, format = reg(base + 4), fmt = (format >> 8) & 0xFF;
+    CubeSource c;
+    c.ea = location_to_ea(reg(base), (format & 3) == 2);
+    c.w = reg(base + 0x18) >> 16;
+    c.base_fmt = fmt & ~0x60u;
+    c.linear = fmt & 0x20;
+    c.levels = std::max(1u, (format >> 16) & 0xF);
+    switch (c.base_fmt) {
+        case 0x81: c.bpp = 1; break;
+        case 0x82: case 0x83: case 0x84: c.bpp = 2; break;
+        case 0x85: case 0x9E: c.bpp = 4; break;
+        default: {
+            static std::set<u32> warned;
+            if (warned.insert(c.base_fmt).second) LOG_W("rsx: cube map format %02x not supported", c.base_fmt);
+            return c;
+        }
+    }
+    const u32 pitch = reg(0x1840 + unit * 4) & 0xFFFFF;
+    c.pitch = c.linear && pitch ? pitch : c.w * c.bpp;
+    if (c.linear) c.face_bytes = c.pitch * c.w;
+    else   // a swizzled face holds its mip chain; faces start on 128 byte boundaries
+        for (u32 l = 0; l < c.levels; l++) c.face_bytes += tex_level_bytes(c.w, c.w, l, c.base_fmt, c.bpp);
+    c.face_bytes = (c.face_bytes + 127) & ~127u;
+    c.ok = true;
+    return c;
+}
+void cube_face_rgba(const CubeSource& c, u32 face, u32* rgba) {
+    const u32 ea = c.ea + face * c.face_bytes, lw = ilog2(c.w);
+    for (u32 y = 0; y < c.w; y++)
+        for (u32 x = 0; x < c.w; x++) {
+            const u32 t = ea + (c.linear ? y * c.pitch + x * c.bpp : morton(x, y, lw, lw) * c.bpp);
+            u32 a = 255, r, g, b;
+            switch (c.base_fmt) {
+                case 0x81: r = g = b = a = ld8(t); break;
+                case 0x82: { u32 v = ld16(t); a = (v >> 15) ? 255 : 0; r = ((v >> 10) & 31) * 255 / 31; g = ((v >> 5) & 31) * 255 / 31; b = (v & 31) * 255 / 31; break; }
+                case 0x83: { u32 v = ld16(t); a = ((v >> 12) & 15) * 17; r = ((v >> 8) & 15) * 17; g = ((v >> 4) & 15) * 17; b = (v & 15) * 17; break; }
+                case 0x84: { u32 v = ld16(t); r = ((v >> 11) & 31) * 255 / 31; g = ((v >> 5) & 63) * 255 / 63; b = (v & 31) * 255 / 31; break; }
+                default: { u32 v = ld32(t); a = v >> 24; r = (v >> 16) & 255; g = (v >> 8) & 255; b = v & 255; }
+            }
+            rgba[(size_t)y * c.w + x] = r | (g << 8) | (b << 16) | (a << 24);
+        }
+}
+
+// a word per KB every frame, a word per 64 bytes every 32 frames (as large textures in upload_texture)
+bool cube_source_changed(const CubeSource& c, CubeCheck& k) {
+    if (!c.ok || k.frame == g_frame) return false;
+    k.frame = g_frame;
+    const u64 sparse = hash_range(gmem(c.ea), c.face_bytes * 6, 1024) | 1;
+    if (sparse == k.sparse && g_frame % 32 != 0) return false;
+    const u64 full = hash_range(gmem(c.ea), c.face_bytes * 6, 64) | 1;
+    const bool changed = full != k.full;
+    k.sparse = sparse;
+    k.full = full;
+    return changed;
+}
 
 u64 evict_cutoff_frame() {
     static const u64 limit = [] { const char* e = getenv("F1CE_TEX_EVICT_S"); return (e ? strtoull(e, nullptr, 10) : 180ull) * 1000000ull; }();

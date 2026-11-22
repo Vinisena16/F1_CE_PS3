@@ -118,6 +118,12 @@ FORCE_INLINE u64 mix64(u64 x) {   // splitmix64 finalizer
 }
 u32 morton(u32 x, u32 y, u32 log_w, u32 log_h);
 u32 ilog2(u32 v);
+// Cube maps that are not rendered (the driver garage's reflections): six faces one after the other in guest memory.
+struct CubeSource { u32 ea = 0, w = 0, base_fmt = 0, pitch = 0, levels = 1, bpp = 4, face_bytes = 0; bool linear = false, ok = false; };
+CubeSource cube_source(u32 unit);                                     // texture unit registers
+void cube_face_rgba(const CubeSource& c, u32 face, u32* rgba);        // level 0 of a face, top row first
+struct CubeCheck { u64 frame = ~0ull, sparse = 0, full = 0; };
+bool cube_source_changed(const CubeSource& c, CubeCheck& k);          // once per frame: the faces have to be uploaded
 // Texture resolution (F1CE_TEX_RES=<n>): the n largest mip levels of a mipmapped texture are left out (1 = half,
 // 2 = quarter size). Textures without mips, linear, main-memory or texel-addressed ones (format bits 0x20/0x40) keep
 // their size, and the remaining level 0 keeps at least 32 texels on its short side.
@@ -128,6 +134,15 @@ u64 evict_cutoff_frame();
 u32 tex_level_bytes(u32 w, u32 h, u32 level, u32 base_fmt, u32 bpp);   // guest size of a swizzled or DXT mip level
 u32 zpass_value(u32 ea, u64 samples);   // the occlusion count written to report ea for that many counted samples
 float half_to_float(u16 h);
+// sRGB output: SHADER_PACKER (0x1FEC) bit 0, for the 8-bit colour formats (float targets stay linear). The game turns it
+// off for the cube map faces, the cars' shadow decals, heat haze and the 2D interface, and on for everything lit.
+// (0x1FD8, used until 2026-11-22, is INVALIDATE_L2, the texture cache flush: always non-zero, so encoding had to be
+// guessed from the textures of each draw, and materials without a gamma texture - tyres, suspension, chrome - were dark.)
+inline bool srgb_output() {
+    static const bool off = getenv("F1CE_NO_TEXGAMMA") != nullptr;   // debug (with the texture decode)
+    const u32 f = reg(0x0208) & 0x1F;
+    return (reg(0x1FEC) & 1) && f != 11 && f != 12 && f != 13 && !off;
+}
 
 // Block heaps: raw vertex data (vertex pulling) and converted index lists that stay for several frames. Blocks are
 // never rewritten: changed data gets a new block and the old one is reused only after the GPU finished the frame

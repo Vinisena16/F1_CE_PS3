@@ -27,11 +27,16 @@ import season_pack  # noqa: E402
 
 DRIVER_FIELDS = [('first_name', 'First name'), ('last_name', 'Last name'), ('short_name', 'Short name'),
                  ('display_name', 'Display name'), ('abbreviation', 'Abbreviation'), ('car_number', 'Car number'),
+                 ('nationality', 'Nationality'),
                  ('helmet_model', 'Helmet shape (0-2)'), ('helmet_vent', 'Helmet vent (0-5, -1 none)'),
                  ('rating1', 'Rating 1'), ('rating2', 'Rating 2'), ('rating3', 'Rating 3'), ('rating4', 'Rating 4'),
                  ('rating5', 'Rating 5'), ('rating6', 'Rating 6'), ('position_best', 'Expected position: best'),
-                 ('position_typical', 'Expected position: typical'), ('position_worst', 'Expected position: worst'),
-                 ('birth_date', 'Birth date'), ('birth_place', 'Birth place')]
+                 ('position_typical', 'Expected position: typical'), ('position_worst', 'Expected position: worst')]
+# the driver profile in the menus (texts: "1 (x 8)" = best result 1st, reached 8 times, "-" = none)
+DRIVER_STATS = [('birth_date', 'Birth date (dd/mm/yyyy)'), ('birth_place', 'Birth place'), ('height_m', 'Height (m)'),
+                ('debut', 'Debut (year)'), ('first_win', 'First win (year, - none)'), ('titles', 'World titles'),
+                ('races', 'Races'), ('points', 'Career points'), ('best_grid', 'Best grid: 1 (x 9) = 9 poles'),
+                ('best_finish', 'Best finish: 1 (x 8) = 8 wins')]
 TEAM_FIELDS = [('name', 'Name'), ('full_name', 'Full name'), ('name_with_engine', 'Name with engine'),
                ('driver1', 'Driver 1'), ('driver2', 'Driver 2'), ('base', 'Base')]
 PERF_FIELDS = [('aero', 'drag', 'Drag'), ('aero', 'downforce', 'Downforce'), ('engine', 'engine_w18', 'Engine (w18)'),
@@ -150,17 +155,27 @@ class ImageSlot(ttk.Frame):
 
 
 class Form(ttk.Frame):
-    """Label + entry rows bound to a dict."""
+    """Label + entry rows bound to a dict (the keys in choices get a drop-down list, see set_choices)."""
 
-    def __init__(self, master, fields):
+    def __init__(self, master, fields, choices=(), columns=1, width=44):
         super().__init__(master)
-        self.fields, self.vars, self.data = fields, {}, None
-        for r, (key, label) in enumerate(fields):
-            ttk.Label(self, text=label).grid(row=r, column=0, sticky='w', padx=(0, 8), pady=1)
+        self.fields, self.vars, self.data, self.combos = fields, {}, None, {}
+        rows = -(-len(fields) // columns)
+        for i, (key, label) in enumerate(fields):
+            r, c = i % rows, i // rows * 2
+            ttk.Label(self, text=label).grid(row=r, column=c, sticky='w', padx=(16 if c else 0, 8), pady=1)
             v = tk.StringVar()
-            ttk.Entry(self, textvariable=v, width=44).grid(row=r, column=1, sticky='we', pady=1)
+            if key in choices:
+                w = self.combos[key] = ttk.Combobox(self, textvariable=v, width=width - 2, state='readonly')
+            else:
+                w = ttk.Entry(self, textvariable=v, width=width)
+            w.grid(row=r, column=c + 1, sticky='we', pady=1)
             self.vars[key] = v
-        self.columnconfigure(1, weight=1)
+        for c in range(columns):
+            self.columnconfigure(c * 2 + 1, weight=1)
+
+    def set_choices(self, key, values):
+        self.combos[key].configure(values=values)
 
     def load(self, data, get=lambda d, k: d.get(k)):
         self.data = data
@@ -244,6 +259,8 @@ class App(tk.Tk):
         self.header.pack(anchor='w', pady=4)
         self.nb = ttk.Notebook(right)
         self.nb.pack(fill='both', expand=True)
+        # Teams tab driver edits show up in the Drivers tab's reference line
+        self.nb.bind('<<NotebookTabChanged>>', lambda e: self.show_driver_ref())
         self._teams_tab()
         self._rims_tab()
         self._steering_tab()
@@ -382,12 +399,20 @@ class App(tk.Tk):
     def _drivers_tab(self):
         self.drivers_tab, self.driver_list, d = self._list_and_detail('Drivers')
         self.driver_list.bind('<<ListboxSelect>>', lambda e: self.show_driver())
+        # small windows: the statistics box goes below the bottom, the pictures past the right edge
+        d = self._scrolled(d, fit_width=True, min_width=790)
+        self.driver_ref = ttk.Label(d, foreground='#555', justify='left')
+        self.driver_ref.pack(anchor='w', pady=(0, 6))
         cols = ttk.Frame(d)
-        cols.pack(fill='both', expand=True)
+        cols.pack(fill='x')
         imgs = ttk.Frame(cols)
         imgs.pack(side='right', fill='both', padx=(10, 0))     # first: the form gets what is left
-        self.driver_form = Form(cols, DRIVER_FIELDS)
+        self.driver_form = Form(cols, DRIVER_FIELDS, choices=('nationality',))
         self.driver_form.pack(side='left', fill='x', expand=True, anchor='n')
+        box = ttk.LabelFrame(d, text='Profile and career statistics (driver profile in the menus)', padding=4)
+        box.pack(fill='x', pady=(6, 0))
+        self.stats_form = Form(box, DRIVER_STATS, columns=3, width=16)
+        self.stats_form.pack(fill='x')
         self.driver_imgs = [ImageSlot(imgs, self, t, 90) for t in ('Helmet paint (in the car)', 'Helmet specular',
                                                                'Pre-race photo (menus)',
                                                                'Overalls (garage and podium)',
@@ -425,20 +450,29 @@ class App(tk.Tk):
         self.helmet_grid = self._scrolled(self.helmets_tab)
         self.helmet_slots = []
 
-    def _scrolled(self, master, fit_width=False):
-        """A frame in a vertically scrolling area (fit_width: as wide as the area)."""
+    def _scrolled(self, master, fit_width=False, min_width=0):
+        """A frame in a vertically scrolling area (fit_width: as wide as the area, but not narrower than min_width:
+        a horizontal scroll bar appears instead)."""
         outer = ttk.Frame(master)
         outer.pack(fill='both', expand=True, pady=4)
         canvas = tk.Canvas(outer, highlightthickness=0)
         sb = ttk.Scrollbar(outer, orient='vertical', command=canvas.yview)
         canvas.configure(yscrollcommand=sb.set)
         sb.pack(side='right', fill='y')
+        hsb = ttk.Scrollbar(outer, orient='horizontal', command=canvas.xview)
+        canvas.configure(xscrollcommand=hsb.set)
         canvas.pack(fill='both', expand=True)
         inner = ttk.Frame(canvas)
         win = canvas.create_window((0, 0), window=inner, anchor='nw')
         inner.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
         if fit_width:
-            canvas.bind('<Configure>', lambda e: canvas.itemconfigure(win, width=e.width))
+            def fit(e):
+                canvas.itemconfigure(win, width=max(e.width, min_width))
+                if e.width < min_width and not hsb.winfo_ismapped():
+                    hsb.pack(side='bottom', fill='x', before=canvas)
+                elif e.width >= min_width and hsb.winfo_ismapped():
+                    hsb.pack_forget()
+            canvas.bind('<Configure>', fit)
         wheel = lambda e: canvas.yview_scroll(-1 if e.delta > 0 else 1, 'units')  # noqa: E731
         outer.bind('<Enter>', lambda e: canvas.bind_all('<MouseWheel>', wheel))
         outer.bind('<Leave>', lambda e: canvas.unbind_all('<MouseWheel>'))
@@ -570,6 +604,8 @@ class App(tk.Tk):
         self.driver_list.delete(0, 'end')
         self.teams = [t for t in (self.ents or {}).get('teams', []) if t['id'] in season_pack.TEAMS]
         self.drivers = (self.ents or {}).get('drivers', [])
+        self.load_original_drivers()
+        self.driver_form.set_choices('nationality', sorted(c['id'] for c in (self.ents or {}).get('countries', [])))
         self.rim_list.delete(0, 'end')
         for t in self.teams:
             self.team_list.insert('end', t.get('name') or t['id'])
@@ -589,6 +625,7 @@ class App(tk.Tk):
         self.team_form.load(None)
         self.perf_form.load(None)
         self.driver_form.load(None)
+        self.stats_form.load(None)
         if self.teams:
             self.team_list.selection_set(0)
             self.show_team()
@@ -597,6 +634,33 @@ class App(tk.Tk):
         if self.drivers:
             self.driver_list.selection_set(0)
             self.show_driver()
+
+    def load_original_drivers(self):
+        """The game's own driver records (for the Drivers tab's reference line). Packs made before 2026-11-21 have
+        no driver nationality in entities.json: take the game's."""
+        usr = self.usrdir()
+        self.orig_drivers = {} if not usr else {d['id']: d for d in season_pack.entities.export(
+            season_pack.entities.parse(season_pack.Game(usr).get('offline.wad', 'entities.bin')))['drivers']}
+        for d in self.drivers:
+            if 'nationality' not in d and self.orig_drivers.get(d['id'], {}).get('nationality'):
+                d['nationality'] = self.orig_drivers[d['id']]['nationality']
+
+    def show_driver_ref(self):
+        """The driver's database id (the name Teams > Driver 1 / Driver 2 use), original name and current teams."""
+        dr = getattr(self, 'shown_driver', None)
+        if self.kind != 'season' or not dr:
+            self.driver_ref.configure(text='')
+            return
+        if getattr(self, 'shown_team', None) is not None:
+            self.team_form.store()
+        o = getattr(self, 'orig_drivers', {}).get(dr['id'])
+        orig = f'{o.get("first_name") or ""} {o.get("last_name") or ""}'.strip() if o else ''
+        teams = [f'{t.get("name") or t["id"]} ({"Driver 1" if t.get("driver1") == dr["id"] else "Driver 2"})'
+                 for t in (self.ents or {}).get('teams', []) if dr['id'] in (t.get('driver1'), t.get('driver2'))]
+        self.driver_ref.configure(text=f'Teams tab name: {dr["id"]}' +
+                                  (f'      originally {orig} in the game' if orig else '') +
+                                  f'\nIn the Teams tab: {", ".join(teams) or "no team"}   (to move this driver, '
+                                  f'write {dr["id"]} as Driver 1 or Driver 2 of the new team)')
 
     def cur(self, lst, items):
         s = lst.curselection()
@@ -716,6 +780,8 @@ class App(tk.Tk):
         dr = self.cur(self.driver_list, self.drivers)
         self.shown_driver = dr
         self.driver_form.load(dr)
+        self.stats_form.load(dr)
+        self.show_driver_ref()
         if dr:
             base = self.pack / 'DRIVERS' / dr['id']
             self.driver_imgs[0].show(base / 'Helmet' / 'Colour.png')
@@ -784,6 +850,7 @@ class App(tk.Tk):
                                           k.split('.')[1], v))
         if getattr(self, 'shown_driver', None) is not None:
             n += self.driver_form.store()
+            n += self.stats_form.store()
         return n
 
     def save(self):

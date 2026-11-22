@@ -18,12 +18,14 @@ Import rewrites the strings and numbers given in the JSON; the record ids (id, k
 import json
 import struct
 import sys
+import zlib
 from pathlib import Path
 
 SECTION_NAMES = ['drivers', 'teams', 'cars', 'tracks', 'countries']
 
 # names of known fields, by word index in the record
 DRIVER_FIELDS = {
+    2: ('c', 'nationality'),    # a countries record id (Spain, Britain...); the record stores its name hash
     3: 'first_name', 4: 'last_name', 5: 'short_name', 6: 'abbreviation', 7: 'display_name', 8: 'abbreviation2',
     9: 'birth_date', 10: 'birth_place', 11: 'debut', 12: 'first_win', 13: 'titles', 14: 'races', 15: 'best_grid',
     16: 'best_finish', 17: 'points', 18: 'folder', 19: 'key',
@@ -127,8 +129,22 @@ def field_name(sec_name, i):
     return k or f'field{i}'
 
 
+def name_hash(text):
+    """tools/wad.py name_hash of a country id ('#xxxxxxxx' = a hash no country id matches)."""
+    if len(text) == 9 and text[0] == '#':
+        return int(text[1:], 16)
+    return zlib.crc32(text.lower().encode('utf-8'), 0xFFFFFFFF)
+
+
+def countries(sections):
+    """Country name hash -> country id."""
+    i = SECTION_NAMES.index('countries')
+    return {name_hash(r.id): r.id for r in sections[i].records} if i < len(sections) else {}
+
+
 def export(sections):
     out = {}
+    cmap = countries(sections)
     for si, s in enumerate(sections):
         name = section_name(si)
         known = KNOWN.get(name, {})
@@ -141,6 +157,9 @@ def export(sections):
             for i, k in known.items():
                 if isinstance(k, tuple):
                     v = r.words[i]
+                    if k[0] == 'c':
+                        row[k[1]] = cmap.get(v, f'#{v:08x}')
+                        continue
                     row[k[1]] = round(struct.unpack('>f', struct.pack('>I', v))[0], 4) if k[0] == 'f' else \
                         (v - (1 << 32) if v & 0x80000000 else v)
             rows.append(row)
@@ -151,6 +170,7 @@ def export(sections):
 def apply(sections, edits):
     """Set the string and number fields named in edits (export's layout; rows matched by id)."""
     changed = 0
+    cmap = countries(sections)
     for si, s in enumerate(sections):
         name = section_name(si)
         rows = {row['id']: row for row in edits.get(name, [])}
@@ -186,6 +206,14 @@ def apply(sections, edits):
             for i, k in known.items():
                 if isinstance(k, tuple) and k[1] in row:
                     v = row[k[1]]
+                    if k[0] == 'c':
+                        nw = name_hash(v)
+                        if nw not in cmap and not v.startswith('#'):
+                            raise ValueError(f'{r.id}: {k[1]} "{v}" is not a country ({", ".join(cmap.values())})')
+                        if nw != r.words[i]:
+                            r.words[i] = nw
+                            changed += 1
+                        continue
                     nw = struct.unpack('>I', struct.pack('>f', float(v)))[0] if k[0] == 'f' else int(v) & 0xFFFFFFFF
                     if nw != r.words[i]:
                         r.words[i] = nw

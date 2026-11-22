@@ -14,7 +14,8 @@ the runtime overrides (runtime/mods.cpp). The original game files are only read.
 
 template writes (folders named by the database ids: CARS/Honda, DRIVERS/jbutton, ...)
   pack.ini                          name and description shown by the launcher / Content Manager
-  DATABASE/entities.json            drivers, teams, cars, tracks: names, texts, car numbers, ratings (tools/entities.py)
+  DATABASE/entities.json            drivers, teams, cars, tracks: names, texts, car numbers, ratings, driver
+                                    nationality (a countries id) (tools/entities.py)
   DATABASE/dynamics.json            per-team car performance: aero, engine, gearbox, failure rates (tools/dynamics.py)
   DATABASE/points.txt               the points of 1st, 2nd, ... (read by the game itself, runtime/mods.cpp)
   CARS/<team>/livery/*.png          base paint (uv0) and sponsor decals (uv1) of the race model, their low-detail
