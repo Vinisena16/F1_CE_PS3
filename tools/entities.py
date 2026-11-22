@@ -52,6 +52,7 @@ DRIVER_FIELDS = {
     21: ('f', 'unknown21'), 22: ('f', 'unknown22'), 23: ('i', 'unknown23'), 24: ('i', 'unknown24'),
 }
 TEAM_FIELDS = {
+    2: ('c', 'nationality'),    # as for the drivers
     3: 'full_name', 4: 'name', 5: 'name_with_engine', 6: 'era', 7: 'driver1', 8: 'driver2', 9: 'test_drivers',
     10: 'base', 11: 'first_race', 12: 'first_win', 13: 'drivers_titles', 14: 'constructors_titles', 15: 'stat_a',
     16: 'stat_b', 17: 'points', 18: 'note', 19: 'folder', 20: 'key',

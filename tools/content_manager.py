@@ -39,7 +39,7 @@ DRIVER_STATS = [('birth_date', 'Birth date (dd/mm/yyyy)'), ('birth_place', 'Birt
                 ('races', 'Races'), ('points', 'Career points'), ('best_grid', 'Best grid: 1 (x 9) = 9 poles'),
                 ('best_finish', 'Best finish: 1 (x 8) = 8 wins')]
 TEAM_FIELDS = [('name', 'Name'), ('full_name', 'Full name'), ('name_with_engine', 'Name with engine'),
-               ('driver1', 'Driver 1'), ('driver2', 'Driver 2'), ('base', 'Base')]
+               ('driver1', 'Driver 1'), ('driver2', 'Driver 2'), ('nationality', 'Nationality'), ('base', 'Base')]
 PERF_FIELDS = [('aero', 'drag', 'Drag'), ('aero', 'downforce', 'Downforce'), ('engine', 'engine_w18', 'Engine (w18)'),
                ('engine', 'max_speed_rad_s', 'Max engine speed (rad/s)'),
                ('engine', 'failure_rates', 'Failure rates'), ('gearbox', 'ratios', 'Gear ratios')]
@@ -303,7 +303,7 @@ class App(tk.Tk):
         self.team_list.bind('<<ListboxSelect>>', lambda e: self.show_team())
         cols = ttk.Frame(d)
         cols.pack(fill='x')
-        self.team_form = Form(cols, TEAM_FIELDS, choices=('driver1', 'driver2'))
+        self.team_form = Form(cols, TEAM_FIELDS, choices=('driver1', 'driver2', 'nationality'))
         for key in ('driver1', 'driver2'):
             self.team_form.combos[key].bind('<<ComboboxSelected>>', lambda e, k=key: self.change_seat(k))
         self.team_form.pack(side='left', fill='x', expand=True, anchor='n')
@@ -629,10 +629,14 @@ class App(tk.Tk):
         self.load_original()
         self.check_lineup()
         self.drivers = (self.ents or {}).get('drivers', [])
-        for d in self.drivers:      # packs made before 2026-11-21 have no driver nationality: the game's
-            if 'nationality' not in d and self.orig_drivers.get(d['id'], {}).get('nationality'):
-                d['nationality'] = self.orig_drivers[d['id']]['nationality']
-        self.driver_form.set_choices('nationality', sorted(c['id'] for c in (self.ents or {}).get('countries', [])))
+        # packs made before 2026-11-21 (drivers) and 2026-11-22 (teams) have no nationality: the game's
+        for section in ('drivers', 'teams'):
+            original = {r['id']: r for r in (self.original or {}).get(section, [])}
+            for r in (self.ents or {}).get(section, []):
+                if 'nationality' not in r and original.get(r['id'], {}).get('nationality'):
+                    r['nationality'] = original[r['id']]['nationality']
+        for form in (self.driver_form, self.team_form):
+            form.set_choices('nationality', sorted(c['id'] for c in (self.ents or {}).get('countries', [])))
         self.fill_lists()
         self.steer_list.delete(0, 'end')
         names = {t['id']: t.get('name') or t['id'] for t in self.teams}
