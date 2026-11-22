@@ -90,7 +90,8 @@ namespace {
     X(decltype(&::glGetTexParameteriv), glGetTexParameteriv) X(decltype(&::glPixelStorei), glPixelStorei) \
     X(decltype(&::glReadPixels), glReadPixels) X(decltype(&::glScissor), glScissor) \
     X(decltype(&::glTexImage2D), glTexImage2D) X(decltype(&::glTexParameterf), glTexParameterf) \
-    X(decltype(&::glTexParameteri), glTexParameteri) X(decltype(&::glViewport), glViewport)
+    X(decltype(&::glTexParameteri), glTexParameteri) X(decltype(&::glTexSubImage2D), glTexSubImage2D) \
+    X(decltype(&::glViewport), glViewport)
 #endif
 
 #define X(type, name) type name;
