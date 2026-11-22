@@ -27,7 +27,7 @@ namespace {
 enum : int {
     ID_DEVICE = 400, ID_ENABLED, ID_STATUS, ID_STEER_VIEW, ID_STEER_AXIS, ID_STEER_INV, ID_CENTER, ID_RANGE, ID_RANGE_LBL,
     ID_LOCK, ID_SDZ, ID_SDZ_LBL, ID_PEDAL_VIEW, ID_BTN_VIEW, ID_FFB, ID_FFB_INV, ID_SOFT_LOCK, ID_AUTOC, ID_AUTOC_STR,
-    ID_AUTOC_LBL, ID_DEFAULTS,
+    ID_AUTOC_LBL, ID_DEFAULTS, ID_RATIO,
     ID_PEDAL_AXIS = 450, ID_PEDAL_CAL = 460, ID_PEDAL_RANGE = 463, ID_PEDAL_RANGE_LBL = 466, ID_MAP = 470, ID_GEAR = 500,
     ID_GAIN = 520, ID_GAIN_LBL = 540, ID_TEST = 560,
     ID_PROFILE = 570, ID_PROF_LOAD, ID_PROF_SAVE, ID_PROF_DEL, ID_LAST,
@@ -334,7 +334,7 @@ void worker() {
 HWND g_main;
 HWND g_device, g_enabled, g_status, g_steer_view, g_steer_axis, g_steer_inv, g_range, g_range_lbl, g_lock, g_sdz,
     g_sdz_lbl, g_pedal_view, g_pedal_axis[3], g_pedal_cal[3], g_pedal_range[3], g_pedal_range_lbl[3], g_btn_view,
-    g_map[wheelcfg::BUTTONS], g_gear[wheelcfg::GEARS], g_ffb, g_ffb_inv, g_soft_lock, g_autoc, g_autoc_str, g_autoc_lbl,
+    g_map[wheelcfg::BUTTONS], g_gear[wheelcfg::GEARS], g_ffb, g_ffb_inv, g_soft_lock, g_ratio, g_autoc, g_autoc_str, g_autoc_lbl,
     g_gain[GAIN_N], g_gain_lbl[GAIN_N];
 
 wheelcfg::Config g_cfg;
@@ -596,6 +596,7 @@ void read_controls() {
     g_cfg.ffb = checked(g_ffb);
     g_cfg.ffb_invert = checked(g_ffb_inv);
     g_cfg.soft_lock = checked(g_soft_lock);
+    g_cfg.constant_ratio = checked(g_ratio);
     for (int i = 0; i < GAIN_N; i++) g_cfg.*GAINS[i].v = pos(g_gain[i]);
     g_cfg.autocenter = sel(g_autoc) == 0 ? -1 : pos(g_autoc_str);
 }
@@ -638,6 +639,7 @@ void write_controls() {
     set_check(g_ffb, g_cfg.ffb);
     set_check(g_ffb_inv, g_cfg.ffb_invert);
     set_check(g_soft_lock, g_cfg.soft_lock);
+    set_check(g_ratio, g_cfg.constant_ratio);
     for (int i = 0; i < GAIN_N; i++) set_pos(g_gain[i], g_cfg.*GAINS[i].v);
     set_sel(g_autoc, g_cfg.autocenter < 0 ? 0 : 1);
     set_pos(g_autoc_str, g_cfg.autocenter < 0 ? 30 : g_cfg.autocenter);
@@ -1006,7 +1008,12 @@ int build(HWND main, int page, int x, int y, int w, AddFn add, TipFn tip) {
     add(L"STATIC", L"Dead zone", 0, x + 10, y1 + 4, 100, 18, 0, page);
     g_sdz = slider(add, x + 106, y1, col1 - 166, ID_SDZ, page, 0, 10);
     g_sdz_lbl = add(L"STATIC", L"", 0, x + col1 - 56, y1 + 4, 46, 18, ID_SDZ_LBL, page);
-    y1 += 32;
+    y1 += 30;
+    g_ratio = add(L"BUTTON", L"Constant steering ratio (real car)", WS_TABSTOP | BS_AUTOCHECKBOX, x + 10, y1 + 2,
+                  col1 - 20, 22, ID_RATIO, page);
+    tip(g_ratio, L"Off (original): the game gives less steering for the same turn of the wheel the faster you go (60% "
+                 L"at 200 km/h). On: a turn of the wheel always steers the front wheels the same, as on the real car.");
+    y1 += 30;
     SetWindowPos(g1, nullptr, 0, 0, px(col1), px(y1 - y), SWP_NOMOVE | SWP_NOZORDER);
     // H-shifter gears, under the steering
     y1 += GAP;

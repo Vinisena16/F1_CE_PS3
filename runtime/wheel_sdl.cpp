@@ -450,6 +450,10 @@ void wheel_forces(const WheelForces& f) {
     g_forces = f;
 }
 void wheel_lock_deg(int degrees) { g_game_lock = degrees; }
+bool wheel_constant_ratio() {
+    std::lock_guard lk(g_mutex);
+    return g_cfg.constant_ratio;
+}
 bool wheel_ffb() {
     if (!wheel_script().empty()) return true;   // (tests: the forces are logged without a wheel)
     std::lock_guard lk(g_mutex);

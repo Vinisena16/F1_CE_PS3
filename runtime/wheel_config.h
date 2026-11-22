@@ -54,6 +54,7 @@ struct Config {
     int range = 900;                  // degrees lock to lock, as set in the wheel's own driver / control panel
     int lock = 0;                     // degrees lock to lock in the game; 0: the game's choice (its range command)
     int steer_deadzone = 0;           // percent
+    bool constant_ratio = false;      // the game keeps its full steering lock at any speed (runtime/hle_handling.cpp)
     Pedal throttle{1}, brake{5}, clutch{6};
     bool pedals_separate = false;     // the pedals are a USB device of their own
     std::string pedals_device;        // its SDL joystick GUID; empty: the first one found (see pick)
@@ -254,6 +255,7 @@ void load(Config& c, Get get) {
     i("range", c.range);
     i("lock", c.lock);
     i("steer_deadzone", c.steer_deadzone);
+    b("constant_ratio", c.constant_ratio);
     pedal("throttle", c.throttle);
     pedal("brake", c.brake);
     pedal("clutch", c.clutch);
@@ -306,6 +308,7 @@ void save(const Config& c, Put put) {
     i("range", c.range);
     i("lock", c.lock);
     i("steer_deadzone", c.steer_deadzone);
+    i("constant_ratio", c.constant_ratio);
     pedal("throttle", c.throttle);
     pedal("brake", c.brake);
     pedal("clutch", c.clutch);

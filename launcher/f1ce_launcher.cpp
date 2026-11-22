@@ -124,6 +124,16 @@ Combo g_combos[] = {
     // gamepad motors: update 02.00's DualShock 3 vibration ported to this version (runtime/hle_rumble.cpp)
     {L"Controller vibration", L"F1CE_RUMBLE",
      {{L"Off", L"0"}, {L"Light", L"50"}, {L"Normal", nullptr}, {L"Strong", L"150"}}, 2, GAME},
+    // car handling (runtime/hle_handling.cpp): the pad's steering speed and a damper limit for kerb hits
+    {L"Pad steering response", L"F1CE_STEER_RESPONSE", {{L"Responsive", nullptr}, {L"Direct", L"2"}, {L"Original", L"0"}},
+     0, GAME,
+     L"How fast the front wheels follow the stick (and the keyboard). Responsive: about three times the game's speed. "
+     L"Direct: as fast as on a steering wheel. Original: the game's own. Steering wheels are not affected."},
+    {L"Kerb handling", L"F1CE_KERBS", {{L"Improved low", nullptr}, {L"Improved high", L"2"}, {L"Original", L"0"}}, 0,
+     GAME,
+     L"Improved low: the suspension absorbs kerb hits, so an aggressive kerb no longer throws the car in the air and "
+     L"spins it. Improved high: also no tyre grip while a wheel is off the ground, so a car that jumps a kerb no longer "
+     L"twists in the air and spins on landing. Original: the game's own suspension."},
     // in-game cameras (runtime/hle_camera.cpp): the second TV pod camera of the view cycle as a broadcast T-cam, and
     // the right stick turning the chase cameras
     {L"Onboard TV camera", L"F1CE_TVCAM",

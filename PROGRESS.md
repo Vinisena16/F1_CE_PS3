@@ -1269,6 +1269,37 @@ frame clock's real time (probes after 0x56E738 in 0x345D70 / 0x346A94 / 0x346BB4
 while paused. Checked on the user's saved replay (F1TV menu path by script: `down:0.12` presses, the hold time is
 in seconds) and a Watch a race session: paused frames differ only by a sub-pixel helmet shimmer.
 
+**2026-11-21** – Handling (`runtime/hle_handling.cpp`, launcher General tab "Handling", both on by default).
+- Steering: 0x112818 (called by the driver update 0x122960 with the tick's control sample) slews the steering angle
+  +0x4b0 towards input x lock. Lock = max(+0x5d4, +0x5d8 - v +0x5dc), rate = max(+0x5e0, +0x5e4 - v +0x5e8), centring
+  +0x5ec; the 8 floats are a record of dynamics.bin section 6 picked by the sample's flags (wheel 0x580da796: rate 20;
+  pad 0xe9b1cb9d: 0.6 / 2.4 / 0.025, about 0.9 s to full lock at 180 km/h). AI cars skip the slew (angle = input x
+  lock). `F1CE_STEER_RESPONSE` swaps the pad's rate words in for the call only. Measured at 10 m/s: 0.036 -> 0.092
+  per tick.
+- Kerbs: dry kerbs have no grip penalty (0x119c78's kerb branch sets lane +0xa60 = section 0 word 6 = 0.1, used by
+  0x113f90 only in the wet; the kerb bump wave 0x11042c has amplitude 0). A user's Bahrain spin log showed the cause:
+  the suspension 0x1177f4's damper (clamp +-24000 N, section 9) makes 10-17 kN at a kerb edge, the rebound pulls the
+  loads to 0 for ~10 ticks and the yaw rate rises 39 -> 150 deg/s in the air. Tyre forces (0x11b0dc: +0x4a0 lateral,
+  +0x510 longitudinal) scale linearly with +0x4c0, the spring load low-passed 0.99 a substep; +0x530 (raw load) is
+  only an output (found by running each substep stage twice from a snapshot with one input halved).
+  `F1CE_KERBS` limits the damper to 4500 N during 0x1177f4. Not in f1ce_online (ONLINE.BIN has its own addresses).
+- Later: an Imola log with the damper limit showed no flight (max ~4.3 kN, yaw nudge 27 deg/s instead of 150) but a
+  spin from full counter-lock plus 2.3 g braking. User asked for a stronger level: `F1CE_KERBS=2` "Improved high"
+  adds, for wheels off plain tarmac (+0x920 != 1), a 2500 N damper limit and a 40% softer spring +0x320. AI laps:
+  kerb-wheel load change per tick median 440 -> 250 N, p90 1650 -> 1184 N; tarmac unchanged.
+- High v2: the user still spun at the Variante Alta with v1. Log: full lock (1.0) held at 200 km/h over the outer kerb
+  onto the grass, the rear hung (compression 0) for 12 ticks (v1's soft spring and 2500 N let it spring back in 2
+  ticks), and the yaw rate went 39 -> 228 deg/s in the air: the tyres kept 2-3 kN of side force from +0x4c0, the
+  spring load smoothed over ~0.5 s. v2 drops v1's spring / damper changes and fades +0x4c0 by 20% a substep for a wheel
+  hanging two substeps in a row (+0x690 and +0x3b0 both 0), catching up 20% a substep (not 1%) after touch-down while
+  under half the spring load. AI laps: no +0x4c0 lane under 500 N in normal driving.
+- User confirmed high v2 (no crazy spins). Added `F1CE_WHEEL_RATIO=1` (launcher "Wheel steering ratio"): a wheel's set
+  keeps its full lock at any speed (+0x5dc = 0 during 0x112818); scripted wheel at 36-40 m/s: lock 1.600 (original
+  1.6 - 0.011 v), input -0.3 -> angle -0.48.
+- Cockpit steering animation (F1CE_CAMERA=4, scripted wheel held at 0 / -0.5 / -1, standing): the wheel turns ~45 deg
+  at half and ~90 deg at full game steering, linear, the driver's right arm crossing over the top at full lock (baked
+  in Steer.anim). So the game's animation is 180 deg lock to lock; a real wheel set to Steering lock 180 matches it 1:1.
+
 **2026-11-22** - Garage scenes (reflections, tyres, shadows), compared with RPCS3 (`REFERENCE/RPCS3_screenshot/alonso_garage.png`). Three renderer faults, both backends:
 - **Cube maps from memory.** The garage reflects a static cube (6 x 256x256 linear ARGB8, `0x09564800`). `cube_texture()` filled faces from render targets only, so it stayed black. A cube none of whose faces was ever a render target is now uploaded from guest memory (`cube_source` / `cube_face_rgba` in rsx_common.cpp; level 0, uncompressed formats, others warn).
 - **sRGB output flag.** SHADER_PACKER is `0x1FEC`, not `0x1FD8` (INVALIDATE_L2, the cache flush: always non-zero). With the wrong register the encode was guessed from each draw's textures; materials without a gamma texture (tyres, suspension, chrome) were written linear and came out nearly black. `srgb_output()` now follows `0x1FEC` bit 0 for 8-bit targets and the guesses are gone (gamma texture read, raw target copy, linear cube faces, alpha-only gamma, mirror glass: the real flag agrees with each of them in menus, garage and race). It also covers the per-car lighting table (32x1), so race cars are brighter: Silverstone start against RPCS3, car nose error 31.6 -> 7.5 levels, tyres 16 -> 10, helmet 18 -> 10 (RPCS3 is ~7 brighter everywhere). The driving line is brighter too (no reference with it on).
