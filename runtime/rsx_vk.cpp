@@ -1539,8 +1539,7 @@ u32 unit_sampler(u32 u, bool from_surface, bool depth_image) {
     k.bias = bias / 256.0f;
     k.min_lod = ((ctl0 >> 19) & 0xFFF) / 256.0f;
     k.max_lod = ((ctl0 >> 7) & 0xFFF) / 256.0f;
-    static const float aniso_levels[8] = {1, 2, 4, 6, 8, 10, 12, 16};
-    k.aniso = aniso_levels[(ctl0 >> 4) & 7];
+    k.aniso = tex_anisotropy(ctl0, filt);
     // base filter, mip filter, mips used: LINEAR_MIPMAP_LINEAR, NEAREST, LINEAR, NEAREST_MIPMAP_NEAREST,
     // LINEAR_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR, LINEAR_MIPMAP_LINEAR, LINEAR_MIPMAP_LINEAR
     static const struct { VkFilter f; VkSamplerMipmapMode m; bool mips; } modes[8] = {
@@ -1752,6 +1751,8 @@ void draw(bool indexed) {
         if (depth_func >= 1 && depth_func <= 8 && ((reg(0x1A14 + u * 0x20) >> 24) & 0xF) != 1) dp.tex_depth[u] = (float)(depth_func + 16);
         if (depth_func == 0 || depth_func == 12 || depth_func == 9) dp.remap[u] = (float)(reg(0x1A10 + u * 0x20) & 0xFFFF);
         if (depth_func == 0 || depth_func == 12) dp.remap[u] = (float)((u32)dp.remap[u] | (conv << 16));
+        if (depth_func == 0 && !from_surface)
+            dp.remap[u] = (float)((u32)dp.remap[u] | aniso_remap_bits(reg(0x1A0C + u * 0x20), reg(0x1A14 + u * 0x20)));
     }
     g_prof.t_upload += prof_usec() - tu0;
     for (u32 u = 0; u < 4; u++) {

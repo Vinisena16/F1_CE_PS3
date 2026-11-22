@@ -631,7 +631,7 @@ FPInfo translate_fp(u32 ea, u32 shader_control, u32 cube_mask) {
            // applied to the fetched texel before the remap
            << (g_shader_vk ? "" : "uniform float u_remap[16];\n") <<
            "vec4 remap(vec4 v, int u) {\n"
-           " int r = int(u_remap[u]), c = r >> 16; r &= 0xFFFF;\n"
+           " int r = int(u_remap[u]), c = " << (aniso_forced() ? "(r >> 16) & 31" : "r >> 16") << "; r &= 0xFFFF;\n"
            " if (c != 0) {\n"
            "  vec4 m = vec4(ivec4(c, c >> 1, c >> 2, c >> 3) & 1);\n"
            "  v = mix(v, v * (v * (v * 0.305306011 + 0.682171111) + 0.012522878), m);\n"
@@ -642,6 +642,16 @@ FPInfo translate_fp(u32 ea, u32 shader_control, u32 cube_mask) {
            " for (int i = 0; i < 4; i++) { int op = (r >> (8 + 2 * i)) & 3; o[i] = op == 0 ? 0.0 : op == 1 ? 1.0 : s[(r >> (2 * i)) & 3]; }\n"
            " return vec4(o.y, o.z, o.w, o.x);\n"
            "}\n"
+        // anisotropic filtering (aniso_remap_bits): ratio of the pixel footprint's axes in texels, major^2 / area
+        << (!aniso_forced() ? "" :
+           "float aniso_bias(vec2 tc, vec2 size, int u) {\n"
+           " vec2 dx = dFdx(tc) * size, dy = dFdy(tc) * size;\n"
+           " int k = (int(u_remap[u]) >> 21) & 3;\n"
+           " if (k == 0) return 0.0;\n"
+           " float s = dot(dx, dx) + dot(dy, dy), area = abs(dx.x * dy.y - dx.y * dy.x);\n"
+           " float major2 = 0.5 * (s + sqrt(max(s * s - 4.0 * area * area, 0.0)));\n"
+           " return clamp(log2(max(major2, 1e-12) / max(area, 1e-12)), 0.0, min(float(k), 1.5));\n"
+           "}\n")
         // (Vulkan: the sampler comes from the descriptor array inside, an array element is no function argument)
         << (g_shader_vk ? "#define t g_tex[u_slot[u]]\nvec4 sample_unit_(vec4 c, int u, bool proj) {\n"
                         : "vec4 sample_unit(sampler2D t, vec4 c, int u, bool proj) {\n")
@@ -655,7 +665,9 @@ FPInfo translate_fp(u32 ea, u32 shader_control, u32 cube_mask) {
                " if (u_ui_clamp > 0.5 && all(greaterThanEqual(tc, vec2(0.0))) && all(lessThanEqual(tc, vec2(1.0)))) {\n"
                "  vec2 hh = 0.5 / vec2(textureSize(t, 0)); tc = clamp(tc, hh, 1.0 - hh);\n"
                " }\n"
-               " vec4 v = texture(t, tc);\n";
+            << (aniso_forced() ? " vec4 v = texture(t, tc, aniso_bias(tc, vec2(textureSize(t, 0)), u));\n" : " vec4 v = texture(t, tc);\n");
+    else if (aniso_forced())
+        src << " vec2 tc = tex_coord(p.xy, u);\n vec4 v = texture(t, tc, aniso_bias(tc, vec2(textureSize(t, 0)), u));\n";
     else
         src << " vec4 v = texture(t, tex_coord(p.xy, u));\n";
     src << " int f = int(u_tex_depth[u]);\n"
@@ -1114,6 +1126,26 @@ u32 tex_levels_dropped(u32 w, u32 h, u32 levels, u32 fmt, bool main_mem) {
     u32 d = 0;
     while (d < want && levels - d > 1 && (std::min(w, h) >> (d + 1)) >= 32) d++;
     return d;
+}
+static float aniso_want() {
+    static const float v = getenv("F1CE_ANISO") ? (float)std::clamp(atoi(getenv("F1CE_ANISO")), 0, 16) : 0.0f;
+    return v;
+}
+bool aniso_forced() { return aniso_want() > 1.0f; }
+static bool trilinear_filter(u32 ctl0, u32 filt) {
+    return ((filt >> 16) & 7) == 6 && ((filt >> 24) & 0xF) == 2 && ((ctl0 >> 7) & 0xFFF);
+}
+float tex_anisotropy(u32 ctl0, u32 filt) {
+    static const float levels[8] = {1, 2, 4, 6, 8, 10, 12, 16};
+    const float game = levels[(ctl0 >> 4) & 7];
+    if (aniso_want() == 1.0f) return 1.0f;
+    return trilinear_filter(ctl0, filt) ? std::max(game, aniso_want()) : game;
+}
+u32 aniso_remap_bits(u32 ctl0, u32 filt) {
+    static const bool keep_bias = getenv("F1CE_ANISO_KEEP_BIAS") != nullptr;   // debug: the game's bias everywhere
+    if (!aniso_forced() || keep_bias || (filt & 0x1FFF) != 0x1E80 || !trilinear_filter(ctl0, filt)) return 0;
+    const float a = tex_anisotropy(ctl0, filt);
+    return (a >= 8 ? 3u : a >= 4 ? 2u : 1u) << 21;
 }
 // Counts are per native-resolution pixel (the counted targets are scaled local ones). F1CE_ZPASS_LOG=1 logs a burst
 // of 200 reports every 10 s (report offset, count). (Car models do not choose their detail level from these counts:

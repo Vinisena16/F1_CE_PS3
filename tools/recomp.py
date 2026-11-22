@@ -30,6 +30,7 @@ HOOKS = {0x3FB310: "camera_projection_hook",   # camera projection and frustum, 
          0x43FFA0: "skip_43ffa0_hook", 0x30388C: "skip_30388c_hook",
          0x447704: "motion_blur_get_hook", 0x452E08: "post_effects_hook", 0x2F2CEC: "effect_take_hook",   # hle_gfxopts.cpp
          0x3065F0: "car_lod_hook", 0x312900: "car_lod_hook",
+         0x433F00: "crowd_hook", 0x431688: "crowd_hook", 0x4306C4: "crowd_hook",
          0x2F22D4: "environment_env_hook", 0x2F5950: "environment_sky_hook",   # hle_environment.cpp
          0x48F88: "boot_language_hook", 0x1FE0EC: "boot_init_hook",   # hle_boot.cpp
          0x1F9EBC: "boot_attract_hook",

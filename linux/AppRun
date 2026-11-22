@@ -124,6 +124,8 @@ F1CE_FULLSCREEN|Window|Full screen|0|1
 F1CE_VSYNC|On|Off|Adaptive|-|0|-1
 F1CE_MSAA|4x (original)|2x|8x|-|2|8
 F1CE_FXAA|Off|On|-|1
+F1CE_ANISO|Off (original)|2x|4x|8x|-|2|4|8
+F1CE_CROWD|On (original)|Off|-|0
 F1CE_60FPS|30 fps (original)|Up to 60 fps (experimental)|-|1
 F1CE_FPS_CAP|None|30 fps|45 fps|-|30|45
 F1CE_RUMBLE|Normal|Light|Strong|Off|-|50|150|0

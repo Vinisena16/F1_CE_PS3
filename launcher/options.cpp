@@ -180,10 +180,17 @@ std::vector<Option> make_options() {
     v.push_back(choice(VIDEO, "Textures", "F1CE_TEX_RES",
                        {{"High (original)", nullptr}, {"Medium (half size)", "1"}, {"Low (quarter size)", "2"}}, 0,
                        "Smaller textures save video memory on small GPUs."));
+    v.push_back(choice(VIDEO, "Anisotropic filtering", "F1CE_ANISO",
+                       {{"Off (original)", nullptr}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}}, 0,
+                       "Sharper track, kerbs and walls seen at a shallow angle. The first start after turning it on "
+                       "prepares the shaders again (a few minutes with OpenGL)."));
     v.push_back(choice(VIDEO, "Car detail distance", "F1CE_CAR_LOD",
                        {{"Near (x0.5, lighter)", "0.5"}, {"Original (15/25/50 m)", nullptr}, {"Far (x2)", "2"},
                         {"Very far (x4)", "4"}},
                        1, "How far away the cars switch to their simpler models (15, 25 and 50 m in the original)."));
+    v.push_back(choice(VIDEO, "Crowd", "F1CE_CROWD", {{"On (original)", nullptr}, {"Off", "0"}}, 0,
+                       "Off: empty grandstands in every session, as the game does in Time Trial. A little lighter "
+                       "on the CPU and GPU. The crowd's sound stays."));
     v.push_back(header(VIDEO, "Display"));
     v.push_back(toggle(VIDEO, "Full screen", "F1CE_FULLSCREEN", "Start in full screen. F11 toggles it in the game."));
     v.push_back(greyed(choice(VIDEO, "Window size", "F1CE_WINDOW",

@@ -105,11 +105,15 @@ Combo g_combos[] = {
     // mip levels left out of mipmapped textures (runtime/rsx_common.cpp tex_levels_dropped)
     {L"Texture resolution", L"F1CE_TEX_RES",
      {{L"High (original)", nullptr}, {L"Medium (half size)", L"1"}, {L"Low (quarter size)", L"2"}}, 0, DETAIL},
+    // on the textures the game filters trilinearly (runtime/rsx_common.cpp tex_anisotropy)
+    {L"Anisotropic filtering", L"F1CE_ANISO", {{L"Off (original)", nullptr}, {L"2x", L"2"}, {L"4x", L"4"}, {L"8x", L"8"}}, 0, DETAIL},
     // what the game draws (runtime/hle_gfxopts.cpp): the distances of the car models' detail levels (15, 25, 50 m)
     // and two effects it can do without
     {L"Car detail distance", L"F1CE_CAR_LOD",
      {{L"Near (x0.5, lighter)", L"0.5"}, {L"Original (15/25/50 m)", nullptr}, {L"Far (x2)", L"2"},
       {L"Very far (x4)", L"4"}}, 1, DETAIL},
+    // the spectators (none in time trial sessions anyway)
+    {L"Crowd", L"F1CE_CROWD", {{L"On (original)", nullptr}, {L"Off", L"0"}}, 0, DETAIL},
     // the game's own post-effect switches; Post-processing Off clears all of them, motion blur and heat haze (the
     // others are greyed out then, update_enabled)
     {L"Post-processing", L"F1CE_POSTFX", {{L"On (original)", nullptr}, {L"Off", L"0"}}, 0, POST},

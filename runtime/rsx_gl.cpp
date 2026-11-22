@@ -1964,6 +1964,8 @@ void draw(bool indexed) {
             else if (depth_func == 0 || depth_func == 12 || depth_func == 9)
                 remaps[u] = (float)(reg(0x1A10 + u * 0x20) & 0xFFFF);
             if (depth_func == 0 || depth_func == 12) remaps[u] = (float)((u32)remaps[u] | (conv << 16));
+            if (depth_func == 0 && !from_surface)
+                remaps[u] = (float)((u32)remaps[u] | aniso_remap_bits(reg(0x1A0C + u * 0x20), reg(0x1A14 + u * 0x20)));
         }
         if (first_of_prog)
             LOG_I("   unit %u: offset=%08x fmt=%02x %ux%u %s zfunc=%d addr=%08x ctl0=%08x filter=%08x remap=%08x", u, reg(0x1A00 + u * 0x20),
@@ -2013,8 +2015,7 @@ void draw(bool indexed) {
             if (tf_mask & 1) glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, bias / 256.0f);
             if (tf_mask & 2) glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, ((ctl0 >> 19) & 0xFFF) / 256.0f);
             if (tf_mask & 2) glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, ((ctl0 >> 7) & 0xFFF) / 256.0f);
-            static const float aniso_levels[8] = {1, 2, 4, 6, 8, 10, 12, 16};
-            if (tf_mask & 4) glTexParameterf(GL_TEXTURE_2D, 0x84FE /*GL_TEXTURE_MAX_ANISOTROPY*/, aniso_levels[(ctl0 >> 4) & 7]);
+            if (tf_mask & 4) glTexParameterf(GL_TEXTURE_2D, 0x84FE /*GL_TEXTURE_MAX_ANISOTROPY*/, tex_anisotropy(ctl0, filt));
             static const GLenum min_modes[8] = {GL_LINEAR_MIPMAP_LINEAR, GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_NEAREST,
                                                 GL_LINEAR_MIPMAP_NEAREST, GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR_MIPMAP_LINEAR,
                                                 GL_LINEAR_MIPMAP_LINEAR};

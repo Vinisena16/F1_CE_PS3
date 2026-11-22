@@ -18,6 +18,10 @@
 //    handle, first word = the settings) tests them directly and skips a pass whose switch is 0, so clearing them at its
 //    entry every frame (the game's setters may turn them on again with a scene or camera) takes the game's own off
 //    paths. F1CE_DOF=0, F1CE_BLOOM=0, F1CE_LIGHT_RAYS=0; F1CE_POSTFX=0 turns off all three, motion blur and heat haze.
+//  - Crowd: the track model's crowd object (+0x4068, sgCrowd.cpp) is only used by its render 0x2FB3A4, which calls the
+//    update 0x4306C4, the animation step 0x431688 and the draw 0x433F00 (3D figures and billboards), and goes past all
+//    three when there is no object: Time Trial and test sessions never load one. F1CE_CROWD=0 makes the three return
+//    at once (the crowd's sound stays). ONLINE.BIN has no crowd loader and never calls these functions.
 #include <bit>
 #include <cstdlib>
 
@@ -34,6 +38,7 @@ const bool g_no_dof = g_no_postfx || env_off("F1CE_DOF");
 const bool g_no_bloom = g_no_postfx || env_off("F1CE_BLOOM");
 const bool g_no_light_rays = g_no_postfx || env_off("F1CE_LIGHT_RAYS");
 const bool g_no_heat_haze = g_no_postfx || env_off("F1CE_HEAT_HAZE");
+const bool g_no_crowd = env_off("F1CE_CROWD");
 constexpr u32 ENGINE_HEAT = 2;
 constexpr u32 LOD0_DIST2 = 0x70E4A8, LOD_DISTS = 0x1000E664;   // 15 m squared; 25 m, 50 m
 
@@ -71,6 +76,13 @@ bool effect_take_hook(PPUContext& c) {
     static bool logged = false;
     if (!logged) { logged = true; LOG_I("effects: heat haze off"); }
     c.r[3] = 0;
+    return true;
+}
+// 0x433F00, 0x431688, 0x4306C4: the crowd's draw, animation step and update (main thread, once per frame)
+bool crowd_hook(PPUContext&) {
+    if (!g_no_crowd) return false;
+    static bool logged = false;
+    if (!logged) { logged = true; LOG_I("crowd: off"); }
     return true;
 }
 // 0x3065F0, 0x312900: a car's level of detail (main thread)

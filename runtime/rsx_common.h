@@ -128,6 +128,15 @@ bool cube_source_changed(const CubeSource& c, CubeCheck& k);          // once pe
 // 2 = quarter size). Textures without mips, linear, main-memory or texel-addressed ones (format bits 0x20/0x40) keep
 // their size, and the remaining level 0 keeps at least 32 texels on its short side.
 u32 tex_levels_dropped(u32 w, u32 h, u32 levels, u32 fmt, bool main_mem);
+// Anisotropy of a texture from its CONTROL0 and FILTER registers. F1CE_ANISO=2/4/8/16: at least that much on the textures
+// the game filters trilinearly (0x418480 gives those their LOD bias, max LOD and anisotropy; tables, depth and 2D ones get
+// nearest or bilinear filtering and none). 1 = none at all; unset = the game's own.
+float tex_anisotropy(u32 ctl0, u32 filt);
+// The game samples those textures with a -1.5 LOD bias, its stand-in for anisotropic filtering. With F1CE_ANISO the
+// programs give back, per pixel, the LOD the filtering gains (up to the 1.5), else far tarmac is undersampled (grain).
+// Surfaces seen face-on keep the bias, hence their sharpness. u_remap bits 21-22: log2 of the anisotropy, 0 = untouched.
+bool aniso_forced();
+u32 aniso_remap_bits(u32 ctl0, u32 filt);
 // Called every 60 frames: the frame at which textures (and Vulkan render targets) still unused count as unused for
 // longer than F1CE_TEX_EVICT_S seconds (default 180, longer than a lap; 0 = never), or 0 when none do yet
 u64 evict_cutoff_frame();

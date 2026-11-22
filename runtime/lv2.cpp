@@ -505,8 +505,11 @@ SYS(timer_usleep) {
     if (!no_throttle && rsx_refs_behind() > 2) {
         u64 start = time_usec();
         // up to 15 s: at the race start the RSX can take seconds for the loading list (hundreds of textures)
-        // (no limit while the renderer compiles its start-up shaders on the RSX thread)
-        while (rsx_refs_behind() > 2 && (time_usec() - start < 15000000 || g_rsx_starting)) {
+        // (no limit while the renderer compiles its start-up shaders on the RSX thread: the 15 s start after that phase,
+        // else a phase longer than 15 s let the PPU go with the RSX still behind and frame 1's list was rewritten)
+        u64 limit_from = start;
+        while (rsx_refs_behind() > 2 && time_usec() - limit_from < 15000000) {
+            if (g_rsx_starting) limit_from = time_usec();
             if (old_spin) sleep_usec(200);
             else rsx_ref_wait();
         }
