@@ -77,5 +77,8 @@ the gain must come from whole call trees running natively (no dispatcher round t
 - Host profile after it (workers, 60 fps + LOD0): dispatcher 9.1% (was 13.3%), `spu_fast_cmdlist` 4.4% (the operand
   gathering, 152 instructions per command), native cull 4.2%, DMA path ~10%, `geomfn_08970` 3.3%, `geomfn_08c80` 2.3%,
   `geomfn_0bd80` 1.4%, `geomfn_04c18` 1.3%. Translated code still running there: the job manager and workload w0's job.
+- [x] Generated functions on local register copies (SpuLocal, 74 of 82; the 8 with channel instructions stay on the
+  thread): exact, but no measurable change (30.4/31.2, 29.9/32.2, 30.4/32.1 fps = +5% against the SPU job, same as
+  before within noise): register memory traffic is not what limits this code.
 - [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
   handlers that issue DMA.
