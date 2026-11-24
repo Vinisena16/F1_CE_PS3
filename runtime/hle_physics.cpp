@@ -169,9 +169,12 @@ void shake_frame_probe(PPUContext&) {
     if (shake_filter_on()) shake_apply();
 }
 
+void car_log(u32 car);   // car_log.cpp: F1CE_CAR_LOG
+
 // wheels, first function of each substep of a car
 bool wheel_update_hook(PPUContext& c) {
     phys_snap(c);
+    if (!g_online_image) car_log((u32)c.r[3]);
     if (g_in_tick) {
         const u32 car = (u32)c.r[3];
         auto it = std::find_if(g_shake.begin(), g_shake.end(), [&](const ShakeCar& s) { return s.car == car; });

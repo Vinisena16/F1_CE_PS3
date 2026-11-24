@@ -5,6 +5,7 @@
 # scene appears (F1CE_QUIT_AFTER_3D). The last frame and the 3D target are saved as frame_s*_quit.
 # usage: tools/race_test.sh <run dir name> [VAR=value ...]
 cd "$(dirname "$0")/.." || exit 1
+[ -n "$SOUND" ] || export SDL_AUDIO_DRIVER=dummy   # silent (same pacing); SOUND=1 to hear the run
 GAME="C:/Users/user/Desktop/Repos/F1_CE_PS3/F1_CE_PS3_og/PS3_GAME"
 name="$1"; shift
 d="dbg/$name"; rm -rf "$d"; mkdir -p "$d"; cp -r dbg/menu/ps3_data "$d/"

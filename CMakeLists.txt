@@ -61,6 +61,7 @@ set(RUNTIME_SOURCES
   runtime/fs.cpp
   runtime/mods.cpp
   runtime/lineup.cpp
+  runtime/car_log.cpp
   runtime/hle_sys.cpp
   runtime/hle_misc.cpp
   runtime/hle_aspect.cpp

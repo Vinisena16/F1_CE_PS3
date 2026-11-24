@@ -21,8 +21,12 @@ some words are padding holding whatever memory the tool that wrote the file had 
   section 4  0x10, section 5 0x80 per team, the same for every 2006 team
   section 6  0x20  6 records, section 7 0x20 per track, section 8 0x10 per classic car, section 9 0xb0 18 records
   then more data read by 0x1A2BA4 / 0x1A2530 (not decoded)
-The meaning of the values is read from how they differ between teams; it is not confirmed in the game's code.
-A test (Honda engine word 18 x1.9, drag 0.30, AI driving at Silverstone) showed no speed change.
+Which record a car uses (0x10FC74, measured 2026-11-22 with F1CE_CAR_LOG): a car driven by a human uses its team's
+records; a car driven by the AI uses its team's engine (2), gearbox (3) and drag (section 1 word 24, put back by
+0x10926C) and the "ai" record for the rest of section 1 and sections 4, 5, 6, 8, 9.
+Meanings from the code: section 1 word 19 = mass without fuel (the AI's fuel is not added), 24 = drag and 25 =
+downforce (both x speed squared, 0x11CF6C), 26 = grip; section 2 word 16 = idle revs, 17 = rev limit, 18 = torque factor.
+AI cars drive to a target speed: worse values slow them, better ones than the original change nothing on their own.
 Import changes only the words named below.
 """
 import json

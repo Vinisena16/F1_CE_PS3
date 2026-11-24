@@ -111,7 +111,7 @@ Combo g_combos[] = {
     // and two effects it can do without
     {L"Car detail distance", L"F1CE_CAR_LOD",
      {{L"Near (x0.5, lighter)", L"0.5"}, {L"Original (15/25/50 m)", nullptr}, {L"Far (x2)", L"2"},
-      {L"Very far (x4)", L"4"}}, 1, DETAIL},
+      {L"Very far (x4)", L"4"}, {L"LOD0 only", L"0"}}, 1, DETAIL},
     // the spectators (none in time trial sessions anyway)
     {L"Crowd", L"F1CE_CROWD", {{L"On (original)", nullptr}, {L"Off", L"0"}}, 0, DETAIL},
     // the game's own post-effect switches; Post-processing Off clears all of them, motion blur and heat haze (the

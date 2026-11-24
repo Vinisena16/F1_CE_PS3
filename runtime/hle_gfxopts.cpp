@@ -12,6 +12,14 @@
 //    at TOC 0x70E4A8), then one more level past each distance of the table at 0x1000E664 (25, 50 m), up to the car's
 //    level count (car +12960). Only these two functions read either constant. F1CE_CAR_LOD=<k> multiplies the three
 //    distances by k (2 = full detail up to 30 m), patched on the first call of either function.
+//  - LOD 0 only: the car's LAST level (car + (count-1)*0x10D0 + 0x30) is its shadow caster: 0x312900 hands it to the
+//    scene every frame besides the level it draws, and the car shadow pass 0x6431F0 and the shadow bounds 0x63ED50
+//    take that node. A car with a new level-0 model but the original lod1/lod2 then casts the old shape onto itself
+//    (season packs). The game has a path for one-level cars (count 1: level 0 always, and it is also the last one).
+//    F1CE_CAR_LOD=0 sets the count to 1 at the car's first update, for good (every reader must see the same last
+//    level: with the count at 1 inside 0x312900 only, the shadow pass drew lod2's stale node and the car lost its
+//    shadow), and makes 0x3065F0 return level 0. The levels are node lookups in the one model resource (0x30E2E0),
+//    so lod1/lod2 left unused leak nothing.
 //  - Post effects: the Post Effects settings (DefaultPostEffects.txt / a track's PostEffects.txt, parsed by 0x4583A0)
 //    keep their switches as bytes: +0x418 Motion Blur.Enable, +0x419 Depth Of Field.Enable, +0x41B Bloom.Enable, +0x41C
 //    Crob Rays.Enable (light rays), +0x41D Rain And Muck.Enable. The post-effects render 0x452E08 (r3: the settings'
@@ -40,7 +48,9 @@ const bool g_no_light_rays = g_no_postfx || env_off("F1CE_LIGHT_RAYS");
 const bool g_no_heat_haze = g_no_postfx || env_off("F1CE_HEAT_HAZE");
 const bool g_no_crowd = env_off("F1CE_CROWD");
 constexpr u32 ENGINE_HEAT = 2;
+const bool g_lod0_only = env_off("F1CE_CAR_LOD");
 constexpr u32 LOD0_DIST2 = 0x70E4A8, LOD_DISTS = 0x1000E664;   // 15 m squared; 25 m, 50 m
+constexpr u32 CAR_LOD_COUNT = 0x32A0;
 
 float ldf(u32 ea) { return std::bit_cast<float>(ld32(ea)); }
 void stf(u32 ea, float v) { st32(ea, std::bit_cast<u32>(v)); }
@@ -85,8 +95,19 @@ bool crowd_hook(PPUContext&) {
     if (!logged) { logged = true; LOG_I("crowd: off"); }
     return true;
 }
-// 0x3065F0, 0x312900: a car's level of detail (main thread)
-bool car_lod_hook(PPUContext&) {
+// 0x3065F0, 0x312900: a car's level of detail (main thread, r3 = the car)
+bool car_lod_hook(PPUContext& c) {
+    if (g_lod0_only) {
+        static bool logged = false;
+        if (!logged) { logged = true; LOG_I("car lod: level 0 only"); }
+        if (c.cur_fn == 0x3065F0) {
+            c.r[3] = 0;
+            return true;
+        }
+        const u32 car = (u32)c.r[3];
+        if (ld32(car + CAR_LOD_COUNT) > 1) st32(car + CAR_LOD_COUNT, 1);
+        return false;
+    }
     static bool patched = false;
     if (patched) return false;
     patched = true;
