@@ -316,8 +316,12 @@ void SPUThread::run() {
     _mm_setcsr(_mm_getcsr() | 0x8040);   // flush denormals to zero (FTZ | DAZ), as the SPU does
     if (const char* e = getenv("F1CE_LS_WRITERS")) lsw_base = (u32)strtoul(e, nullptr, 16) & 0x3FFF0;
     if (!blocks_on) flush_blocks();   // host-side LS writes invalidate through write_ls/ls_written
+    run_until(~0u);
+}
+
+void SPUThread::run_until(u32 stop) {
     static const bool per_instruction = getenv("F1CE_SPU_NOBLOCK") || !g_pc_log.empty();
-    while (!halted) {
+    while (!halted && pc != stop) {
         if (kernel_limit && pc < kernel_limit && on_kernel_call) {
             if (on_kernel_call(*this)) continue;
         }
@@ -893,6 +897,28 @@ void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const S
         }
     if (why[0] && c->bad++ < 10) LOG_W("geom check %s: DIFFERENT (%s)", name, why);
     if ((no & 1023) == 0) LOG_I("geom check %s: %u compared, %u differ, %u declined", name, no + 1, c->bad.load(), c->declined.load());
+}
+
+// native handlers of the geometry job's commands (GEOMETRY_JOB.md); each ends with the pc at 05c88 as the SPU handler's
+// return would leave it. None yet: every command runs its SPU handler.
+bool geom_native_handler(SPUThread& s, u32 handler) {
+    (void)s; (void)handler;
+    return false;
+}
+
+void geom_list_stat(GeomListEvent e) {
+    static std::atomic<u64> n[5], window{0};
+    n[e].fetch_add(1, std::memory_order_relaxed);
+    if (e != GL_START) return;
+    const u64 now = time_usec();
+    u64 w = window.load(std::memory_order_relaxed);
+    if (!w) { window.compare_exchange_strong(w, now); return; }
+    if (now - w < 10000000 || !window.compare_exchange_strong(w, now)) return;
+    const double secs = (now - w) / 1e6;
+    const u64 start = n[GL_START].exchange(0), cmd = n[GL_COMMAND].exchange(0);
+    LOG_I("geom lists: %.0f/s run natively, %.1f commands each; %.0f/s finished, %.0f/s handed back at an interrupt, %.0f/s in a halted handler",
+          start / secs, start ? (double)cmd / start : 0.0, n[GL_DONE].exchange(0) / secs, n[GL_INTERRUPT].exchange(0) / secs,
+          n[GL_HALTED].exchange(0) / secs);
 }
 
 namespace {

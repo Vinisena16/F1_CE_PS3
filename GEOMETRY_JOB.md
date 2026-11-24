@@ -61,6 +61,7 @@ the gain must come from whole call trees running natively (no dispatcher round t
 
 - [x] Job located, command set and per-command cost measured, checker (`F1CE_GEOM_CHECK`) and the per-command
   diagnostic (`SPU_AOT_GEOM_OPS=1`).
-- [ ] `SPUThread::run_until`, native command loop calling the SPU handlers (no speed gain expected yet: checks the
-  framework).
+- [x] `SPUThread::run_until`, native command loop (`spu_fast_cmdlist`, skip at `0x5960`) calling the SPU handlers through
+  nested runs: every list runs natively (~70-76k lists/s at the 30 fps race start, ~10.8 commands each), none handed
+  back (`geom lists:` log line).
 - [ ] Native handlers, by cost: 30, 0, 35, 9, 37, then the rest.

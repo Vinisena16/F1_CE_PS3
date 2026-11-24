@@ -238,6 +238,9 @@ struct SPUThread {
     void set_pref(int r, u32 v) { gpr[r].pi = _mm_setzero_si128(); gpr[r].w[3] = v; }
 
     void run();            // execute until halted
+    // execute until halted or until the dispatcher reaches `stop` (native code running SPU code to a return address:
+    // indirect branches always end translated clusters, so a return is always seen here)
+    void run_until(u32 stop);
     void dma(u32 cmd);     // perform an MFC command synchronously
 };
 
