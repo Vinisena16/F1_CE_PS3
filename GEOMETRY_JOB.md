@@ -64,4 +64,11 @@ the gain must come from whole call trees running natively (no dispatcher round t
 - [x] `SPUThread::run_until`, native command loop (`spu_fast_cmdlist`, skip at `0x5960`) calling the SPU handlers through
   nested runs: every list runs natively (~70-76k lists/s at the 30 fps race start, ~10.8 commands each), none handed
   back (`geom lists:` log line).
-- [ ] Native handlers, by cost: 30, 0, 35, 9, 37, then the rest.
+- [x] All 15 handlers as native call trees (`tools/spu_native_fn.py` -> `generated/spu_geom/geom_native.cpp`, 35
+  functions, ~6100 instructions): exact where checkable (ops 6 8 12 14 15 23 35, 40k-507k calls each, 0 differences
+  with `F1CE_GEOM_CHECK=2`; the cull / transform loops are bypassed in a check, they keep only live state); the others
+  touch DMA or the job manager and are verified by game runs. Only stop: op30 at `0x0A088`, interrupts enabled right
+  after job end with the job manager's own event pending (correct, the SPU code takes it). 60 fps + LOD0, vsync off,
+  three alternating pairs: 30.2/31.7, 28.1/28.7, 27.4/28.6 fps = +4% (on better in every pair).
+- [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
+  handlers that issue DMA.
