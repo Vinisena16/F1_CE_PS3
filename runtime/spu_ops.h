@@ -974,6 +974,9 @@ template <class S> bool spu_skip_triangle_cull(S& s) {
 extern bool g_geom_native;
 extern int g_geom_check;
 void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t);
+// set while a check runs a native call tree: the native loops it would enter (triangle cull, vertex transform) keep only
+// the registers and bytes later code reads, so a full-state comparison runs their SPU code instead
+extern thread_local bool t_geom_exact;
 // diagnostic build (SPU_AOT_GEOM_OPS=1 python -I tools/spu_aot.py): calls and time per command of the job's command loop
 // (handler entries from the table at 0x12180; the time runs until the loop's return point 05c88), logged as `geom ops:`
 void geom_op_enter(int op);
@@ -986,7 +989,7 @@ template <class S> bool spu_skip_geom_back(S&) { geom_op_back(); return false; }
 // goes to a native handler when there is one, else to the SPU handler through a nested run until it returns to 05c88.
 // The loop head keeps the SPU loop's state, so an interrupt, or a handler that halts the SPU, leaves the rest to it.
 bool geom_native_handler(SPUThread& s, u32 handler);   // spu.cpp: false = none for this handler
-enum GeomListEvent { GL_START, GL_COMMAND, GL_INTERRUPT, GL_HALTED, GL_DONE };
+enum GeomListEvent { GL_START, GL_COMMAND, GL_INTERRUPT, GL_HALTED, GL_DONE, GL_NATIVE_STOPPED };
 void geom_list_stat(GeomListEvent e);   // spu.cpp: counts, logged as `geom lists:` every 10 s
 template <class S> bool spu_fast_cmdlist(S& s) {
     static_assert(std::is_same_v<S, SPUThread>);
@@ -1191,11 +1194,10 @@ template <class S> bool spu_fast_cmdlist(S& s) {
         const u32 handler = s.pref(6) & 0x3FFFC;
         s.set_pref(0, 0x5C88);
         s.instructions += 152;
-        if (!geom_native_handler(s, handler)) {
-            s.pc = handler;
-            s.run_until(0x5C88);
-            if (s.halted || s.pc != 0x5C88) { geom_list_stat(GL_HALTED); return true; }   // the SPU code carries on
-        }
+        if (!geom_native_handler(s, handler)) s.pc = handler;
+        else if (s.pc != 0x5C88) geom_list_stat(GL_NATIVE_STOPPED);
+        s.run_until(0x5C88);   // the SPU handler, or the rest of a native one that stopped early
+        if (s.halted || s.pc != 0x5C88) { geom_list_stat(GL_HALTED); return true; }   // the SPU code carries on
         op_lqx(s, 0x3898E883u);   // 05c8c lqx r3,r81,r99
         op_a(s, 0x1818E882u);   // 05c90 a r2,r81,r99
         op_lqd(s, 0x34002906u);   // 05c9c lqd r6,0(r82)

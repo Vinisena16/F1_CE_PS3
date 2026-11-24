@@ -151,9 +151,13 @@ const u32 g_spu_aot_cluster_count = 0;
 ")
   set(SPU_AOT_SOURCES ${CMAKE_SOURCE_DIR}/generated/spu/spu_aot_table.cpp)
 endif()
+# the geometry job's call trees as native functions (tools/spu_native_fn.py, GEOMETRY_JOB.md); a folder of their own:
+# spu_aot.py clears generated/spu
+file(GLOB SPU_GEOM_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/generated/spu_geom/*.cpp)
+list(APPEND SPU_AOT_SOURCES ${SPU_GEOM_SOURCES})
 add_library(spu_aot OBJECT ${SPU_AOT_SOURCES})
 target_include_directories(spu_aot PRIVATE runtime generated)
-target_compile_options(spu_aot PRIVATE ${ARCH_FLAGS} -O2 -fno-strict-aliasing -fwrapv -Wno-unused-function)
+target_compile_options(spu_aot PRIVATE ${ARCH_FLAGS} -O2 -fno-strict-aliasing -fwrapv -Wno-unused-function -Wno-unused-label)
 
 # The runtime is shared by the game (f1ce: EBOOT.BIN) and the multiplayer executable the game exitspawns into
 # (f1ce_online: ONLINE.BIN, translated by 'tools/recomp.py online' into generated_online; built when that exists).
