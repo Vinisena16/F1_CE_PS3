@@ -4,9 +4,83 @@
 
 namespace {
 bool geomfn_041c0(SPUThread& s);
+bool geomfn_04220(SPUThread& s);
+bool geomfn_04368(SPUThread& s);
+bool geomfn_044c8(SPUThread& s);
+bool geomfn_04c18(SPUThread& s);
+bool geomfn_05d30(SPUThread& s);
+bool geomfn_061c8(SPUThread& s);
+bool geomfn_066b8(SPUThread& s);
+bool geomfn_06a30(SPUThread& s);
+bool geomfn_07580(SPUThread& s);
+bool geomfn_07610(SPUThread& s);
+bool geomfn_076a8(SPUThread& s);
+bool geomfn_07790(SPUThread& s);
+bool geomfn_07888(SPUThread& s);
+bool geomfn_079b0(SPUThread& s);
+bool geomfn_07c50(SPUThread& s);
+bool geomfn_07e40(SPUThread& s);
+bool geomfn_07e70(SPUThread& s);
+bool geomfn_08660(SPUThread& s);
+bool geomfn_08690(SPUThread& s);
+bool geomfn_088e0(SPUThread& s);
 bool geomfn_08970(SPUThread& s);
+bool geomfn_08ab0(SPUThread& s);
+bool geomfn_08c80(SPUThread& s);
+bool geomfn_09fd8(SPUThread& s);
 bool geomfn_0afd0(SPUThread& s);
+bool geomfn_0b280(SPUThread& s);
+bool geomfn_0b300(SPUThread& s);
+bool geomfn_0b700(SPUThread& s);
+bool geomfn_0b980(SPUThread& s);
+bool geomfn_0bc80(SPUThread& s);
+bool geomfn_0bd80(SPUThread& s);
+bool geomfn_0c180(SPUThread& s);
+bool geomfn_0cd80(SPUThread& s);
 bool geomfn_0d400(SPUThread& s);
+// an indirect call (bisl) to the pc: a generated function, else the SPU code through a nested run; true when it
+// returned to ret (the caller goes on natively)
+bool geom_call(SPUThread& s, u32 ret) {
+    switch (s.pc & 0x3FFFC) {
+    case 0x041C0: if (!geomfn_041c0(s)) s.run_until(ret); break;
+    case 0x04220: if (!geomfn_04220(s)) s.run_until(ret); break;
+    case 0x04368: if (!geomfn_04368(s)) s.run_until(ret); break;
+    case 0x044C8: if (!geomfn_044c8(s)) s.run_until(ret); break;
+    case 0x04C18: if (!geomfn_04c18(s)) s.run_until(ret); break;
+    case 0x05D30: if (!geomfn_05d30(s)) s.run_until(ret); break;
+    case 0x061C8: if (!geomfn_061c8(s)) s.run_until(ret); break;
+    case 0x066B8: if (!geomfn_066b8(s)) s.run_until(ret); break;
+    case 0x06A30: if (!geomfn_06a30(s)) s.run_until(ret); break;
+    case 0x07580: if (!geomfn_07580(s)) s.run_until(ret); break;
+    case 0x07610: if (!geomfn_07610(s)) s.run_until(ret); break;
+    case 0x076A8: if (!geomfn_076a8(s)) s.run_until(ret); break;
+    case 0x07790: if (!geomfn_07790(s)) s.run_until(ret); break;
+    case 0x07888: if (!geomfn_07888(s)) s.run_until(ret); break;
+    case 0x079B0: if (!geomfn_079b0(s)) s.run_until(ret); break;
+    case 0x07C50: if (!geomfn_07c50(s)) s.run_until(ret); break;
+    case 0x07E40: if (!geomfn_07e40(s)) s.run_until(ret); break;
+    case 0x07E70: if (!geomfn_07e70(s)) s.run_until(ret); break;
+    case 0x08660: if (!geomfn_08660(s)) s.run_until(ret); break;
+    case 0x08690: if (!geomfn_08690(s)) s.run_until(ret); break;
+    case 0x088E0: if (!geomfn_088e0(s)) s.run_until(ret); break;
+    case 0x08970: if (!geomfn_08970(s)) s.run_until(ret); break;
+    case 0x08AB0: if (!geomfn_08ab0(s)) s.run_until(ret); break;
+    case 0x08C80: if (!geomfn_08c80(s)) s.run_until(ret); break;
+    case 0x09FD8: if (!geomfn_09fd8(s)) s.run_until(ret); break;
+    case 0x0AFD0: if (!geomfn_0afd0(s)) s.run_until(ret); break;
+    case 0x0B280: if (!geomfn_0b280(s)) s.run_until(ret); break;
+    case 0x0B300: if (!geomfn_0b300(s)) s.run_until(ret); break;
+    case 0x0B700: if (!geomfn_0b700(s)) s.run_until(ret); break;
+    case 0x0B980: if (!geomfn_0b980(s)) s.run_until(ret); break;
+    case 0x0BC80: if (!geomfn_0bc80(s)) s.run_until(ret); break;
+    case 0x0BD80: if (!geomfn_0bd80(s)) s.run_until(ret); break;
+    case 0x0C180: if (!geomfn_0c180(s)) s.run_until(ret); break;
+    case 0x0CD80: if (!geomfn_0cd80(s)) s.run_until(ret); break;
+    case 0x0D400: if (!geomfn_0d400(s)) s.run_until(ret); break;
+    default: s.run_until(ret); break;
+    }
+    return !s.halted && s.pc == ret;
+}
 bool geomfn_041c0(SPUThread& s) {
     u32 to;
     goto L_041c0;
@@ -28,6 +102,3626 @@ L_041c0:
     s.instructions++; op_stqd(s, 0x24044105u);   // 041e8 stqd r5,272(r2)
     s.instructions++;   // 041ec bi r0,r0,r0
     s.pc = 0x041EC; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_04220(SPUThread& s) {
+    u32 to;
+    goto L_04220;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x04220: goto L_04220;
+    case 0x0426C: goto L_0426c;
+    case 0x04290: goto L_04290;
+    case 0x04298: goto L_04298;
+    case 0x042B0: goto L_042b0;
+    case 0x042B8: goto L_042b8;
+    case 0x042C8: goto L_042c8;
+    case 0x042E0: goto L_042e0;
+    case 0x04340: goto L_04340;
+    case 0x0435C: goto L_0435c;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_04220:
+    s.instructions++; op_ori(s, 0x04000185u);   // 04220 ori r5,r3,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0018Du);   // 04224 shlqbyi r13,r3,0
+    s.instructions++; op_il(s, 0x40806802u);   // 04228 il r2,0xd0
+    s.instructions++; op_lqd(s, 0x34090183u);   // 0422c lqd r3,576(r3)
+    s.instructions++; op_ai(s, 0x1C1FC204u);   // 04230 ai r4,r4,127
+    s.instructions++; op_ori(s, 0x0400010Fu);   // 04238 ori r15,r2,0
+    s.instructions++; op_stqd(s, 0x24FF0081u);   // 0423c stqd r1,-64(r1)
+    s.instructions++; op_il(s, 0x40805A02u);   // 04240 il r2,0xb4
+    s.instructions++; op_fsmbi(s, 0x32800010u);   // 04244 fsmbi r16,0x0
+    s.instructions++; op_ai(s, 0x1CF00081u);   // 04248 ai r1,r1,-64
+    s.instructions++; op_ori(s, 0x0400010Eu);   // 0424c ori r14,r2,0
+    s.instructions++; op_andi(s, 0x14E00204u);   // 04250 andi r4,r4,-128
+    s.instructions++; op_rotqby(s, 0x3B814182u);   // 04254 rotqby r2,r3,r5
+    s.instructions++; op_ai(s, 0x1C04028Cu);   // 04258 ai r12,r5,16
+    s.instructions++; op_lqd(s, 0x34004103u);   // 0425c lqd r3,16(r2)
+    s.instructions++; op_rotqby(s, 0x3B808182u);   // 04260 rotqby r2,r3,r2
+    s.instructions++; op_ori(s, 0x0400010Bu);   // 04264 ori r11,r2,0
+    s.instructions++; goto L_042b8;   // 04268 br r0,0x42b8
+L_0426c:
+    s.instructions++; op_lqd(s, 0x34008082u);   // 0426c lqd r2,32(r1)
+    s.instructions++; op_lqd(s, 0x34008283u);   // 04270 lqd r3,32(r5)
+    s.instructions++; op_shufb(s, 0xB0408806u);   // 04274 shufb r2,r16,r2,r6
+    s.instructions++; op_stqd(s, 0x24008082u);   // 04278 stqd r2,32(r1)
+    s.instructions++; op_lqd(s, 0x34008282u);   // 0427c lqd r2,32(r5)
+    s.instructions++; op_rotqby(s, 0x3B814102u);   // 04280 rotqby r2,r2,r5
+    s.instructions++; op_a(s, 0x18008202u);   // 04284 a r2,r4,r2
+    s.instructions++; op_shufb(s, 0xB060C10Au);   // 04288 shufb r3,r2,r3,r10
+    s.instructions++; op_stqd(s, 0x24008283u);   // 0428c stqd r3,32(r5)
+L_04290:
+    s.instructions++; op_ila(s, 0x42214C02u);   // 04290 ila r2,0x4298
+    s.instructions++;   // 04294 bi r0,r2,r32
+    s.pc = 0x04294; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04298:
+    s.pc = 0x04298; s.instructions++; op_wrch(s, 0x21A0080Du);   // 04298 wrch ch16,r13
+    if (s.halted) { s.pc = 0x0429C; return false; }
+    s.pc = 0x0429C; s.instructions++; op_wrch(s, 0x21A0090Bu);   // 0429c wrch ch18,r11
+    if (s.halted) { s.pc = 0x042A0; return false; }
+    s.pc = 0x042A0; s.instructions++; op_wrch(s, 0x21A00A8Eu);   // 042a0 wrch ch21,r14
+    if (s.halted) { s.pc = 0x042A4; return false; }
+    s.pc = 0x042A4; s.instructions++; op_rdch(s, 0x01A00D82u);   // 042a4 rdch r2,ch27
+    if (s.halted) { s.pc = 0x042A8; return false; }
+    s.instructions++; op_ila(s, 0x42215803u);   // 042a8 ila r3,0x42b0
+    s.instructions++;   // 042ac bi r0,r3,r16
+    s.pc = 0x042AC; op_bi(s, 0x35040180u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_042b0:
+    s.instructions++; op_andi(s, 0x14004102u);   // 042b0 andi r2,r2,1
+    s.instructions++; if (s.pref(2) == 0) goto L_04340;   // 042b4 brz r2,0x4340
+L_042b8:
+    s.instructions++; op_ila(s, 0x42216402u);   // 042c0 ila r2,0x42c8
+    s.instructions++;   // 042c4 bi r0,r2,r32
+    s.pc = 0x042C4; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_042c8:
+    s.pc = 0x042C8; s.instructions++; op_wrch(s, 0x21A0080Du);   // 042c8 wrch ch16,r13
+    if (s.halted) { s.pc = 0x042CC; return false; }
+    s.pc = 0x042CC; s.instructions++; op_wrch(s, 0x21A0090Bu);   // 042cc wrch ch18,r11
+    if (s.halted) { s.pc = 0x042D0; return false; }
+    s.pc = 0x042D0; s.instructions++; op_wrch(s, 0x21A00A8Fu);   // 042d0 wrch ch21,r15
+    if (s.halted) { s.pc = 0x042D4; return false; }
+    s.pc = 0x042D4; s.instructions++; op_rdch(s, 0x01A00D82u);   // 042d4 rdch r2,ch27
+    if (s.halted) { s.pc = 0x042D8; return false; }
+    s.instructions++; op_ila(s, 0x42217002u);   // 042d8 ila r2,0x42e0
+    s.instructions++;   // 042dc bi r0,r2,r16
+    s.pc = 0x042DC; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_042e0:
+    s.instructions++; op_lqd(s, 0x34000283u);   // 042e0 lqd r3,0(r5)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 042e4 lqd r2,32(r1)
+    s.instructions++; op_cwd(s, 0x3EC00086u);   // 042e8 cwd r6,r1,0
+    s.instructions++; op_cwd(s, 0x3EC8028Au);   // 042ec cwd r10,r5,32
+    s.instructions++; op_cwd(s, 0x3EC00288u);   // 042f0 cwd r8,r5,0
+    s.instructions++; op_rotqby(s, 0x3B814183u);   // 042f4 rotqby r3,r3,r5
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 042f8 shufb r2,r3,r2,r6
+    s.instructions++; op_stqd(s, 0x24008082u);   // 042fc stqd r2,32(r1)
+    s.instructions++; op_lqd(s, 0x34000603u);   // 04300 lqd r3,0(r12)
+    s.instructions++; op_lqd(s, 0x3400C082u);   // 04304 lqd r2,48(r1)
+    s.instructions++; op_rotqby(s, 0x3B830183u);   // 04308 rotqby r3,r3,r12
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 0430c shufb r2,r3,r2,r6
+    s.instructions++; op_stqd(s, 0x2400C082u);   // 04310 stqd r2,48(r1)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 04314 lqd r2,32(r1)
+    s.instructions++; op_lqd(s, 0x3400C083u);   // 04318 lqd r3,48(r1)
+    s.instructions++; op_a(s, 0x18008202u);   // 0431c a r2,r4,r2
+    s.instructions++; op_clgt(s, 0x5800C102u);   // 04320 clgt r2,r2,r3
+    s.instructions++; if (s.pref(2) != 0) goto L_0426c;   // 04324 brnz r2,0x426c
+    s.instructions++; op_lqd(s, 0x34008082u);   // 04328 lqd r2,32(r1)
+    s.instructions++; op_lqd(s, 0x34000283u);   // 0432c lqd r3,0(r5)
+    s.instructions++; op_a(s, 0x18008202u);   // 04330 a r2,r4,r2
+    s.instructions++; op_shufb(s, 0xB060C108u);   // 04334 shufb r3,r2,r3,r8
+    s.instructions++; op_stqd(s, 0x24000283u);   // 04338 stqd r3,0(r5)
+    s.instructions++; goto L_04290;   // 0433c br r0,0x4290
+L_04340:
+    s.instructions++; op_lqd(s, 0x34008082u);   // 04340 lqd r2,32(r1)
+    s.instructions++; if (s.pref(2) != 0) goto L_0435c;   // 04344 brnz r2,0x435c
+    s.instructions++; op_il(s, 0x40FFFF83u);   // 04348 il r3,0xffff
+    s.instructions++; op_lqd(s, 0x34124282u);   // 0434c lqd r2,1168(r5)
+    s.instructions++; op_cwd(s, 0x3EC40284u);   // 04350 cwd r4,r5,16
+    s.instructions++; op_shufb(s, 0xB0408184u);   // 04354 shufb r2,r3,r2,r4
+    s.instructions++; op_stqd(s, 0x24124282u);   // 04358 stqd r2,1168(r5)
+L_0435c:
+    s.instructions++; op_lqd(s, 0x34008083u);   // 0435c lqd r3,32(r1)
+    s.instructions++; op_ai(s, 0x1C100081u);   // 04360 ai r1,r1,64
+    s.instructions++;   // 04364 bi r0,r0,r0
+    s.pc = 0x04364; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_04368(SPUThread& s) {
+    u32 to;
+    goto L_04368;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x04368: goto L_04368;
+    case 0x043A8: goto L_043a8;
+    case 0x043E0: goto L_043e0;
+    case 0x043E8: goto L_043e8;
+    case 0x04418: goto L_04418;
+    case 0x04420: goto L_04420;
+    case 0x04468: goto L_04468;
+    case 0x0447C: goto L_0447c;
+    case 0x04488: goto L_04488;
+    case 0x044B0: goto L_044b0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_04368:
+    s.instructions++; op_ori(s, 0x04000186u);   // 04368 ori r6,r3,0
+    s.instructions++; op_stqd(s, 0x24FF4081u);   // 0436c stqd r1,-48(r1)
+    s.instructions++; op_ai(s, 0x1CF40081u);   // 04370 ai r1,r1,-48
+    s.instructions++; op_stqd(s, 0x24008085u);   // 04374 stqd r5,32(r1)
+    s.instructions++; op_lqd(s, 0x34054182u);   // 04378 lqd r2,336(r3)
+    s.instructions++; op_lqd(s, 0x34050183u);   // 0437c lqd r3,320(r3)
+    s.instructions++; op_rotqby(s, 0x3B818108u);   // 04380 rotqby r8,r2,r6
+    s.instructions++; op_rotqby(s, 0x3B818183u);   // 04384 rotqby r3,r3,r6
+    s.instructions++; op_sf(s, 0x0800C405u);   // 04388 sf r5,r8,r3
+    s.instructions++; if (s.pref(5) == 0) goto L_04418;   // 0438c brz r5,0x4418
+    s.instructions++; op_lqd(s, 0x34008082u);   // 04390 lqd r2,32(r1)
+    s.instructions++; if (s.pref(2) == 0) goto L_04420;   // 04394 brz r2,0x4420
+    s.instructions++; op_lqd(s, 0x34124302u);   // 04398 lqd r2,1168(r6)
+    s.instructions++; op_rotqby(s, 0x3B818102u);   // 0439c rotqby r2,r2,r6
+    s.instructions++; if (s.pref(2) != 0) goto L_04418;   // 043a4 brnz r2,0x4418
+L_043a8:
+    s.instructions++; op_il(s, 0x40809A07u);   // 043a8 il r7,0x134
+    s.instructions++; op_lqd(s, 0x3404C303u);   // 043ac lqd r3,304(r6)
+    s.instructions++; op_il(s, 0x40A00009u);   // 043b0 il r9,0x4000
+    s.instructions++; op_clgt(s, 0x58024282u);   // 043b4 clgt r2,r5,r9
+    s.instructions++; op_rotqby(s, 0x3B818183u);   // 043b8 rotqby r3,r3,r6
+    s.instructions++; op_andi(s, 0x14FF0183u);   // 043bc andi r3,r3,-4
+    s.instructions++; op_a(s, 0x18018183u);   // 043c0 a r3,r3,r6
+    s.instructions++; op_a(s, 0x1801C186u);   // 043c8 a r6,r3,r7
+    s.instructions++; op_lqx(s, 0x3881C183u);   // 043cc lqx r3,r3,r7
+    s.instructions++; op_rotqby(s, 0x3B818183u);   // 043d0 rotqby r3,r3,r6
+    s.instructions++; op_rotmi(s, 0x0F3A0183u);   // 043d4 rotmi r3,r3,-24
+    s.instructions++; op_ori(s, 0x04000187u);   // 043d8 ori r7,r3,0
+    s.instructions++; if (s.pref(2) != 0) goto L_04468;   // 043dc brnz r2,0x4468
+L_043e0:
+    s.instructions++; op_ila(s, 0x4221F402u);   // 043e0 ila r2,0x43e8
+    s.instructions++;   // 043e4 bi r0,r2,r32
+    s.pc = 0x043E4; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_043e8:
+    s.instructions++; op_ori(s, 0x04000402u);   // 043e8 ori r2,r8,0
+    s.pc = 0x043EC; s.instructions++; op_wrch(s, 0x21A00802u);   // 043ec wrch ch16,r2
+    if (s.halted) { s.pc = 0x043F0; return false; }
+    s.instructions++; op_ori(s, 0x04000203u);   // 043f0 ori r3,r4,0
+    s.pc = 0x043F4; s.instructions++; op_wrch(s, 0x21A00903u);   // 043f4 wrch ch18,r3
+    if (s.halted) { s.pc = 0x043F8; return false; }
+    s.instructions++; op_ori(s, 0x04000282u);   // 043f8 ori r2,r5,0
+    s.pc = 0x043FC; s.instructions++; op_wrch(s, 0x21A00982u);   // 043fc wrch ch19,r2
+    if (s.halted) { s.pc = 0x04400; return false; }
+    s.pc = 0x04400; s.instructions++; op_wrch(s, 0x21A00A07u);   // 04400 wrch ch20,r7
+    if (s.halted) { s.pc = 0x04404; return false; }
+    s.instructions++; op_il(s, 0x40801002u);   // 04404 il r2,0x20
+    s.pc = 0x04408; s.instructions++; op_wrch(s, 0x21A00A82u);   // 04408 wrch ch21,r2
+    if (s.halted) { s.pc = 0x0440C; return false; }
+    s.instructions++; op_ila(s, 0x42220C02u);   // 04410 ila r2,0x4418
+    s.instructions++;   // 04414 bi r0,r2,r16
+    s.pc = 0x04414; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04418:
+    s.instructions++; op_ai(s, 0x1C0C0081u);   // 04418 ai r1,r1,48
+    s.instructions++;   // 0441c bi r0,r0,r0
+    s.pc = 0x0441C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_04420:
+    s.instructions++; op_ai(s, 0x1C1FC282u);   // 04420 ai r2,r5,127
+    s.instructions++; op_lqd(s, 0x34054307u);   // 04424 lqd r7,336(r6)
+    s.instructions++; op_ai(s, 0x1C1FC183u);   // 04428 ai r3,r3,127
+    s.instructions++; op_cwd(s, 0x3ED40309u);   // 0442c cwd r9,r6,-48
+    s.instructions++; op_andi(s, 0x14E00102u);   // 04430 andi r2,r2,-128
+    s.instructions++; op_cwd(s, 0x3ED0030Au);   // 04434 cwd r10,r6,-64
+    s.instructions++; op_andi(s, 0x14E00183u);   // 04438 andi r3,r3,-128
+    s.instructions++; op_a(s, 0x18008402u);   // 04440 a r2,r8,r2
+    s.instructions++; op_shufb(s, 0xB0E1C109u);   // 04444 shufb r7,r2,r7,r9
+    s.instructions++; op_stqd(s, 0x24054307u);   // 04448 stqd r7,336(r6)
+    s.instructions++; op_lqd(s, 0x34050302u);   // 0444c lqd r2,320(r6)
+    s.instructions++; op_shufb(s, 0xB040818Au);   // 04450 shufb r2,r3,r2,r10
+    s.instructions++; op_stqd(s, 0x24050302u);   // 04454 stqd r2,320(r6)
+    s.instructions++; op_lqd(s, 0x34124302u);   // 04458 lqd r2,1168(r6)
+    s.instructions++; op_rotqby(s, 0x3B818102u);   // 0445c rotqby r2,r2,r6
+    s.instructions++; if (s.pref(2) == 0) goto L_043a8;   // 04460 brz r2,0x43a8
+    s.instructions++; goto L_04418;   // 04464 br r0,0x4418
+L_04468:
+    s.instructions++; op_il(s, 0x40801002u);   // 04468 il r2,0x20
+    s.instructions++; op_shlqbyi(s, 0x3FE0048Au);   // 0446c shlqbyi r10,r9,0
+    s.instructions++; op_ori(s, 0x04000486u);   // 04470 ori r6,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00187u);   // 04474 shlqbyi r7,r3,0
+    s.instructions++; op_ori(s, 0x04000109u);   // 04478 ori r9,r2,0
+L_0447c:
+    s.instructions++; op_ila(s, 0x42224402u);   // 04480 ila r2,0x4488
+    s.instructions++;   // 04484 bi r0,r2,r32
+    s.pc = 0x04484; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04488:
+    s.instructions++; op_ori(s, 0x04000402u);   // 04488 ori r2,r8,0
+    s.pc = 0x0448C; s.instructions++; op_wrch(s, 0x21A00802u);   // 0448c wrch ch16,r2
+    if (s.halted) { s.pc = 0x04490; return false; }
+    s.instructions++; op_ori(s, 0x04000203u);   // 04490 ori r3,r4,0
+    s.pc = 0x04494; s.instructions++; op_wrch(s, 0x21A00903u);   // 04494 wrch ch18,r3
+    if (s.halted) { s.pc = 0x04498; return false; }
+    s.pc = 0x04498; s.instructions++; op_wrch(s, 0x21A0098Au);   // 04498 wrch ch19,r10
+    if (s.halted) { s.pc = 0x0449C; return false; }
+    s.pc = 0x0449C; s.instructions++; op_wrch(s, 0x21A00A07u);   // 0449c wrch ch20,r7
+    if (s.halted) { s.pc = 0x044A0; return false; }
+    s.pc = 0x044A0; s.instructions++; op_wrch(s, 0x21A00A89u);   // 044a0 wrch ch21,r9
+    if (s.halted) { s.pc = 0x044A4; return false; }
+    s.instructions++; op_ila(s, 0x42225802u);   // 044a8 ila r2,0x44b0
+    s.instructions++;   // 044ac bi r0,r2,r16
+    s.pc = 0x044AC; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_044b0:
+    s.instructions++; op_sf(s, 0x08014305u);   // 044b0 sf r5,r6,r5
+    s.instructions++; op_a(s, 0x18018204u);   // 044b4 a r4,r4,r6
+    s.instructions++; op_clgt(s, 0x58018282u);   // 044b8 clgt r2,r5,r6
+    s.instructions++; op_a(s, 0x18018408u);   // 044bc a r8,r8,r6
+    s.instructions++; if (s.pref(2) != 0) goto L_0447c;   // 044c0 brnz r2,0x447c
+    s.instructions++; goto L_043e0;   // 044c4 br r0,0x43e0
+}
+bool geomfn_044c8(SPUThread& s) {
+    u32 to;
+    goto L_044c8;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x04368: goto L_04368;
+    case 0x043A8: goto L_043a8;
+    case 0x043E0: goto L_043e0;
+    case 0x043E8: goto L_043e8;
+    case 0x04418: goto L_04418;
+    case 0x04420: goto L_04420;
+    case 0x04468: goto L_04468;
+    case 0x0447C: goto L_0447c;
+    case 0x04488: goto L_04488;
+    case 0x044B0: goto L_044b0;
+    case 0x044C8: goto L_044c8;
+    case 0x04520: goto L_04520;
+    case 0x04548: goto L_04548;
+    case 0x04590: goto L_04590;
+    case 0x04610: goto L_04610;
+    case 0x04628: goto L_04628;
+    case 0x04678: goto L_04678;
+    case 0x04680: goto L_04680;
+    case 0x04698: goto L_04698;
+    case 0x046F4: goto L_046f4;
+    case 0x04700: goto L_04700;
+    case 0x04728: goto L_04728;
+    case 0x04730: goto L_04730;
+    case 0x04738: goto L_04738;
+    case 0x04750: goto L_04750;
+    case 0x047CC: goto L_047cc;
+    case 0x047E0: goto L_047e0;
+    case 0x047E8: goto L_047e8;
+    case 0x047EC: goto L_047ec;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_04368:
+    s.instructions++; op_ori(s, 0x04000186u);   // 04368 ori r6,r3,0
+    s.instructions++; op_stqd(s, 0x24FF4081u);   // 0436c stqd r1,-48(r1)
+    s.instructions++; op_ai(s, 0x1CF40081u);   // 04370 ai r1,r1,-48
+    s.instructions++; op_stqd(s, 0x24008085u);   // 04374 stqd r5,32(r1)
+    s.instructions++; op_lqd(s, 0x34054182u);   // 04378 lqd r2,336(r3)
+    s.instructions++; op_lqd(s, 0x34050183u);   // 0437c lqd r3,320(r3)
+    s.instructions++; op_rotqby(s, 0x3B818108u);   // 04380 rotqby r8,r2,r6
+    s.instructions++; op_rotqby(s, 0x3B818183u);   // 04384 rotqby r3,r3,r6
+    s.instructions++; op_sf(s, 0x0800C405u);   // 04388 sf r5,r8,r3
+    s.instructions++; if (s.pref(5) == 0) goto L_04418;   // 0438c brz r5,0x4418
+    s.instructions++; op_lqd(s, 0x34008082u);   // 04390 lqd r2,32(r1)
+    s.instructions++; if (s.pref(2) == 0) goto L_04420;   // 04394 brz r2,0x4420
+    s.instructions++; op_lqd(s, 0x34124302u);   // 04398 lqd r2,1168(r6)
+    s.instructions++; op_rotqby(s, 0x3B818102u);   // 0439c rotqby r2,r2,r6
+    s.instructions++; if (s.pref(2) != 0) goto L_04418;   // 043a4 brnz r2,0x4418
+L_043a8:
+    s.instructions++; op_il(s, 0x40809A07u);   // 043a8 il r7,0x134
+    s.instructions++; op_lqd(s, 0x3404C303u);   // 043ac lqd r3,304(r6)
+    s.instructions++; op_il(s, 0x40A00009u);   // 043b0 il r9,0x4000
+    s.instructions++; op_clgt(s, 0x58024282u);   // 043b4 clgt r2,r5,r9
+    s.instructions++; op_rotqby(s, 0x3B818183u);   // 043b8 rotqby r3,r3,r6
+    s.instructions++; op_andi(s, 0x14FF0183u);   // 043bc andi r3,r3,-4
+    s.instructions++; op_a(s, 0x18018183u);   // 043c0 a r3,r3,r6
+    s.instructions++; op_a(s, 0x1801C186u);   // 043c8 a r6,r3,r7
+    s.instructions++; op_lqx(s, 0x3881C183u);   // 043cc lqx r3,r3,r7
+    s.instructions++; op_rotqby(s, 0x3B818183u);   // 043d0 rotqby r3,r3,r6
+    s.instructions++; op_rotmi(s, 0x0F3A0183u);   // 043d4 rotmi r3,r3,-24
+    s.instructions++; op_ori(s, 0x04000187u);   // 043d8 ori r7,r3,0
+    s.instructions++; if (s.pref(2) != 0) goto L_04468;   // 043dc brnz r2,0x4468
+L_043e0:
+    s.instructions++; op_ila(s, 0x4221F402u);   // 043e0 ila r2,0x43e8
+    s.instructions++;   // 043e4 bi r0,r2,r32
+    s.pc = 0x043E4; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_043e8:
+    s.instructions++; op_ori(s, 0x04000402u);   // 043e8 ori r2,r8,0
+    s.pc = 0x043EC; s.instructions++; op_wrch(s, 0x21A00802u);   // 043ec wrch ch16,r2
+    if (s.halted) { s.pc = 0x043F0; return false; }
+    s.instructions++; op_ori(s, 0x04000203u);   // 043f0 ori r3,r4,0
+    s.pc = 0x043F4; s.instructions++; op_wrch(s, 0x21A00903u);   // 043f4 wrch ch18,r3
+    if (s.halted) { s.pc = 0x043F8; return false; }
+    s.instructions++; op_ori(s, 0x04000282u);   // 043f8 ori r2,r5,0
+    s.pc = 0x043FC; s.instructions++; op_wrch(s, 0x21A00982u);   // 043fc wrch ch19,r2
+    if (s.halted) { s.pc = 0x04400; return false; }
+    s.pc = 0x04400; s.instructions++; op_wrch(s, 0x21A00A07u);   // 04400 wrch ch20,r7
+    if (s.halted) { s.pc = 0x04404; return false; }
+    s.instructions++; op_il(s, 0x40801002u);   // 04404 il r2,0x20
+    s.pc = 0x04408; s.instructions++; op_wrch(s, 0x21A00A82u);   // 04408 wrch ch21,r2
+    if (s.halted) { s.pc = 0x0440C; return false; }
+    s.instructions++; op_ila(s, 0x42220C02u);   // 04410 ila r2,0x4418
+    s.instructions++;   // 04414 bi r0,r2,r16
+    s.pc = 0x04414; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04418:
+    s.instructions++; op_ai(s, 0x1C0C0081u);   // 04418 ai r1,r1,48
+    s.instructions++;   // 0441c bi r0,r0,r0
+    s.pc = 0x0441C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_04420:
+    s.instructions++; op_ai(s, 0x1C1FC282u);   // 04420 ai r2,r5,127
+    s.instructions++; op_lqd(s, 0x34054307u);   // 04424 lqd r7,336(r6)
+    s.instructions++; op_ai(s, 0x1C1FC183u);   // 04428 ai r3,r3,127
+    s.instructions++; op_cwd(s, 0x3ED40309u);   // 0442c cwd r9,r6,-48
+    s.instructions++; op_andi(s, 0x14E00102u);   // 04430 andi r2,r2,-128
+    s.instructions++; op_cwd(s, 0x3ED0030Au);   // 04434 cwd r10,r6,-64
+    s.instructions++; op_andi(s, 0x14E00183u);   // 04438 andi r3,r3,-128
+    s.instructions++; op_a(s, 0x18008402u);   // 04440 a r2,r8,r2
+    s.instructions++; op_shufb(s, 0xB0E1C109u);   // 04444 shufb r7,r2,r7,r9
+    s.instructions++; op_stqd(s, 0x24054307u);   // 04448 stqd r7,336(r6)
+    s.instructions++; op_lqd(s, 0x34050302u);   // 0444c lqd r2,320(r6)
+    s.instructions++; op_shufb(s, 0xB040818Au);   // 04450 shufb r2,r3,r2,r10
+    s.instructions++; op_stqd(s, 0x24050302u);   // 04454 stqd r2,320(r6)
+    s.instructions++; op_lqd(s, 0x34124302u);   // 04458 lqd r2,1168(r6)
+    s.instructions++; op_rotqby(s, 0x3B818102u);   // 0445c rotqby r2,r2,r6
+    s.instructions++; if (s.pref(2) == 0) goto L_043a8;   // 04460 brz r2,0x43a8
+    s.instructions++; goto L_04418;   // 04464 br r0,0x4418
+L_04468:
+    s.instructions++; op_il(s, 0x40801002u);   // 04468 il r2,0x20
+    s.instructions++; op_shlqbyi(s, 0x3FE0048Au);   // 0446c shlqbyi r10,r9,0
+    s.instructions++; op_ori(s, 0x04000486u);   // 04470 ori r6,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00187u);   // 04474 shlqbyi r7,r3,0
+    s.instructions++; op_ori(s, 0x04000109u);   // 04478 ori r9,r2,0
+L_0447c:
+    s.instructions++; op_ila(s, 0x42224402u);   // 04480 ila r2,0x4488
+    s.instructions++;   // 04484 bi r0,r2,r32
+    s.pc = 0x04484; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04488:
+    s.instructions++; op_ori(s, 0x04000402u);   // 04488 ori r2,r8,0
+    s.pc = 0x0448C; s.instructions++; op_wrch(s, 0x21A00802u);   // 0448c wrch ch16,r2
+    if (s.halted) { s.pc = 0x04490; return false; }
+    s.instructions++; op_ori(s, 0x04000203u);   // 04490 ori r3,r4,0
+    s.pc = 0x04494; s.instructions++; op_wrch(s, 0x21A00903u);   // 04494 wrch ch18,r3
+    if (s.halted) { s.pc = 0x04498; return false; }
+    s.pc = 0x04498; s.instructions++; op_wrch(s, 0x21A0098Au);   // 04498 wrch ch19,r10
+    if (s.halted) { s.pc = 0x0449C; return false; }
+    s.pc = 0x0449C; s.instructions++; op_wrch(s, 0x21A00A07u);   // 0449c wrch ch20,r7
+    if (s.halted) { s.pc = 0x044A0; return false; }
+    s.pc = 0x044A0; s.instructions++; op_wrch(s, 0x21A00A89u);   // 044a0 wrch ch21,r9
+    if (s.halted) { s.pc = 0x044A4; return false; }
+    s.instructions++; op_ila(s, 0x42225802u);   // 044a8 ila r2,0x44b0
+    s.instructions++;   // 044ac bi r0,r2,r16
+    s.pc = 0x044AC; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_044b0:
+    s.instructions++; op_sf(s, 0x08014305u);   // 044b0 sf r5,r6,r5
+    s.instructions++; op_a(s, 0x18018204u);   // 044b4 a r4,r4,r6
+    s.instructions++; op_clgt(s, 0x58018282u);   // 044b8 clgt r2,r5,r6
+    s.instructions++; op_a(s, 0x18018408u);   // 044bc a r8,r8,r6
+    s.instructions++; if (s.pref(2) != 0) goto L_0447c;   // 044c0 brnz r2,0x447c
+    s.instructions++; goto L_043e0;   // 044c4 br r0,0x43e0
+L_044c8:
+    s.instructions++; op_ori(s, 0x04000206u);   // 044c8 ori r6,r4,0
+    s.instructions++; op_lqd(s, 0x34050182u);   // 044cc lqd r2,320(r3)
+    s.instructions++; op_lqd(s, 0x34054185u);   // 044d0 lqd r5,336(r3)
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 044d4 stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x040001D0u);   // 044d8 ori r80,r3,0
+    s.instructions++; op_stqd(s, 0x24004080u);   // 044dc stqd r0,16(r1)
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 044e0 stqd r81,-32(r1)
+    s.instructions++; op_stqd(s, 0x24FEC081u);   // 044e4 stqd r1,-80(r1)
+    s.instructions++; op_ai(s, 0x1CEC0081u);   // 044e8 ai r1,r1,-80
+    s.instructions++; op_rotqby(s, 0x3B80C104u);   // 044ec rotqby r4,r2,r3
+    s.instructions++; op_rotqby(s, 0x3B80C282u);   // 044f0 rotqby r2,r5,r3
+    s.instructions++; op_sf(s, 0x08010104u);   // 044f4 sf r4,r2,r4
+    s.instructions++; if (s.pref(4) == 0) goto L_04610;   // 044f8 brz r4,0x4610
+    s.instructions++; if (s.pref(6) == 0) goto L_04628;   // 044fc brz r6,0x4628
+    s.instructions++; op_il(s, 0x40812002u);   // 04500 il r2,0x240
+    s.instructions++; op_lqd(s, 0x34000303u);   // 04504 lqd r3,0(r6)
+    s.instructions++; op_cwd(s, 0x3EC00307u);   // 04508 cwd r7,r6,0
+    s.instructions++; op_a(s, 0x1800A851u);   // 0450c a r81,r80,r2
+    s.instructions++; op_rotqby(s, 0x3B81818Cu);   // 04510 rotqby r12,r3,r6
+    s.instructions++; op_a(s, 0x18030202u);   // 04514 a r2,r4,r12
+    s.instructions++; op_shufb(s, 0xB0A0C107u);   // 04518 shufb r5,r2,r3,r7
+    s.instructions++; op_stqd(s, 0x24000305u);   // 0451c stqd r5,0(r6)
+L_04520:
+    s.instructions++; op_il(s, 0x40800A05u);   // 04520 il r5,0x14
+    s.instructions++; op_lqd(s, 0x34002882u);   // 04524 lqd r2,0(r81)
+    s.instructions++; op_ori(s, 0x04002804u);   // 04528 ori r4,r80,0
+    s.instructions++; op_fsmbi(s, 0x32800008u);   // 0452c fsmbi r8,0x0
+    s.instructions++; op_il(s, 0x4080000Bu);   // 04530 il r11,0x0
+    s.instructions++; op_rotqby(s, 0x3B944102u);   // 04534 rotqby r2,r2,r81
+    s.instructions++; op_a(s, 0x18014103u);   // 04538 a r3,r2,r5
+    s.instructions++; op_lqx(s, 0x38814102u);   // 0453c lqx r2,r2,r5
+    s.instructions++; op_rotqby(s, 0x3B80C102u);   // 04540 rotqby r2,r2,r3
+    s.instructions++; op_sf(s, 0x0803010Au);   // 04544 sf r10,r2,r12
+L_04548:
+    s.instructions++; op_ai(s, 0x1C004408u);   // 04548 ai r8,r8,1
+    s.instructions++; op_lqd(s, 0x3412C202u);   // 04554 lqd r2,1200(r4)
+    s.instructions++; op_ceqi(s, 0x7C040407u);   // 04558 ceqi r7,r8,16
+    s.instructions++; op_cwd(s, 0x3ECC0209u);   // 0455c cwd r9,r4,48
+    s.instructions++; op_rotqby(s, 0x3B810103u);   // 04560 rotqby r3,r2,r4
+    s.instructions++; op_cwd(s, 0x3EC00186u);   // 04564 cwd r6,r3,0
+    s.instructions++; if (s.pref(3) == 0) goto L_04590;   // 04568 brz r3,0x4590
+    s.instructions++; op_lqd(s, 0x34000182u);   // 0456c lqd r2,0(r3)
+    s.instructions++; op_ori(s, 0x04000105u);   // 04570 ori r5,r2,0
+    s.instructions++; op_rotqby(s, 0x3B80C102u);   // 04574 rotqby r2,r2,r3
+    s.instructions++; op_a(s, 0x18008502u);   // 04578 a r2,r10,r2
+    s.instructions++; op_shufb(s, 0xB0A14106u);   // 0457c shufb r5,r2,r5,r6
+    s.instructions++; op_stqd(s, 0x24000185u);   // 04580 stqd r5,0(r3)
+    s.instructions++; op_lqd(s, 0x3412C202u);   // 04584 lqd r2,1200(r4)
+    s.instructions++; op_shufb(s, 0xB0408589u);   // 04588 shufb r2,r11,r2,r9
+    s.instructions++; op_stqd(s, 0x2412C202u);   // 0458c stqd r2,1200(r4)
+L_04590:
+    s.instructions++; op_ai(s, 0x1C010204u);   // 04590 ai r4,r4,4
+    s.instructions++; if (s.pref(7) == 0) goto L_04548;   // 04594 brz r7,0x4548
+    s.instructions++; op_il(s, 0x40800007u);   // 04598 il r7,0x0
+    s.instructions++; op_lqd(s, 0x34008082u);   // 0459c lqd r2,32(r1)
+    s.instructions++; op_ori(s, 0x04002803u);   // 045a0 ori r3,r80,0
+    s.instructions++; op_cwd(s, 0x3EC00086u);   // 045a4 cwd r6,r1,0
+    s.instructions++; op_ori(s, 0x04000604u);   // 045a8 ori r4,r12,0
+    s.instructions++; op_cwd(s, 0x3EC10088u);   // 045ac cwd r8,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20089u);   // 045b0 cwd r9,r1,8
+    s.instructions++; op_lqd(s, 0x3412A805u);   // 045b4 lqd r5,1184(r80)
+    s.instructions++; op_cwd(s, 0x3EC3008Au);   // 045b8 cwd r10,r1,12
+    s.instructions++; op_shufb(s, 0xB0408386u);   // 045bc shufb r2,r7,r2,r6
+    s.instructions++; op_cwd(s, 0x3EC82806u);   // 045c0 cwd r6,r80,32
+    s.instructions++; op_shufb(s, 0xB0408388u);   // 045c8 shufb r2,r7,r2,r8
+    s.instructions++; op_shufb(s, 0xB0A14386u);   // 045cc shufb r5,r7,r5,r6
+    s.instructions++; op_shufb(s, 0xB0408389u);   // 045d0 shufb r2,r7,r2,r9
+    s.instructions++; op_stqd(s, 0x2412A805u);   // 045d4 stqd r5,1184(r80)
+    s.instructions++; op_shufb(s, 0xB040838Au);   // 045d8 shufb r2,r7,r2,r10
+    s.instructions++; op_stqd(s, 0x24008082u);   // 045dc stqd r2,32(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820105u);   // 045e0 rotqbyi r5,r2,8
+    s.instructions++; op_lqd(s, 0x34008082u);   // 045e4 lqd r2,32(r1)
+    s.instructions++; op_ai(s, 0x1C140081u);   // 045e8 ai r1,r1,80
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0285u);   // 045ec rotqmbyi r5,r5,-8
+    s.instructions++; op_lqd(s, 0x34004080u);   // 045f0 lqd r0,16(r1)
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 045f4 lqd r80,-16(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 045f8 rotqmbyi r2,r2,-8
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 045fc lqd r81,-32(r1)
+    s.instructions++; op_shlqbyi(s, 0x3FE20106u);   // 04604 shlqbyi r6,r2,8
+    s.instructions++; op_or_(s, 0x08218285u);   // 04608 or r5,r5,r6
+    s.instructions++; goto L_04368;   // 0460c br r0,0x4368
+L_04610:
+    s.instructions++; op_ai(s, 0x1C140081u);   // 04610 ai r1,r1,80
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 04614 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 04618 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 0461c lqd r0,16(r1)
+    s.instructions++;   // 04624 bi r0,r0,r0
+    s.pc = 0x04624; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_04628:
+    s.instructions++; op_il(s, 0x40812002u);   // 04628 il r2,0x240
+    s.instructions++; op_lqd(s, 0x34090185u);   // 0462c lqd r5,576(r3)
+    s.instructions++; op_il(s, 0x40801407u);   // 04630 il r7,0x28
+    s.instructions++; op_a(s, 0x180081D1u);   // 04634 a r81,r3,r2
+    s.instructions++; op_rotqby(s, 0x3B80C282u);   // 0463c rotqby r2,r5,r3
+    s.instructions++; op_a(s, 0x1801C105u);   // 04640 a r5,r2,r7
+    s.instructions++; op_lqx(s, 0x3881C102u);   // 04644 lqx r2,r2,r7
+    s.instructions++; op_rotqby(s, 0x3B814102u);   // 04648 rotqby r2,r2,r5
+    s.instructions++; if (s.pref(2) == 0) goto L_047e8;   // 0464c brz r2,0x47e8
+    s.instructions++; op_il(s, 0x40808402u);   // 04650 il r2,0x108
+    s.instructions++; op_ori(s, 0x04000305u);   // 04658 ori r5,r6,0
+    s.instructions++; op_a(s, 0x18008183u);   // 04660 a r3,r3,r2
+    s.instructions++; op_lqx(s, 0x3880A802u);   // 04664 lqx r2,r80,r2
+    s.instructions++; op_rotqby(s, 0x3B80C103u);   // 04668 rotqby r3,r2,r3
+    s.instructions++; op_il(s, 0x40800082u);   // 0466c il r2,0x1
+    s.instructions++; op_shl(s, 0x0B60C106u);   // 04670 shl r6,r2,r3
+    s.instructions++; op_ori(s, 0x04000307u);   // 04674 ori r7,r6,0
+L_04678:
+    s.instructions++; op_ila(s, 0x42234002u);   // 04678 ila r2,0x4680
+    s.instructions++;   // 0467c bi r0,r2,r32
+    s.pc = 0x0467C; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04680:
+    s.pc = 0x04680; s.instructions++; op_wrch(s, 0x21A00B07u);   // 04680 wrch ch22,r7
+    if (s.halted) { s.pc = 0x04684; return false; }
+    s.pc = 0x04684; s.instructions++; op_wrch(s, 0x21A00B85u);   // 04684 wrch ch23,r5
+    if (s.halted) { s.pc = 0x04688; return false; }
+    s.pc = 0x04688; s.instructions++; op_rdch(s, 0x01A00C02u);   // 04688 rdch r2,ch24
+    if (s.halted) { s.pc = 0x0468C; return false; }
+    s.instructions++; op_ila(s, 0x42234C08u);   // 04690 ila r8,0x4698
+    s.instructions++;   // 04694 bi r0,r8,r16
+    s.pc = 0x04694; op_bi(s, 0x35040400u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04698:
+    s.instructions++; op_ceq(s, 0x78008302u);   // 04698 ceq r2,r6,r2
+    s.instructions++; if (s.pref(2) == 0) goto L_04678;   // 0469c brz r2,0x4678
+    s.instructions++; op_ai(s, 0x1C3E280Du);   // 046a0 ai r13,r80,248
+    s.instructions++; op_lqd(s, 0x3403E80Cu);   // 046a4 lqd r12,240(r80)
+    s.instructions++; op_il(s, 0x40807A05u);   // 046a8 il r5,0xf4
+    s.instructions++; op_shlqbyi(s, 0x3FE0018Fu);   // 046ac shlqbyi r15,r3,0
+    s.instructions++; op_il(s, 0x40807E0Bu);   // 046b0 il r11,0xfc
+    s.instructions++; op_lqd(s, 0x34000683u);   // 046b4 lqd r3,0(r13)
+    s.instructions++; op_a(s, 0x18016808u);   // 046b8 a r8,r80,r5
+    s.instructions++; op_lqx(s, 0x38816809u);   // 046bc lqx r9,r80,r5
+    s.instructions++; op_ai(s, 0x1C1FC202u);   // 046c0 ai r2,r4,127
+    s.instructions++; op_lqx(s, 0x3882E80Au);   // 046c4 lqx r10,r80,r11
+    s.instructions++; op_a(s, 0x1802E805u);   // 046c8 a r5,r80,r11
+    s.instructions++; op_shlqbyi(s, 0x3FE0280Eu);   // 046cc shlqbyi r14,r80,0
+    s.instructions++; op_andi(s, 0x14E00102u);   // 046d0 andi r2,r2,-128
+    s.instructions++; op_rotqby(s, 0x3B940610u);   // 046d4 rotqby r16,r12,r80
+    s.instructions++; op_rotqby(s, 0x3B83418Cu);   // 046d8 rotqby r12,r3,r13
+    s.instructions++; op_rotqby(s, 0x3B820484u);   // 046dc rotqby r4,r9,r8
+    s.instructions++; op_a(s, 0x18008809u);   // 046e0 a r9,r16,r2
+    s.instructions++; op_rotqby(s, 0x3B814503u);   // 046e4 rotqby r3,r10,r5
+    s.instructions++; op_a(s, 0x18008608u);   // 046e8 a r8,r12,r2
+    s.instructions++; op_ori(s, 0x0400018Bu);   // 046ec ori r11,r3,0
+    s.instructions++; op_clgt(s, 0x5801040Au);   // 046f0 clgt r10,r8,r4
+L_046f4:
+    s.instructions++; op_ila(s, 0x42238002u);   // 046f8 ila r2,0x4700
+    s.instructions++;   // 046fc bi r0,r2,r32
+    s.pc = 0x046FC; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04700:
+    s.pc = 0x04700; s.instructions++; op_wrch(s, 0x21A0080Eu);   // 04700 wrch ch16,r14
+    if (s.halted) { s.pc = 0x04704; return false; }
+    s.pc = 0x04704; s.instructions++; op_wrch(s, 0x21A0090Bu);   // 04704 wrch ch18,r11
+    if (s.halted) { s.pc = 0x04708; return false; }
+    s.instructions++; op_il(s, 0x40800202u);   // 04708 il r2,0x4
+    s.pc = 0x0470C; s.instructions++; op_wrch(s, 0x21A00982u);   // 0470c wrch ch19,r2
+    if (s.halted) { s.pc = 0x04710; return false; }
+    s.pc = 0x04710; s.instructions++; op_wrch(s, 0x21A00A0Fu);   // 04710 wrch ch20,r15
+    if (s.halted) { s.pc = 0x04714; return false; }
+    s.instructions++; op_il(s, 0x40802002u);   // 04714 il r2,0x40
+    s.pc = 0x04718; s.instructions++; op_wrch(s, 0x21A00A82u);   // 04718 wrch ch21,r2
+    if (s.halted) { s.pc = 0x0471C; return false; }
+    s.instructions++; op_ila(s, 0x42239402u);   // 04720 ila r2,0x4728
+    s.instructions++;   // 04724 bi r0,r2,r16
+    s.pc = 0x04724; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04728:
+    s.instructions++; op_il(s, 0x40800002u);   // 04728 il r2,0x0
+    s.instructions++; op_ori(s, 0x04000103u);   // 0472c ori r3,r2,0
+L_04730:
+    s.instructions++; op_ila(s, 0x42239C02u);   // 04730 ila r2,0x4738
+    s.instructions++;   // 04734 bi r0,r2,r32
+    s.pc = 0x04734; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04738:
+    s.pc = 0x04738; s.instructions++; op_wrch(s, 0x21A00B07u);   // 04738 wrch ch22,r7
+    if (s.halted) { s.pc = 0x0473C; return false; }
+    s.pc = 0x0473C; s.instructions++; op_wrch(s, 0x21A00B83u);   // 0473c wrch ch23,r3
+    if (s.halted) { s.pc = 0x04740; return false; }
+    s.pc = 0x04740; s.instructions++; op_rdch(s, 0x01A00C02u);   // 04740 rdch r2,ch24
+    if (s.halted) { s.pc = 0x04744; return false; }
+    s.instructions++; op_ila(s, 0x4223A804u);   // 04748 ila r4,0x4750
+    s.instructions++;   // 0474c bi r0,r4,r16
+    s.pc = 0x0474C; op_bi(s, 0x35040200u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04750:
+    s.instructions++; op_ceq(s, 0x78008302u);   // 04750 ceq r2,r6,r2
+    s.instructions++; if (s.pref(2) == 0) goto L_04730;   // 04754 brz r2,0x4730
+    s.instructions++; op_nor(s, 0x09228504u);   // 04758 nor r4,r10,r10
+    s.instructions++; op_lqd(s, 0x34002802u);   // 0475c lqd r2,0(r80)
+    s.instructions++; op_sfi(s, 0x0C000204u);   // 04764 sfi r4,r4,0
+    s.instructions++; op_rotqby(s, 0x3B940102u);   // 04768 rotqby r2,r2,r80
+    s.instructions++; op_clgt(s, 0x58030103u);   // 0476c clgt r3,r2,r12
+    s.instructions++; op_clgt(s, 0x58024105u);   // 04770 clgt r5,r2,r9
+    s.instructions++; op_nor(s, 0x0920C183u);   // 04774 nor r3,r3,r3
+    s.instructions++; op_clgt(s, 0x58020102u);   // 04778 clgt r2,r2,r8
+    s.instructions++; op_sfi(s, 0x0C000183u);   // 0477c sfi r3,r3,0
+    s.instructions++; op_sfi(s, 0x0C000102u);   // 04780 sfi r2,r2,0
+    s.instructions++; op_sfi(s, 0x0C000285u);   // 04784 sfi r5,r5,0
+    s.instructions++; op_or_(s, 0x08208183u);   // 04788 or r3,r3,r2
+    s.instructions++; op_or_(s, 0x08214204u);   // 0478c or r4,r4,r5
+    s.instructions++; op_ceqbi(s, 0x7E000183u);   // 04790 ceqbi r3,r3,0
+    s.instructions++; op_ceqbi(s, 0x7E000204u);   // 04794 ceqbi r4,r4,0
+    s.instructions++; op_xsbh(s, 0x56C00183u);   // 04798 xsbh r3,r3,r0
+    s.instructions++; op_xsbh(s, 0x56C00204u);   // 0479c xsbh r4,r4,r0
+    s.instructions++; op_ceqhi(s, 0x7D000183u);   // 047a0 ceqhi r3,r3,0
+    s.instructions++; op_ceqhi(s, 0x7D000204u);   // 047a4 ceqhi r4,r4,0
+    s.instructions++; op_nor(s, 0x0920C183u);   // 047a8 nor r3,r3,r3
+    s.instructions++; op_nor(s, 0x09210204u);   // 047ac nor r4,r4,r4
+    s.instructions++; op_xshw(s, 0x55C00183u);   // 047b0 xshw r3,r3,r0
+    s.instructions++; op_xshw(s, 0x55C00204u);   // 047b4 xshw r4,r4,r0
+    s.instructions++; op_ori(s, 0x04000182u);   // 047b8 ori r2,r3,0
+    s.instructions++; op_or_(s, 0x08210103u);   // 047bc or r3,r2,r4
+    s.instructions++; if ((s.pref(3) & 0xFFFF) != 0) goto L_046f4;   // 047c0 brhnz r3,0x46f4
+    s.instructions++; if (s.pref(10) == 0) goto L_047e0;   // 047c4 brz r10,0x47e0
+    s.instructions++; op_ori(s, 0x0400080Cu);   // 047c8 ori r12,r16,0
+L_047cc:
+    s.instructions++; op_lqd(s, 0x34000682u);   // 047cc lqd r2,0(r13)
+    s.instructions++; op_cwd(s, 0x3EC00683u);   // 047d0 cwd r3,r13,0
+    s.instructions++; op_shufb(s, 0xB0408483u);   // 047d4 shufb r2,r9,r2,r3
+    s.instructions++; op_stqd(s, 0x24000682u);   // 047d8 stqd r2,0(r13)
+    s.instructions++; goto L_04520;   // 047dc br r0,0x4520
+L_047e0:
+    s.instructions++; op_ori(s, 0x04000409u);   // 047e0 ori r9,r8,0
+    s.instructions++; goto L_047cc;   // 047e4 br r0,0x47cc
+L_047e8:
+    s.instructions++; s.set_pref(0, 0x047EC);   // 047e8 brsl r0,0x4220
+    if (!geomfn_04220(s)) s.run_until(0x047EC);
+    if (s.halted || s.pc != 0x047EC) return false;
+L_047ec:
+    s.instructions++; op_ori(s, 0x0400018Cu);   // 047ec ori r12,r3,0
+    s.instructions++; goto L_04520;   // 047f0 br r0,0x4520
+}
+bool geomfn_04c18(SPUThread& s) {
+    u32 to;
+    goto L_04c18;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x04C18: goto L_04c18;
+    case 0x04CC8: goto L_04cc8;
+    case 0x04D20: goto L_04d20;
+    case 0x04D60: goto L_04d60;
+    case 0x04D68: goto L_04d68;
+    case 0x04D80: goto L_04d80;
+    case 0x04D88: goto L_04d88;
+    case 0x04DA0: goto L_04da0;
+    case 0x04E30: goto L_04e30;
+    case 0x04E68: goto L_04e68;
+    case 0x04F30: goto L_04f30;
+    case 0x04F48: goto L_04f48;
+    case 0x04F50: goto L_04f50;
+    case 0x04F88: goto L_04f88;
+    case 0x04FD8: goto L_04fd8;
+    case 0x050B8: goto L_050b8;
+    case 0x050D0: goto L_050d0;
+    case 0x050D8: goto L_050d8;
+    case 0x05110: goto L_05110;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_04c18:
+    s.instructions++; op_sfi(s, 0x0C000288u);   // 04c18 sfi r8,r5,0
+    s.instructions++; op_lqd(s, 0x3404C182u);   // 04c1c lqd r2,304(r3)
+    s.instructions++; op_ai(s, 0x1C03C204u);   // 04c20 ai r4,r4,15
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 04c24 stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x040001D0u);   // 04c28 ori r80,r3,0
+    s.instructions++; op_lqd(s, 0x34050183u);   // 04c2c lqd r3,320(r3)
+    s.instructions++; op_stqd(s, 0x24FE80D5u);   // 04c30 stqd r85,-96(r1)
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 04c34 stqd r81,-32(r1)
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 04c3c stqd r83,-64(r1)
+    s.instructions++; op_ori(s, 0x040003D3u);   // 04c40 ori r83,r7,0
+    s.instructions++; op_rotqby(s, 0x3B940155u);   // 04c44 rotqby r85,r2,r80
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 04c4c stqd r84,-80(r1)
+    s.instructions++; op_ori(s, 0x04000189u);   // 04c50 ori r9,r3,0
+    s.instructions++; op_rotqby(s, 0x3B940182u);   // 04c54 rotqby r2,r3,r80
+    s.instructions++; op_ori(s, 0x04000354u);   // 04c58 ori r84,r6,0
+    s.instructions++; op_cwd(s, 0x3ED02806u);   // 04c5c cwd r6,r80,-64
+    s.instructions++; op_andi(s, 0x14FF2A83u);   // 04c60 andi r3,r85,-4
+    s.instructions++; op_stqd(s, 0x24FDC0D8u);   // 04c64 stqd r88,-144(r1)
+    s.instructions++; op_andi(s, 0x14FC0258u);   // 04c68 andi r88,r4,-16
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 04c6c stqd r82,-48(r1)
+    s.instructions++; op_a(s, 0x18014102u);   // 04c70 a r2,r2,r5
+    s.instructions++; op_stqd(s, 0x24FE40D6u);   // 04c74 stqd r86,-112(r1)
+    s.instructions++; op_a(s, 0x1800E803u);   // 04c78 a r3,r80,r3
+    s.instructions++; op_stqd(s, 0x24FE00D7u);   // 04c7c stqd r87,-128(r1)
+    s.instructions++; op_ai(s, 0x1CFFC102u);   // 04c80 ai r2,r2,-1
+    s.instructions++; op_stqd(s, 0x24004080u);   // 04c84 stqd r0,16(r1)
+    s.instructions++; op_ai(s, 0x1C4D01D1u);   // 04c88 ai r81,r3,308
+    s.instructions++; op_stqd(s, 0x24FD80D9u);   // 04c8c stqd r89,-160(r1)
+    s.instructions++; op_and_(s, 0x18220107u);   // 04c90 and r7,r2,r8
+    s.instructions++; op_stqd(s, 0x24FCC081u);   // 04c94 stqd r1,-208(r1)
+    s.instructions++; op_ila(s, 0x43FFFFD2u);   // 04c98 ila r82,0x3ffff
+    s.instructions++; op_lqd(s, 0x34002882u);   // 04c9c lqd r2,0(r81)
+    s.instructions++; op_ai(s, 0x1CCC0081u);   // 04ca0 ai r1,r1,-208
+    s.instructions++; op_shufb(s, 0xB1224386u);   // 04ca4 shufb r9,r7,r9,r6
+    s.instructions++; op_ai(s, 0x1C4C2856u);   // 04ca8 ai r86,r80,304
+    s.instructions++; op_ai(s, 0x1C502857u);   // 04cac ai r87,r80,320
+    s.instructions++; op_stqd(s, 0x24052809u);   // 04cb0 stqd r9,320(r80)
+    s.instructions++; op_rotqby(s, 0x3B944104u);   // 04cb4 rotqby r4,r2,r81
+    s.instructions++; op_and_(s, 0x18348202u);   // 04cb8 and r2,r4,r82
+    s.instructions++; op_sf(s, 0x08008386u);   // 04cc0 sf r6,r7,r2
+    s.instructions++; if (s.pref(2) == 0) goto L_04e68;   // 04cc4 brz r2,0x4e68
+L_04cc8:
+    s.instructions++; op_il(s, 0x40825003u);   // 04cc8 il r3,0x4a0
+    s.instructions++; op_lqd(s, 0x3412A805u);   // 04ccc lqd r5,1184(r80)
+    s.instructions++; op_il(s, 0x40BC0002u);   // 04cd0 il r2,0x7800
+    s.instructions++; op_a(s, 0x1800E852u);   // 04cd8 a r82,r80,r3
+    s.instructions++; op_a(s, 0x18008302u);   // 04cdc a r2,r6,r2
+    s.instructions++; op_clgt(s, 0x5800AC02u);   // 04ce0 clgt r2,r88,r2
+    s.instructions++; op_rotqby(s, 0x3B940283u);   // 04ce4 rotqby r3,r5,r80
+    s.instructions++; op_sfi(s, 0x0C000102u);   // 04ce8 sfi r2,r2,0
+    s.instructions++; op_clgti(s, 0x5C03C183u);   // 04cec clgti r3,r3,15
+    s.instructions++; op_sfi(s, 0x0C000183u);   // 04cf0 sfi r3,r3,0
+    s.instructions++; op_or_(s, 0x0820C102u);   // 04cf4 or r2,r2,r3
+    s.instructions++; op_ceqbi(s, 0x7E000102u);   // 04cf8 ceqbi r2,r2,0
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 04cfc xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_04da0;   // 04d00 brhnz r2,0x4da0
+    s.instructions++; op_or_(s, 0x0834EA02u);   // 04d04 or r2,r84,r83
+    s.instructions++; if (s.pref(2) == 0) goto L_04d20;   // 04d0c brz r2,0x4d20
+    s.instructions++; op_ori(s, 0x04002984u);   // 04d10 ori r4,r83,0
+    s.instructions++; op_shlqbyi(s, 0x3FE02803u);   // 04d14 shlqbyi r3,r80,0
+    s.instructions++; s.set_pref(0, 0x04D20);   // 04d1c brsl r0,0x44c8
+    if (!geomfn_044c8(s)) s.run_until(0x04D20);
+    if (s.halted || s.pc != 0x04D20) return false;
+L_04d20:
+    s.instructions++; op_sfi(s, 0x0C012AD5u);   // 04d20 sfi r85,r85,4
+    s.instructions++; op_il(s, 0x40800003u);   // 04d28 il r3,0x0
+    s.instructions++; op_andi(s, 0x14FF2A82u);   // 04d2c andi r2,r85,-4
+    s.instructions++; op_ori(s, 0x04000187u);   // 04d30 ori r7,r3,0
+    s.instructions++; op_a(s, 0x1800A802u);   // 04d34 a r2,r80,r2
+    s.instructions++; op_ila(s, 0x43FFFFD9u);   // 04d38 ila r89,0x3ffff
+    s.instructions++; op_ai(s, 0x1C4D0151u);   // 04d3c ai r81,r2,308
+    s.instructions++; op_lqd(s, 0x34002882u);   // 04d40 lqd r2,0(r81)
+    s.instructions++; op_rotqby(s, 0x3B944104u);   // 04d44 rotqby r4,r2,r81
+    s.instructions++; op_il(s, 0x40800082u);   // 04d48 il r2,0x1
+    s.instructions++; op_rotmi(s, 0x0F3A0203u);   // 04d4c rotmi r3,r4,-24
+    s.instructions++; op_and_(s, 0x18364206u);   // 04d50 and r6,r4,r89
+    s.instructions++; op_shl(s, 0x0B60C103u);   // 04d54 shl r3,r2,r3
+    s.instructions++; op_ori(s, 0x04000185u);   // 04d58 ori r5,r3,0
+    s.instructions++; if (s.pref(6) == 0) goto L_04fd8;   // 04d5c brz r6,0x4fd8
+L_04d60:
+    s.instructions++; op_ila(s, 0x4226B402u);   // 04d60 ila r2,0x4d68
+    s.instructions++;   // 04d64 bi r0,r2,r32
+    s.pc = 0x04D64; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04d68:
+    s.pc = 0x04D68; s.instructions++; op_wrch(s, 0x21A00B05u);   // 04d68 wrch ch22,r5
+    if (s.halted) { s.pc = 0x04D6C; return false; }
+    s.pc = 0x04D6C; s.instructions++; op_wrch(s, 0x21A00B87u);   // 04d6c wrch ch23,r7
+    if (s.halted) { s.pc = 0x04D70; return false; }
+    s.pc = 0x04D70; s.instructions++; op_rdch(s, 0x01A00C02u);   // 04d70 rdch r2,ch24
+    if (s.halted) { s.pc = 0x04D74; return false; }
+    s.instructions++; op_ila(s, 0x4226C008u);   // 04d78 ila r8,0x4d80
+    s.instructions++;   // 04d7c bi r0,r8,r16
+    s.pc = 0x04D7C; op_bi(s, 0x35040400u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04d80:
+    s.instructions++; op_ceq(s, 0x78008182u);   // 04d80 ceq r2,r3,r2
+    s.instructions++; if (s.pref(2) == 0) goto L_04d60;   // 04d84 brz r2,0x4d60
+L_04d88:
+    s.instructions++; op_ori(s, 0x04000307u);   // 04d88 ori r7,r6,0
+    s.instructions++; op_lqd(s, 0x34056802u);   // 04d8c lqd r2,336(r80)
+    s.instructions++; op_cwd(s, 0x3ED42803u);   // 04d90 cwd r3,r80,-48
+    s.instructions++; op_shufb(s, 0xB0408303u);   // 04d94 shufb r2,r6,r2,r3
+    s.instructions++; op_stqd(s, 0x24056802u);   // 04d9c stqd r2,336(r80)
+L_04da0:
+    s.instructions++; op_a(s, 0x18160382u);   // 04da0 a r2,r7,r88
+    s.instructions++; op_lqd(s, 0x34002B03u);   // 04da4 lqd r3,0(r86)
+    s.instructions++; op_cwd(s, 0x3EC02B05u);   // 04da8 cwd r5,r86,0
+    s.instructions++; op_cwd(s, 0x3EC02886u);   // 04dac cwd r6,r81,0
+    s.instructions++; op_cwd(s, 0x3EC02B88u);   // 04db0 cwd r8,r87,0
+    s.instructions++; op_shufb(s, 0xB060EA85u);   // 04db4 shufb r3,r85,r3,r5
+    s.instructions++; op_stqd(s, 0x24002B03u);   // 04db8 stqd r3,0(r86)
+    s.instructions++; op_lqd(s, 0x34002883u);   // 04dbc lqd r3,0(r81)
+    s.instructions++; op_shufb(s, 0xB060C206u);   // 04dc0 shufb r3,r4,r3,r6
+    s.instructions++; op_stqd(s, 0x24002883u);   // 04dc4 stqd r3,0(r81)
+    s.instructions++; op_lqd(s, 0x34002B83u);   // 04dc8 lqd r3,0(r87)
+    s.instructions++; op_shufb(s, 0xB060C108u);   // 04dcc shufb r3,r2,r3,r8
+    s.instructions++; op_stqd(s, 0x24002B83u);   // 04dd0 stqd r3,0(r87)
+    s.instructions++; if (s.pref(84) == 0) goto L_04e30;   // 04dd4 brz r84,0x4e30
+    s.instructions++; op_lqd(s, 0x34002902u);   // 04dd8 lqd r2,0(r82)
+    s.instructions++; op_cwd(s, 0x3EC02905u);   // 04ddc cwd r5,r82,0
+    s.instructions++; op_cwd(s, 0x3EC02A06u);   // 04de4 cwd r6,r84,0
+    s.instructions++; op_ori(s, 0x04000103u);   // 04de8 ori r3,r2,0
+    s.instructions++; op_rotqby(s, 0x3B948102u);   // 04dec rotqby r2,r2,r82
+    s.instructions++; op_ai(s, 0x1C004104u);   // 04df0 ai r4,r2,1
+    s.instructions++; op_shli(s, 0x0F608102u);   // 04df4 shli r2,r2,2
+    s.instructions++; op_shufb(s, 0xB060C205u);   // 04df8 shufb r3,r4,r3,r5
+    s.instructions++; op_a(s, 0x18140102u);   // 04dfc a r2,r2,r80
+    s.instructions++; op_stqd(s, 0x24002903u);   // 04e00 stqd r3,0(r82)
+    s.instructions++; op_lqd(s, 0x3412C103u);   // 04e04 lqd r3,1200(r2)
+    s.instructions++; op_cwd(s, 0x3ECC0104u);   // 04e08 cwd r4,r2,48
+    s.instructions++; op_shufb(s, 0xB060EA04u);   // 04e0c shufb r3,r84,r3,r4
+    s.instructions++; op_stqd(s, 0x2412C103u);   // 04e10 stqd r3,1200(r2)
+    s.instructions++; op_lqd(s, 0x34056802u);   // 04e14 lqd r2,336(r80)
+    s.instructions++; op_lqd(s, 0x34002A04u);   // 04e18 lqd r4,0(r84)
+    s.instructions++; op_rotqby(s, 0x3B940102u);   // 04e1c rotqby r2,r2,r80
+    s.instructions++; op_sf(s, 0x0801C102u);   // 04e20 sf r2,r2,r7
+    s.instructions++; op_shufb(s, 0xB0810106u);   // 04e24 shufb r4,r2,r4,r6
+    s.instructions++; op_stqd(s, 0x24002A04u);   // 04e2c stqd r4,0(r84)
+L_04e30:
+    s.instructions++; op_ai(s, 0x1C340081u);   // 04e30 ai r1,r1,208
+    s.instructions++; op_shlqbyi(s, 0x3FE00383u);   // 04e34 shlqbyi r3,r7,0
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 04e38 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 04e3c lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 04e40 lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 04e44 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 04e48 lqd r84,-80(r1)
+    s.instructions++; op_lqd(s, 0x34FE80D5u);   // 04e4c lqd r85,-96(r1)
+    s.instructions++; op_lqd(s, 0x34FE40D6u);   // 04e50 lqd r86,-112(r1)
+    s.instructions++; op_lqd(s, 0x34FE00D7u);   // 04e54 lqd r87,-128(r1)
+    s.instructions++; op_lqd(s, 0x34FDC0D8u);   // 04e58 lqd r88,-144(r1)
+    s.instructions++; op_lqd(s, 0x34FD80D9u);   // 04e5c lqd r89,-160(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 04e60 lqd r0,16(r1)
+    s.instructions++;   // 04e64 bi r0,r0,r0
+    s.pc = 0x04E64; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_04e68:
+    s.instructions++; op_ilhu(s, 0x417FFF82u);   // 04e68 ilhu r2,0xffff
+    s.instructions++; op_lqa(s, 0x30A40A03u);   // 04e6c lqa r3,0x12050
+    s.instructions++; op_il(s, 0x40800105u);   // 04e70 il r5,0x2
+    s.instructions++; op_lqd(s, 0x34008087u);   // 04e74 lqd r7,32(r1)
+    s.instructions++; op_iohl(s, 0x60FFF802u);   // 04e78 iohl r2,0xfff0
+    s.instructions++; op_cdd(s, 0x3EE00088u);   // 04e7c cdd r8,r1,0
+    s.instructions++; op_xswd(s, 0x54C00285u);   // 04e80 xswd r5,r5,r0
+    s.instructions++; op_cdd(s, 0x3EE20089u);   // 04e84 cdd r9,r1,8
+    s.instructions++; op_il(s, 0x40800184u);   // 04e88 il r4,0x3
+    s.instructions++; op_rotqmbyi(s, 0x3FBF0102u);   // 04e8c rotqmbyi r2,r2,-4
+    s.instructions++; op_cbd(s, 0x3E82808Au);   // 04e90 cbd r10,r1,10
+    s.instructions++; op_xswd(s, 0x54C00204u);   // 04e94 xswd r4,r4,r0
+    s.instructions++; op_andc(s, 0x58208306u);   // 04e98 andc r6,r6,r2
+    s.instructions++; op_rotqbyi(s, 0x3F820282u);   // 04e9c rotqbyi r2,r5,8
+    s.instructions++; op_shlqbyi(s, 0x3FE34102u);   // 04ea0 shlqbyi r2,r2,13
+    s.instructions++; op_shlqbii(s, 0x3F604102u);   // 04ea4 shlqbii r2,r2,1
+    s.instructions++; op_ori(s, 0x04000105u);   // 04ea8 ori r5,r2,0
+    s.instructions++; op_lqa(s, 0x30A40002u);   // 04eac lqa r2,0x12000
+    s.instructions++; op_andc(s, 0x58208306u);   // 04eb0 andc r6,r6,r2
+    s.instructions++; op_rotqbyi(s, 0x3F820202u);   // 04eb4 rotqbyi r2,r4,8
+    s.instructions++; op_shlqbyi(s, 0x3FE30102u);   // 04eb8 shlqbyi r2,r2,12
+    s.instructions++; op_shlqbii(s, 0x3F614102u);   // 04ebc shlqbii r2,r2,5
+    s.instructions++; op_ori(s, 0x04000104u);   // 04ec0 ori r4,r2,0
+    s.instructions++; op_lqa(s, 0x30A40202u);   // 04ec4 lqa r2,0x12010
+    s.instructions++; op_and_(s, 0x18208306u);   // 04ec8 and r6,r6,r2
+    s.instructions++; op_lqa(s, 0x30A40402u);   // 04ecc lqa r2,0x12020
+    s.instructions++; op_and_(s, 0x18208306u);   // 04ed0 and r6,r6,r2
+    s.instructions++; op_lqa(s, 0x30A40602u);   // 04ed4 lqa r2,0x12030
+    s.instructions++; op_and_(s, 0x18208306u);   // 04ed8 and r6,r6,r2
+    s.instructions++; op_lqa(s, 0x30A40802u);   // 04edc lqa r2,0x12040
+    s.instructions++; op_and_(s, 0x18208306u);   // 04ee0 and r6,r6,r2
+    s.instructions++; op_lqa(s, 0x30A40C02u);   // 04ee4 lqa r2,0x12060
+    s.instructions++; op_and_(s, 0x1820C306u);   // 04ee8 and r6,r6,r3
+    s.instructions++; op_lqa(s, 0x30A40E03u);   // 04eec lqa r3,0x12070
+    s.instructions++; op_selb(s, 0x80C14302u);   // 04ef0 selb r6,r6,r5,r2
+    s.instructions++; op_lqa(s, 0x30A41002u);   // 04ef4 lqa r2,0x12080
+    s.instructions++; op_selb(s, 0x80C10303u);   // 04ef8 selb r6,r6,r4,r3
+    s.instructions++; op_fsmbi(s, 0x32800003u);   // 04efc fsmbi r3,0x0
+    s.instructions++; op_andc(s, 0x58208306u);   // 04f00 andc r6,r6,r2
+    s.instructions++; op_shufb(s, 0xB0E1C308u);   // 04f04 shufb r7,r6,r7,r8
+    s.instructions++; op_shufb(s, 0xB041C189u);   // 04f08 shufb r2,r3,r7,r9
+    s.instructions++; op_il(s, 0x40800603u);   // 04f0c il r3,0xc
+    s.instructions++; op_ori(s, 0x04000105u);   // 04f10 ori r5,r2,0
+    s.instructions++; op_rotqbyi(s, 0x3F81C104u);   // 04f14 rotqbyi r4,r2,7
+    s.instructions++; op_il(s, 0x40800702u);   // 04f18 il r2,0xe
+    s.instructions++; op_selb(s, 0x8080C202u);   // 04f1c selb r4,r4,r3,r2
+    s.instructions++; op_shufb(s, 0xB0A1420Au);   // 04f20 shufb r5,r4,r5,r10
+    s.instructions++; op_stqd(s, 0x24008085u);   // 04f24 stqd r5,32(r1)
+    s.instructions++; op_ila(s, 0x42279802u);   // 04f28 ila r2,0x4f30
+    s.instructions++;   // 04f2c bi r0,r2,r32
+    s.pc = 0x04F2C; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04f30:
+    s.instructions++; op_lqa(s, 0x30A58002u);   // 04f30 lqa r2,0x12c00
+    s.instructions++; op_ai(s, 0x1C080083u);   // 04f34 ai r3,r1,32
+    s.instructions++; op_lqd(s, 0x3400C104u);   // 04f38 lqd r4,48(r2)
+    s.instructions++;   // 04f3c bisl r0,r4,r0
+    s.pc = 0x04F3C; op_bisl(s, 0x35200200u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x04F40)) return false;   // indirect call
+    s.instructions++; op_ila(s, 0x4227A402u);   // 04f40 ila r2,0x4f48
+    s.instructions++;   // 04f44 bi r0,r2,r16
+    s.pc = 0x04F44; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04f48:
+    s.instructions++; op_ila(s, 0x4227A802u);   // 04f48 ila r2,0x4f50
+    s.instructions++;   // 04f4c bi r0,r2,r32
+    s.pc = 0x04F4C; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04f50:
+    s.instructions++; op_lqa(s, 0x30A58006u);   // 04f50 lqa r6,0x12c00
+    s.instructions++; op_il(s, 0x40801A02u);   // 04f54 il r2,0x34
+    s.instructions++; op_fsmbi(s, 0x32800003u);   // 04f58 fsmbi r3,0x0
+    s.instructions++; op_il(s, 0x40800184u);   // 04f5c il r4,0x3
+    s.instructions++; op_fsmbi(s, 0x32800005u);   // 04f60 fsmbi r5,0x0
+    s.instructions++; op_a(s, 0x18008307u);   // 04f64 a r7,r6,r2
+    s.instructions++; op_lqx(s, 0x38808302u);   // 04f68 lqx r2,r6,r2
+    s.instructions++; op_il(s, 0x40800086u);   // 04f6c il r6,0x1
+    s.instructions++; op_rotqby(s, 0x3B81C102u);   // 04f70 rotqby r2,r2,r7
+    s.instructions++;   // 04f74 bisl r0,r2,r0
+    s.pc = 0x04F74; op_bisl(s, 0x35200100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x04F78)) return false;   // indirect call
+    s.instructions++; op_ila(s, 0x4227C402u);   // 04f80 ila r2,0x4f88
+    s.instructions++;   // 04f84 bi r0,r2,r16
+    s.pc = 0x04F84; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_04f88:
+    s.instructions++; op_il(s, 0x40800006u);   // 04f88 il r6,0x0
+    s.instructions++; op_shlqbyi(s, 0x3FE10182u);   // 04f8c shlqbyi r2,r3,4
+    s.instructions++; op_shlqbyi(s, 0x3FE08184u);   // 04f94 shlqbyi r4,r3,2
+    s.instructions++; op_ila(s, 0x427FFF83u);   // 04f98 ila r3,0xffff
+    s.instructions++; op_lqd(s, 0x34056805u);   // 04f9c lqd r5,336(r80)
+    s.instructions++; op_cwd(s, 0x3ED42808u);   // 04fa0 cwd r8,r80,-48
+    s.instructions++; op_rotqmbyi(s, 0x3FBC8102u);   // 04fa4 rotqmbyi r2,r2,-14
+    s.instructions++; op_rotqmbyi(s, 0x3FBC8204u);   // 04fa8 rotqmbyi r4,r4,-14
+    s.instructions++; op_shlqbyi(s, 0x3FE30102u);   // 04fac shlqbyi r2,r2,12
+    s.instructions++; op_shlqbyi(s, 0x3FE30204u);   // 04fb0 shlqbyi r4,r4,12
+    s.instructions++; op_and_(s, 0x1820C102u);   // 04fb4 and r2,r2,r3
+    s.instructions++; op_shli(s, 0x0F660204u);   // 04fb8 shli r4,r4,24
+    s.instructions++; op_shli(s, 0x0F608102u);   // 04fbc shli r2,r2,2
+    s.instructions++; op_or_(s, 0x08208204u);   // 04fc0 or r4,r4,r2
+    s.instructions++; op_and_(s, 0x18348203u);   // 04fc4 and r3,r4,r82
+    s.instructions++; op_ori(s, 0x04000187u);   // 04fc8 ori r7,r3,0
+    s.instructions++; op_shufb(s, 0xB0A14188u);   // 04fcc shufb r5,r3,r5,r8
+    s.instructions++; op_stqd(s, 0x24056805u);   // 04fd0 stqd r5,336(r80)
+    s.instructions++; goto L_04cc8;   // 04fd4 br r0,0x4cc8
+L_04fd8:
+    s.instructions++; op_ilhu(s, 0x417FFF82u);   // 04fd8 ilhu r2,0xffff
+    s.instructions++; op_lqa(s, 0x30A40A03u);   // 04fdc lqa r3,0x12050
+    s.instructions++; op_il(s, 0x40800106u);   // 04fe0 il r6,0x2
+    s.instructions++; op_lqd(s, 0x34008087u);   // 04fe4 lqd r7,32(r1)
+    s.instructions++; op_iohl(s, 0x60FFF802u);   // 04fe8 iohl r2,0xfff0
+    s.instructions++; op_cdd(s, 0x3EE00088u);   // 04fec cdd r8,r1,0
+    s.instructions++; op_xswd(s, 0x54C00306u);   // 04ff0 xswd r6,r6,r0
+    s.instructions++; op_cdd(s, 0x3EE20089u);   // 04ff4 cdd r9,r1,8
+    s.instructions++; op_il(s, 0x40800184u);   // 04ff8 il r4,0x3
+    s.instructions++; op_rotqmbyi(s, 0x3FBF0102u);   // 04ffc rotqmbyi r2,r2,-4
+    s.instructions++; op_il(s, 0x40800085u);   // 05000 il r5,0x1
+    s.instructions++; op_cbd(s, 0x3E82808Au);   // 05004 cbd r10,r1,10
+    s.instructions++; op_xswd(s, 0x54C00204u);   // 05008 xswd r4,r4,r0
+    s.instructions++; op_xswd(s, 0x54C00285u);   // 0500c xswd r5,r5,r0
+    s.instructions++; op_andc(s, 0x5820A9D3u);   // 05010 andc r83,r83,r2
+    s.instructions++; op_rotqbyi(s, 0x3F820302u);   // 05014 rotqbyi r2,r6,8
+    s.instructions++; op_shlqbyi(s, 0x3FE34102u);   // 05018 shlqbyi r2,r2,13
+    s.instructions++; op_shlqbii(s, 0x3F604102u);   // 0501c shlqbii r2,r2,1
+    s.instructions++; op_ori(s, 0x04000106u);   // 05020 ori r6,r2,0
+    s.instructions++; op_lqa(s, 0x30A40002u);   // 05024 lqa r2,0x12000
+    s.instructions++; op_andc(s, 0x5820A9D3u);   // 05028 andc r83,r83,r2
+    s.instructions++; op_rotqbyi(s, 0x3F820202u);   // 0502c rotqbyi r2,r4,8
+    s.instructions++; op_shlqbyi(s, 0x3FE30102u);   // 05030 shlqbyi r2,r2,12
+    s.instructions++; op_shlqbii(s, 0x3F614102u);   // 05034 shlqbii r2,r2,5
+    s.instructions++; op_ori(s, 0x04000104u);   // 05038 ori r4,r2,0
+    s.instructions++; op_lqa(s, 0x30A40202u);   // 0503c lqa r2,0x12010
+    s.instructions++; op_and_(s, 0x1820A9D3u);   // 05040 and r83,r83,r2
+    s.instructions++; op_rotqbyi(s, 0x3F820282u);   // 05044 rotqbyi r2,r5,8
+    s.instructions++; op_shlqbyi(s, 0x3FE30102u);   // 0504c shlqbyi r2,r2,12
+    s.instructions++; op_ori(s, 0x04000105u);   // 05050 ori r5,r2,0
+    s.instructions++; op_lqa(s, 0x30A40402u);   // 05054 lqa r2,0x12020
+    s.instructions++; op_and_(s, 0x1820A9D3u);   // 05058 and r83,r83,r2
+    s.instructions++; op_lqa(s, 0x30A40602u);   // 0505c lqa r2,0x12030
+    s.instructions++; op_and_(s, 0x1820A9D3u);   // 05060 and r83,r83,r2
+    s.instructions++; op_lqa(s, 0x30A40802u);   // 05064 lqa r2,0x12040
+    s.instructions++; op_and_(s, 0x1820A9D3u);   // 05068 and r83,r83,r2
+    s.instructions++; op_lqa(s, 0x30A40C02u);   // 0506c lqa r2,0x12060
+    s.instructions++; op_and_(s, 0x1820E9D3u);   // 05070 and r83,r83,r3
+    s.instructions++; op_lqa(s, 0x30A40E03u);   // 05074 lqa r3,0x12070
+    s.instructions++; op_selb(s, 0x8A61A982u);   // 05078 selb r83,r83,r6,r2
+    s.instructions++; op_lqa(s, 0x30A41002u);   // 0507c lqa r2,0x12080
+    s.instructions++; op_selb(s, 0x8A612983u);   // 05080 selb r83,r83,r4,r3
+    s.instructions++; op_fsmbi(s, 0x32800003u);   // 05084 fsmbi r3,0x0
+    s.instructions++; op_selb(s, 0x8A616982u);   // 05088 selb r83,r83,r5,r2
+    s.instructions++; op_shufb(s, 0xB0E1E988u);   // 0508c shufb r7,r83,r7,r8
+    s.instructions++; op_shufb(s, 0xB041C189u);   // 05090 shufb r2,r3,r7,r9
+    s.instructions++; op_il(s, 0x40800603u);   // 05094 il r3,0xc
+    s.instructions++; op_ori(s, 0x04000105u);   // 05098 ori r5,r2,0
+    s.instructions++; op_rotqbyi(s, 0x3F81C104u);   // 0509c rotqbyi r4,r2,7
+    s.instructions++; op_il(s, 0x40800702u);   // 050a0 il r2,0xe
+    s.instructions++; op_selb(s, 0x8080C202u);   // 050a4 selb r4,r4,r3,r2
+    s.instructions++; op_shufb(s, 0xB0A1420Au);   // 050a8 shufb r5,r4,r5,r10
+    s.instructions++; op_stqd(s, 0x24008085u);   // 050ac stqd r5,32(r1)
+    s.instructions++; op_ila(s, 0x42285C02u);   // 050b0 ila r2,0x50b8
+    s.instructions++;   // 050b4 bi r0,r2,r32
+    s.pc = 0x050B4; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_050b8:
+    s.instructions++; op_lqa(s, 0x30A58002u);   // 050b8 lqa r2,0x12c00
+    s.instructions++; op_ai(s, 0x1C080083u);   // 050bc ai r3,r1,32
+    s.instructions++; op_lqd(s, 0x3400C104u);   // 050c0 lqd r4,48(r2)
+    s.instructions++;   // 050c4 bisl r0,r4,r0
+    s.pc = 0x050C4; op_bisl(s, 0x35200200u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x050C8)) return false;   // indirect call
+    s.instructions++; op_ila(s, 0x42286802u);   // 050c8 ila r2,0x50d0
+    s.instructions++;   // 050cc bi r0,r2,r16
+    s.pc = 0x050CC; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_050d0:
+    s.instructions++; op_ila(s, 0x42286C02u);   // 050d0 ila r2,0x50d8
+    s.instructions++;   // 050d4 bi r0,r2,r32
+    s.pc = 0x050D4; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_050d8:
+    s.instructions++; op_lqa(s, 0x30A58006u);   // 050d8 lqa r6,0x12c00
+    s.instructions++; op_il(s, 0x40801A02u);   // 050dc il r2,0x34
+    s.instructions++; op_fsmbi(s, 0x32800003u);   // 050e0 fsmbi r3,0x0
+    s.instructions++; op_il(s, 0x40800184u);   // 050e4 il r4,0x3
+    s.instructions++; op_il(s, 0x40800085u);   // 050e8 il r5,0x1
+    s.instructions++; op_a(s, 0x18008307u);   // 050f0 a r7,r6,r2
+    s.instructions++; op_lqx(s, 0x38808302u);   // 050f4 lqx r2,r6,r2
+    s.instructions++; op_il(s, 0x40800086u);   // 050f8 il r6,0x1
+    s.instructions++; op_rotqby(s, 0x3B81C102u);   // 050fc rotqby r2,r2,r7
+    s.instructions++;   // 05100 bisl r0,r2,r0
+    s.pc = 0x05100; op_bisl(s, 0x35200100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x05104)) return false;   // indirect call
+    s.instructions++; op_ila(s, 0x42288802u);   // 05108 ila r2,0x5110
+    s.instructions++;   // 0510c bi r0,r2,r16
+    s.pc = 0x0510C; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_05110:
+    s.instructions++; op_shlqbyi(s, 0x3FE10182u);   // 05110 shlqbyi r2,r3,4
+    s.instructions++; op_shlqbyi(s, 0x3FE08184u);   // 05114 shlqbyi r4,r3,2
+    s.instructions++; op_ila(s, 0x427FFF83u);   // 05118 ila r3,0xffff
+    s.instructions++; op_rotqmbyi(s, 0x3FBC8102u);   // 0511c rotqmbyi r2,r2,-14
+    s.instructions++; op_rotqmbyi(s, 0x3FBC8204u);   // 05120 rotqmbyi r4,r4,-14
+    s.instructions++; op_shlqbyi(s, 0x3FE30102u);   // 05124 shlqbyi r2,r2,12
+    s.instructions++; op_shlqbyi(s, 0x3FE30204u);   // 05128 shlqbyi r4,r4,12
+    s.instructions++; op_and_(s, 0x1820C102u);   // 0512c and r2,r2,r3
+    s.instructions++; op_shli(s, 0x0F660204u);   // 05130 shli r4,r4,24
+    s.instructions++; op_shli(s, 0x0F608102u);   // 05134 shli r2,r2,2
+    s.instructions++; op_or_(s, 0x08208204u);   // 05138 or r4,r4,r2
+    s.instructions++; op_and_(s, 0x18364206u);   // 0513c and r6,r4,r89
+    s.instructions++; goto L_04d88;   // 05140 br r0,0x4d88
+}
+bool geomfn_05d30(SPUThread& s) {
+    u32 to;
+    goto L_05d30;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x05D30: goto L_05d30;
+    case 0x05DE0: goto L_05de0;
+    case 0x05DF8: goto L_05df8;
+    case 0x10780: goto L_10780;
+    case 0x107A0: goto L_107a0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_05d30:
+    s.instructions++; op_il(s, 0x4080C202u);   // 05d30 il r2,0x184
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 05d34 stqd r80,-16(r1)
+    s.instructions++; op_ilhu(s, 0x41555589u);   // 05d38 ilhu r9,0xaaab
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 05d3c stqd r81,-32(r1)
+    s.instructions++; op_ilhu(s, 0x4155550Bu);   // 05d40 ilhu r11,0xaaaa
+    s.instructions++; op_stqd(s, 0x24004080u);   // 05d44 stqd r0,16(r1)
+    s.instructions++; op_iohl(s, 0x60D55509u);   // 05d48 iohl r9,0xaaaa
+    s.instructions++; op_stqd(s, 0x24FE8081u);   // 05d4c stqd r1,-96(r1)
+    s.instructions++; op_ai(s, 0x1CE80081u);   // 05d50 ai r1,r1,-96
+    s.instructions++; op_shlqbyi(s, 0x3FE001D0u);   // 05d54 shlqbyi r80,r3,0
+    s.instructions++; op_iohl(s, 0x60D5558Bu);   // 05d58 iohl r11,0xaaab
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 05d5c fsmbi r7,0x0
+    s.instructions++; op_ai(s, 0x1C650186u);   // 05d60 ai r6,r3,404
+    s.instructions++; op_stqd(s, 0x24008084u);   // 05d64 stqd r4,32(r1)
+    s.instructions++; op_a(s, 0x18008184u);   // 05d68 a r4,r3,r2
+    s.instructions++; op_stqd(s, 0x2400C085u);   // 05d6c stqd r5,48(r1)
+    s.instructions++; op_il(s, 0x40804005u);   // 05d70 il r5,0x80
+    s.instructions++; op_lqd(s, 0x34060188u);   // 05d74 lqd r8,384(r3)
+    s.instructions++; op_lqx(s, 0x38808182u);   // 05d78 lqx r2,r3,r2
+    s.instructions++; op_lqd(s, 0x3412018Au);   // 05d7c lqd r10,1152(r3)
+    s.instructions++; op_rotqby(s, 0x3B80C408u);   // 05d80 rotqby r8,r8,r3
+    s.instructions++; op_rotqby(s, 0x3B810102u);   // 05d84 rotqby r2,r2,r4
+    s.instructions++; op_rotqby(s, 0x3B80C50Eu);   // 05d88 rotqby r14,r10,r3
+    s.instructions++; op_sf(s, 0x08020108u);   // 05d8c sf r8,r2,r8
+    s.instructions++; op_mpyu(s, 0x79824404u);   // 05d90 mpyu r4,r8,r9
+    s.instructions++; op_mpyhhu(s, 0x79C24409u);   // 05d94 mpyhhu r9,r8,r9
+    s.instructions++; op_mpyu(s, 0x7982C402u);   // 05d98 mpyu r2,r8,r11
+    s.instructions++; op_mpyhhu(s, 0x79C2C408u);   // 05d9c mpyhhu r8,r8,r11
+    s.instructions++; op_shli(s, 0x0F64020Au);   // 05da0 shli r10,r4,16
+    s.instructions++; op_rotqmbyi(s, 0x3FBF820Bu);   // 05da4 rotqmbyi r11,r4,-2
+    s.instructions++; op_shli(s, 0x0F64048Cu);   // 05da8 shli r12,r9,16
+    s.instructions++; op_rotqmbyi(s, 0x3FBF848Du);   // 05dac rotqmbyi r13,r9,-2
+    s.instructions++; op_cg(s, 0x18428104u);   // 05db0 cg r4,r2,r10
+    s.instructions++; op_a(s, 0x18028102u);   // 05db4 a r2,r2,r10
+    s.instructions++; op_addx(s, 0x6802C404u);   // 05db8 addx r4,r8,r11
+    s.instructions++; op_cg(s, 0x18430102u);   // 05dbc cg r2,r2,r12
+    s.instructions++; op_addx(s, 0x68034202u);   // 05dc0 addx r2,r4,r13
+    s.instructions++; op_rotmi(s, 0x0F3FC151u);   // 05dc4 rotmi r81,r2,-1
+    s.instructions++; if (s.pref(14) != 0) goto L_05de0;   // 05dc8 brnz r14,0x5de0
+    s.instructions++; op_ai(s, 0x1C180081u);   // 05dcc ai r1,r1,96
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 05dd0 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 05dd4 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 05dd8 lqd r0,16(r1)
+    s.instructions++;   // 05ddc bi r0,r0,r0
+    s.pc = 0x05DDC; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_05de0:
+    s.instructions++; op_ai(s, 0x1C01E884u);   // 05de0 ai r4,r81,7
+    s.instructions++; op_rotmi(s, 0x0F3F4202u);   // 05de4 rotmi r2,r4,-3
+    s.instructions++; op_a(s, 0x18008104u);   // 05de8 a r4,r2,r2
+    s.instructions++; op_a(s, 0x18008204u);   // 05dec a r4,r4,r2
+    s.instructions++; op_shli(s, 0x0F610204u);   // 05df0 shli r4,r4,4
+    s.instructions++; s.set_pref(0, 0x05DF8);   // 05df4 brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x05DF8);
+    if (s.halted || s.pc != 0x05DF8) return false;
+L_05df8:
+    s.instructions++; op_ai(s, 0x1C180081u);   // 05df8 ai r1,r1,96
+    s.instructions++; op_ori(s, 0x04002885u);   // 05e00 ori r5,r81,0
+    s.instructions++; op_lqd(s, 0x34066802u);   // 05e04 lqd r2,400(r80)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 05e0c lqd r0,16(r1)
+    s.instructions++; op_ori(s, 0x04000184u);   // 05e10 ori r4,r3,0
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 05e14 lqd r81,-32(r1)
+    s.instructions++; op_rotqby(s, 0x3B940103u);   // 05e18 rotqby r3,r2,r80
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 05e1c lqd r80,-16(r1)
+    s.instructions++; goto L_10780;   // 05e20 br r0,0x10780
+    s.pc = 0x05E24; return false;   // (falls out of the scanned code)
+L_10780:
+    s.instructions++; op_ai(s, 0x1C03C282u);   // 10780 ai r2,r5,15
+    s.instructions++; op_il(s, 0x40800006u);   // 10788 il r6,0x0
+    s.instructions++;   // 1078c biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x1078C; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_rotmi(s, 0x0F3F4102u);   // 10790 rotmi r2,r2,-3
+    s.pc = 0x10794; s.instructions++; op_lqr(s, 0x3383F385u);   // 10794 lqr r5,0x12730
+    s.pc = 0x10798; s.instructions++; op_lqr(s, 0x33843D07u);   // 10798 lqr r7,0x12980
+    s.pc = 0x1079C; s.instructions++; op_lqr(s, 0x33844888u);   // 1079c lqr r8,0x129e0
+L_107a0:
+    s.instructions++; op_lqd(s, 0x3400018Cu);   // 107a0 lqd r12,0(r3)
+    s.instructions++; op_lqd(s, 0x3400418Du);   // 107a4 lqd r13,16(r3)
+    s.instructions++; op_lqd(s, 0x3400818Eu);   // 107a8 lqd r14,32(r3)
+    s.instructions++; op_lqd(s, 0x3400C18Fu);   // 107ac lqd r15,48(r3)
+    s.instructions++; op_ai(s, 0x1C100183u);   // 107b0 ai r3,r3,64
+    s.instructions++; op_stqd(s, 0x24000209u);   // 107b4 stqd r9,0(r4)
+    s.instructions++; op_stqd(s, 0x2400420Au);   // 107b8 stqd r10,16(r4)
+    s.instructions++; op_stqd(s, 0x2400820Bu);   // 107bc stqd r11,32(r4)
+    s.instructions++; op_a(s, 0x18010304u);   // 107c0 a r4,r6,r4
+    s.instructions++; op_shufb(s, 0xB1234605u);   // 107c4 shufb r9,r12,r13,r5
+    s.instructions++; op_ai(s, 0x1CFFC102u);   // 107c8 ai r2,r2,-1
+    s.instructions++; op_shufb(s, 0xB1438687u);   // 107cc shufb r10,r13,r14,r7
+    s.instructions++; op_il(s, 0x40801806u);   // 107d0 il r6,0x30
+    s.instructions++; op_shufb(s, 0xB163C708u);   // 107d4 shufb r11,r14,r15,r8
+    s.instructions++; if (s.pref(2) != 0) goto L_107a0;   // 107d8 brnz r2,0x107a0
+    s.instructions++;   // 107dc bi r0,r0,r0
+    s.pc = 0x107DC; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_061c8(SPUThread& s) {
+    u32 to;
+    goto L_061c8;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x061C8: goto L_061c8;
+    case 0x06324: goto L_06324;
+    case 0x0632C: goto L_0632c;
+    case 0x06350: goto L_06350;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_061c8:
+    s.instructions++; op_andi(s, 0x143FC387u);   // 061c8 andi r7,r7,255
+    s.instructions++; op_stqd(s, 0x24FBC081u);   // 061cc stqd r1,-272(r1)
+    s.instructions++; op_ai(s, 0x1CBC0081u);   // 061d0 ai r1,r1,-272
+    s.instructions++; op_shlqbyi(s, 0x3FE00191u);   // 061d4 shlqbyi r17,r3,0
+    s.instructions++; op_shli(s, 0x0F60838Eu);   // 061d8 shli r14,r7,2
+    s.instructions++; op_shlqbyi(s, 0x3FE00218u);   // 061dc shlqbyi r24,r4,0
+    s.instructions++; op_ila(s, 0x42906002u);   // 061e0 ila r2,0x120c0
+    s.instructions++; op_stqd(s, 0x2403C088u);   // 061e4 stqd r8,240(r1)
+    s.instructions++; op_ori(s, 0x04000588u);   // 061e8 ori r8,r11,0
+    s.instructions++; op_lqd(s, 0x3403C08Du);   // 061ec lqd r13,240(r1)
+    s.instructions++; op_cwd(s, 0x3EC0008Fu);   // 061f0 cwd r15,r1,0
+    s.instructions++; op_lqx(s, 0x38808703u);   // 061f4 lqx r3,r14,r2
+    s.instructions++; op_ila(s, 0x42905002u);   // 061f8 ila r2,0x120a0
+    s.instructions++; op_cwd(s, 0x3EC10090u);   // 061fc cwd r16,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20092u);   // 06200 cwd r18,r1,8
+    s.instructions++; op_lqx(s, 0x38808702u);   // 06204 lqx r2,r14,r2
+    s.instructions++; op_stqd(s, 0x24040089u);   // 06208 stqd r9,256(r1)
+    s.instructions++; op_cwd(s, 0x3EC30094u);   // 0620c cwd r20,r1,12
+    s.instructions++; op_rotqby(s, 0x3B838183u);   // 06210 rotqby r3,r3,r14
+    s.instructions++; op_rotqby(s, 0x3B838104u);   // 06214 rotqby r4,r2,r14
+    s.instructions++; op_lqd(s, 0x3403C082u);   // 06218 lqd r2,240(r1)
+    s.instructions++; op_fm(s, 0x58C08182u);   // 0621c fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1A3410Fu);   // 06220 shufb r13,r2,r13,r15
+    s.instructions++; op_rotqbyi(s, 0x3F810682u);   // 06224 rotqbyi r2,r13,4
+    s.instructions++; op_fm(s, 0x58C08182u);   // 06228 fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1234110u);   // 0622c shufb r9,r2,r13,r16
+    s.instructions++; op_rotqbyi(s, 0x3F820482u);   // 06230 rotqbyi r2,r9,8
+    s.instructions++; op_fm(s, 0x58C08182u);   // 06234 fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1224112u);   // 06238 shufb r9,r2,r9,r18
+    s.instructions++; op_rotqbyi(s, 0x3F830482u);   // 0623c rotqbyi r2,r9,12
+    s.instructions++; op_fm(s, 0x58C08182u);   // 06240 fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1224114u);   // 06244 shufb r9,r2,r9,r20
+    s.instructions++; op_stqd(s, 0x2403C089u);   // 06248 stqd r9,240(r1)
+    s.instructions++; op_lqd(s, 0x34040082u);   // 0624c lqd r2,256(r1)
+    s.instructions++; op_lqd(s, 0x34040089u);   // 06250 lqd r9,256(r1)
+    s.instructions++; op_fma(s, 0xE0408184u);   // 06254 fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB122410Fu);   // 06258 shufb r9,r2,r9,r15
+    s.instructions++; op_rotqbyi(s, 0x3F810482u);   // 0625c rotqbyi r2,r9,4
+    s.instructions++; op_fma(s, 0xE0408184u);   // 06260 fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB1224110u);   // 06264 shufb r9,r2,r9,r16
+    s.instructions++; op_rotqbyi(s, 0x3F820482u);   // 06268 rotqbyi r2,r9,8
+    s.instructions++; op_fma(s, 0xE0408184u);   // 0626c fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB1224112u);   // 06270 shufb r9,r2,r9,r18
+    s.instructions++; op_rotqbyi(s, 0x3F830482u);   // 06274 rotqbyi r2,r9,12
+    s.instructions++; op_fma(s, 0xE0408184u);   // 06278 fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB1224114u);   // 0627c shufb r9,r2,r9,r20
+    s.instructions++; op_stqd(s, 0x24040089u);   // 06280 stqd r9,256(r1)
+    s.instructions++; if (s.pref(12) == 0) goto L_0632c;   // 06284 brz r12,0x632c
+    s.instructions++; op_il(s, 0x40800407u);   // 06288 il r7,0x8
+    s.instructions++; op_lqd(s, 0x34038082u);   // 0628c lqd r2,224(r1)
+    s.instructions++; op_il(s, 0x40800C09u);   // 06290 il r9,0x18
+    s.instructions++; op_lqd(s, 0x34000603u);   // 06294 lqd r3,0(r12)
+    s.instructions++; op_il(s, 0x4080140Bu);   // 06298 il r11,0x28
+    s.instructions++; op_cdd(s, 0x3EE00606u);   // 0629c cdd r6,r12,0
+    s.instructions++; op_cdx(s, 0x3AE1C60Du);   // 062a0 cdx r13,r12,r7
+    s.instructions++; op_cdd(s, 0x3EE4060Eu);   // 062a4 cdd r14,r12,16
+    s.instructions++; op_cdd(s, 0x3EE80610u);   // 062a8 cdd r16,r12,32
+    s.instructions++; op_shufb(s, 0xB040888Fu);   // 062ac shufb r2,r17,r2,r15
+    s.instructions++; op_cdx(s, 0x3AE2460Fu);   // 062b0 cdx r15,r12,r9
+    s.instructions++; op_cdx(s, 0x3AE2C611u);   // 062b4 cdx r17,r12,r11
+    s.instructions++; op_stqd(s, 0x24038082u);   // 062b8 stqd r2,224(r1)
+    s.instructions++; op_lqd(s, 0x34038082u);   // 062bc lqd r2,224(r1)
+    s.instructions++; op_lqd(s, 0x3403C088u);   // 062c0 lqd r8,240(r1)
+    s.instructions++; op_lqd(s, 0x3404008Au);   // 062c4 lqd r10,256(r1)
+    s.instructions++; op_lqd(s, 0x34040085u);   // 062c8 lqd r5,256(r1)
+    s.instructions++; op_shufb(s, 0xB060C106u);   // 062cc shufb r3,r2,r3,r6
+    s.instructions++; op_lqd(s, 0x34038082u);   // 062d0 lqd r2,224(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820104u);   // 062d4 rotqbyi r4,r2,8
+    s.instructions++; op_lqd(s, 0x3403C082u);   // 062d8 lqd r2,240(r1)
+    s.instructions++; op_stqd(s, 0x24000603u);   // 062dc stqd r3,0(r12)
+    s.instructions++; op_rotqbyi(s, 0x3F820283u);   // 062e0 rotqbyi r3,r5,8
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 062e4 rotqbyi r6,r2,8
+    s.instructions++; op_lqx(s, 0x3881C602u);   // 062e8 lqx r2,r12,r7
+    s.instructions++; op_shufb(s, 0xB040820Du);   // 062ec shufb r2,r4,r2,r13
+    s.instructions++; op_stqx(s, 0x2881C602u);   // 062f0 stqx r2,r12,r7
+    s.instructions++; op_lqd(s, 0x34004602u);   // 062f4 lqd r2,16(r12)
+    s.instructions++; op_shufb(s, 0xB040840Eu);   // 062f8 shufb r2,r8,r2,r14
+    s.instructions++; op_stqd(s, 0x24004602u);   // 062fc stqd r2,16(r12)
+    s.instructions++; op_lqx(s, 0x38824602u);   // 06300 lqx r2,r12,r9
+    s.instructions++; op_shufb(s, 0xB040830Fu);   // 06304 shufb r2,r6,r2,r15
+    s.instructions++; op_stqx(s, 0x28824602u);   // 06308 stqx r2,r12,r9
+    s.instructions++; op_lqd(s, 0x34008602u);   // 0630c lqd r2,32(r12)
+    s.instructions++; op_shufb(s, 0xB0408510u);   // 06310 shufb r2,r10,r2,r16
+    s.instructions++; op_stqd(s, 0x24008602u);   // 06314 stqd r2,32(r12)
+    s.instructions++; op_lqx(s, 0x3882C602u);   // 06318 lqx r2,r12,r11
+    s.instructions++; op_shufb(s, 0xB0408191u);   // 0631c shufb r2,r3,r2,r17
+    s.instructions++; op_stqx(s, 0x2882C602u);   // 06320 stqx r2,r12,r11
+L_06324:
+    s.instructions++; op_ai(s, 0x1C440081u);   // 06324 ai r1,r1,272
+    s.instructions++;   // 06328 bi r0,r0,r0
+    s.pc = 0x06328; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_0632c:
+    s.instructions++; op_ila(s, 0x4231A803u);   // 0632c ila r3,0x6350
+    s.instructions++; op_clgti(s, 0x5C018382u);   // 06330 clgti r2,r7,6
+    s.instructions++; op_lqx(s, 0x38838183u);   // 06334 lqx r3,r3,r14
+    s.instructions++; op_rotqby(s, 0x3B838183u);   // 06338 rotqby r3,r3,r14
+    s.instructions++; if (s.pref(2) != 0) goto L_06324;   // 0633c brnz r2,0x6324
+    s.instructions++;   // 06344 bi r0,r3,r0
+    s.pc = 0x06344; op_bi(s, 0x35000180u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+    s.pc = 0x06348; return false;   // (falls out of the scanned code)
+L_06350:
+    s.pc = 0x06350; s.instructions++; op_stop(s, 0x00006370u);   // 06350 stop 0x2370
+    if (s.halted) { s.pc = 0x06354; return false; }
+}
+bool geomfn_066b8(SPUThread& s) {
+    u32 to;
+    goto L_066b8;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x061C8: goto L_061c8;
+    case 0x06324: goto L_06324;
+    case 0x0632C: goto L_0632c;
+    case 0x06350: goto L_06350;
+    case 0x066B8: goto L_066b8;
+    case 0x06728: goto L_06728;
+    case 0x06758: goto L_06758;
+    case 0x067D0: goto L_067d0;
+    case 0x06880: goto L_06880;
+    case 0x06890: goto L_06890;
+    case 0x06A20: goto L_06a20;
+    case 0x06A28: goto L_06a28;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_061c8:
+    s.instructions++; op_andi(s, 0x143FC387u);   // 061c8 andi r7,r7,255
+    s.instructions++; op_stqd(s, 0x24FBC081u);   // 061cc stqd r1,-272(r1)
+    s.instructions++; op_ai(s, 0x1CBC0081u);   // 061d0 ai r1,r1,-272
+    s.instructions++; op_shlqbyi(s, 0x3FE00191u);   // 061d4 shlqbyi r17,r3,0
+    s.instructions++; op_shli(s, 0x0F60838Eu);   // 061d8 shli r14,r7,2
+    s.instructions++; op_shlqbyi(s, 0x3FE00218u);   // 061dc shlqbyi r24,r4,0
+    s.instructions++; op_ila(s, 0x42906002u);   // 061e0 ila r2,0x120c0
+    s.instructions++; op_stqd(s, 0x2403C088u);   // 061e4 stqd r8,240(r1)
+    s.instructions++; op_ori(s, 0x04000588u);   // 061e8 ori r8,r11,0
+    s.instructions++; op_lqd(s, 0x3403C08Du);   // 061ec lqd r13,240(r1)
+    s.instructions++; op_cwd(s, 0x3EC0008Fu);   // 061f0 cwd r15,r1,0
+    s.instructions++; op_lqx(s, 0x38808703u);   // 061f4 lqx r3,r14,r2
+    s.instructions++; op_ila(s, 0x42905002u);   // 061f8 ila r2,0x120a0
+    s.instructions++; op_cwd(s, 0x3EC10090u);   // 061fc cwd r16,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20092u);   // 06200 cwd r18,r1,8
+    s.instructions++; op_lqx(s, 0x38808702u);   // 06204 lqx r2,r14,r2
+    s.instructions++; op_stqd(s, 0x24040089u);   // 06208 stqd r9,256(r1)
+    s.instructions++; op_cwd(s, 0x3EC30094u);   // 0620c cwd r20,r1,12
+    s.instructions++; op_rotqby(s, 0x3B838183u);   // 06210 rotqby r3,r3,r14
+    s.instructions++; op_rotqby(s, 0x3B838104u);   // 06214 rotqby r4,r2,r14
+    s.instructions++; op_lqd(s, 0x3403C082u);   // 06218 lqd r2,240(r1)
+    s.instructions++; op_fm(s, 0x58C08182u);   // 0621c fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1A3410Fu);   // 06220 shufb r13,r2,r13,r15
+    s.instructions++; op_rotqbyi(s, 0x3F810682u);   // 06224 rotqbyi r2,r13,4
+    s.instructions++; op_fm(s, 0x58C08182u);   // 06228 fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1234110u);   // 0622c shufb r9,r2,r13,r16
+    s.instructions++; op_rotqbyi(s, 0x3F820482u);   // 06230 rotqbyi r2,r9,8
+    s.instructions++; op_fm(s, 0x58C08182u);   // 06234 fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1224112u);   // 06238 shufb r9,r2,r9,r18
+    s.instructions++; op_rotqbyi(s, 0x3F830482u);   // 0623c rotqbyi r2,r9,12
+    s.instructions++; op_fm(s, 0x58C08182u);   // 06240 fm r2,r3,r2
+    s.instructions++; op_shufb(s, 0xB1224114u);   // 06244 shufb r9,r2,r9,r20
+    s.instructions++; op_stqd(s, 0x2403C089u);   // 06248 stqd r9,240(r1)
+    s.instructions++; op_lqd(s, 0x34040082u);   // 0624c lqd r2,256(r1)
+    s.instructions++; op_lqd(s, 0x34040089u);   // 06250 lqd r9,256(r1)
+    s.instructions++; op_fma(s, 0xE0408184u);   // 06254 fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB122410Fu);   // 06258 shufb r9,r2,r9,r15
+    s.instructions++; op_rotqbyi(s, 0x3F810482u);   // 0625c rotqbyi r2,r9,4
+    s.instructions++; op_fma(s, 0xE0408184u);   // 06260 fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB1224110u);   // 06264 shufb r9,r2,r9,r16
+    s.instructions++; op_rotqbyi(s, 0x3F820482u);   // 06268 rotqbyi r2,r9,8
+    s.instructions++; op_fma(s, 0xE0408184u);   // 0626c fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB1224112u);   // 06270 shufb r9,r2,r9,r18
+    s.instructions++; op_rotqbyi(s, 0x3F830482u);   // 06274 rotqbyi r2,r9,12
+    s.instructions++; op_fma(s, 0xE0408184u);   // 06278 fma r2,r3,r2,r4
+    s.instructions++; op_shufb(s, 0xB1224114u);   // 0627c shufb r9,r2,r9,r20
+    s.instructions++; op_stqd(s, 0x24040089u);   // 06280 stqd r9,256(r1)
+    s.instructions++; if (s.pref(12) == 0) goto L_0632c;   // 06284 brz r12,0x632c
+    s.instructions++; op_il(s, 0x40800407u);   // 06288 il r7,0x8
+    s.instructions++; op_lqd(s, 0x34038082u);   // 0628c lqd r2,224(r1)
+    s.instructions++; op_il(s, 0x40800C09u);   // 06290 il r9,0x18
+    s.instructions++; op_lqd(s, 0x34000603u);   // 06294 lqd r3,0(r12)
+    s.instructions++; op_il(s, 0x4080140Bu);   // 06298 il r11,0x28
+    s.instructions++; op_cdd(s, 0x3EE00606u);   // 0629c cdd r6,r12,0
+    s.instructions++; op_cdx(s, 0x3AE1C60Du);   // 062a0 cdx r13,r12,r7
+    s.instructions++; op_cdd(s, 0x3EE4060Eu);   // 062a4 cdd r14,r12,16
+    s.instructions++; op_cdd(s, 0x3EE80610u);   // 062a8 cdd r16,r12,32
+    s.instructions++; op_shufb(s, 0xB040888Fu);   // 062ac shufb r2,r17,r2,r15
+    s.instructions++; op_cdx(s, 0x3AE2460Fu);   // 062b0 cdx r15,r12,r9
+    s.instructions++; op_cdx(s, 0x3AE2C611u);   // 062b4 cdx r17,r12,r11
+    s.instructions++; op_stqd(s, 0x24038082u);   // 062b8 stqd r2,224(r1)
+    s.instructions++; op_lqd(s, 0x34038082u);   // 062bc lqd r2,224(r1)
+    s.instructions++; op_lqd(s, 0x3403C088u);   // 062c0 lqd r8,240(r1)
+    s.instructions++; op_lqd(s, 0x3404008Au);   // 062c4 lqd r10,256(r1)
+    s.instructions++; op_lqd(s, 0x34040085u);   // 062c8 lqd r5,256(r1)
+    s.instructions++; op_shufb(s, 0xB060C106u);   // 062cc shufb r3,r2,r3,r6
+    s.instructions++; op_lqd(s, 0x34038082u);   // 062d0 lqd r2,224(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820104u);   // 062d4 rotqbyi r4,r2,8
+    s.instructions++; op_lqd(s, 0x3403C082u);   // 062d8 lqd r2,240(r1)
+    s.instructions++; op_stqd(s, 0x24000603u);   // 062dc stqd r3,0(r12)
+    s.instructions++; op_rotqbyi(s, 0x3F820283u);   // 062e0 rotqbyi r3,r5,8
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 062e4 rotqbyi r6,r2,8
+    s.instructions++; op_lqx(s, 0x3881C602u);   // 062e8 lqx r2,r12,r7
+    s.instructions++; op_shufb(s, 0xB040820Du);   // 062ec shufb r2,r4,r2,r13
+    s.instructions++; op_stqx(s, 0x2881C602u);   // 062f0 stqx r2,r12,r7
+    s.instructions++; op_lqd(s, 0x34004602u);   // 062f4 lqd r2,16(r12)
+    s.instructions++; op_shufb(s, 0xB040840Eu);   // 062f8 shufb r2,r8,r2,r14
+    s.instructions++; op_stqd(s, 0x24004602u);   // 062fc stqd r2,16(r12)
+    s.instructions++; op_lqx(s, 0x38824602u);   // 06300 lqx r2,r12,r9
+    s.instructions++; op_shufb(s, 0xB040830Fu);   // 06304 shufb r2,r6,r2,r15
+    s.instructions++; op_stqx(s, 0x28824602u);   // 06308 stqx r2,r12,r9
+    s.instructions++; op_lqd(s, 0x34008602u);   // 0630c lqd r2,32(r12)
+    s.instructions++; op_shufb(s, 0xB0408510u);   // 06310 shufb r2,r10,r2,r16
+    s.instructions++; op_stqd(s, 0x24008602u);   // 06314 stqd r2,32(r12)
+    s.instructions++; op_lqx(s, 0x3882C602u);   // 06318 lqx r2,r12,r11
+    s.instructions++; op_shufb(s, 0xB0408191u);   // 0631c shufb r2,r3,r2,r17
+    s.instructions++; op_stqx(s, 0x2882C602u);   // 06320 stqx r2,r12,r11
+L_06324:
+    s.instructions++; op_ai(s, 0x1C440081u);   // 06324 ai r1,r1,272
+    s.instructions++;   // 06328 bi r0,r0,r0
+    s.pc = 0x06328; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_0632c:
+    s.instructions++; op_ila(s, 0x4231A803u);   // 0632c ila r3,0x6350
+    s.instructions++; op_clgti(s, 0x5C018382u);   // 06330 clgti r2,r7,6
+    s.instructions++; op_lqx(s, 0x38838183u);   // 06334 lqx r3,r3,r14
+    s.instructions++; op_rotqby(s, 0x3B838183u);   // 06338 rotqby r3,r3,r14
+    s.instructions++; if (s.pref(2) != 0) goto L_06324;   // 0633c brnz r2,0x6324
+    s.instructions++;   // 06344 bi r0,r3,r0
+    s.pc = 0x06344; op_bi(s, 0x35000180u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+    s.pc = 0x06348; return false;   // (falls out of the scanned code)
+L_06350:
+    s.pc = 0x06350; s.instructions++; op_stop(s, 0x00006370u);   // 06350 stop 0x2370
+    if (s.halted) { s.pc = 0x06354; return false; }
+    s.pc = 0x06354; return false;   // (falls out of the scanned code)
+L_066b8:
+    s.instructions++; op_il(s, 0x4080008Eu);   // 066b8 il r14,0x1
+    s.instructions++; op_il(s, 0x4080010Fu);   // 066c0 il r15,0x2
+    s.instructions++; op_stqd(s, 0x24FE8081u);   // 066c4 stqd r1,-96(r1)
+    s.instructions++; op_a(s, 0x18038182u);   // 066c8 a r2,r3,r14
+    s.instructions++; op_lqx(s, 0x38838191u);   // 066cc lqx r17,r3,r14
+    s.instructions++; op_il(s, 0x4080018Eu);   // 066d0 il r14,0x3
+    s.instructions++; op_lqd(s, 0x34000194u);   // 066d4 lqd r20,0(r3)
+    s.instructions++; op_ai(s, 0x1C034102u);   // 066d8 ai r2,r2,13
+    s.instructions++; op_lqx(s, 0x3883C193u);   // 066dc lqx r19,r3,r15
+    s.instructions++; op_a(s, 0x18038190u);   // 066e0 a r16,r3,r14
+    s.instructions++; op_lqx(s, 0x38838192u);   // 066e4 lqx r18,r3,r14
+    s.instructions++; op_a(s, 0x1803C18Fu);   // 066e8 a r15,r3,r15
+    s.instructions++; op_ai(s, 0x1C034183u);   // 066ec ai r3,r3,13
+    s.instructions++; op_ai(s, 0x1C03478Fu);   // 066f0 ai r15,r15,13
+    s.instructions++; op_rotqby(s, 0x3B808882u);   // 066f4 rotqby r2,r17,r2
+    s.instructions++; op_ai(s, 0x1C034810u);   // 066f8 ai r16,r16,13
+    s.instructions++; op_rotqby(s, 0x3B80CA0Eu);   // 066fc rotqby r14,r20,r3
+    s.instructions++; op_ai(s, 0x1CE80081u);   // 06700 ai r1,r1,-96
+    s.instructions++; op_rotqby(s, 0x3B83C993u);   // 06704 rotqby r19,r19,r15
+    s.instructions++; op_il(s, 0x40800011u);   // 06708 il r17,0x0
+    s.instructions++; op_rotqby(s, 0x3B840924u);   // 0670c rotqby r36,r18,r16
+    s.instructions++; op_andi(s, 0x143FC103u);   // 06710 andi r3,r2,255
+    s.instructions++; op_fsmbi(s, 0x32800010u);   // 06714 fsmbi r16,0x0
+    s.instructions++; op_andbi(s, 0x1603C114u);   // 06718 andbi r20,r2,15
+    s.instructions++; op_rothmi(s, 0x0FBF01A5u);   // 0671c rothmi r37,r3,-4
+    s.instructions++; op_andi(s, 0x143FC703u);   // 06720 andi r3,r14,255
+L_06728:
+    s.instructions++; op_a(s, 0x18010802u);   // 06728 a r2,r16,r4
+    s.instructions++; op_lqx(s, 0x3881080Fu);   // 0672c lqx r15,r16,r4
+    s.instructions++; op_ai(s, 0x1C004810u);   // 06730 ai r16,r16,1
+    s.instructions++; op_ai(s, 0x1C034102u);   // 06734 ai r2,r2,13
+    s.instructions++; op_rotqby(s, 0x3B808782u);   // 06738 rotqby r2,r15,r2
+    s.instructions++; op_andi(s, 0x143FC102u);   // 0673c andi r2,r2,255
+    s.instructions++; op_ceq(s, 0x78008182u);   // 06740 ceq r2,r3,r2
+    s.instructions++; if (s.pref(2) != 0) goto L_06758;   // 06744 brnz r2,0x6758
+    s.instructions++; op_ahi(s, 0x1D004891u);   // 06748 ahi r17,r17,1
+    s.instructions++; op_ceqbi(s, 0x7E040882u);   // 0674c ceqbi r2,r17,16
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 06750 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_06728;   // 06754 brhz r2,0x6728
+L_06758:
+    s.instructions++; op_andi(s, 0x143FC882u);   // 06758 andi r2,r17,255
+    s.instructions++; op_ori(s, 0x04000118u);   // 0675c ori r24,r2,0
+    s.instructions++; op_clgtbi(s, 0x5E03C102u);   // 06760 clgtbi r2,r2,15
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 06764 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_06a20;   // 06768 brhnz r2,0x6a20
+    s.instructions++; op_andi(s, 0x143FC983u);   // 0676c andi r3,r19,255
+    s.instructions++; op_andbi(s, 0x16E00182u);   // 06770 andbi r2,r3,-128
+    s.instructions++; op_ceqbi(s, 0x7E000102u);   // 06774 ceqbi r2,r2,0
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 06778 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_06880;   // 0677c brhz r2,0x6880
+    s.instructions++; op_ilhu(s, 0x411FC004u);   // 06780 ilhu r4,0x3f80
+    s.instructions++; op_lqd(s, 0x34010082u);   // 06784 lqd r2,64(r1)
+    s.instructions++; op_il(s, 0x40800006u);   // 06788 il r6,0x0
+    s.instructions++; op_cwd(s, 0x3EC00083u);   // 0678c cwd r3,r1,0
+    s.instructions++; op_andi(s, 0x143FCA13u);   // 06790 andi r19,r20,255
+    s.instructions++; op_cwd(s, 0x3EC10085u);   // 06794 cwd r5,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20087u);   // 06798 cwd r7,r1,8
+    s.instructions++; op_cwd(s, 0x3EC3008Eu);   // 0679c cwd r14,r1,12
+    s.instructions++; op_ori(s, 0x0400018Fu);   // 067a0 ori r15,r3,0
+    s.instructions++; op_shufb(s, 0xB0408203u);   // 067a4 shufb r2,r4,r2,r3
+    s.instructions++; op_shufb(s, 0xB0408205u);   // 067a8 shufb r2,r4,r2,r5
+    s.instructions++; op_shufb(s, 0xB0408207u);   // 067ac shufb r2,r4,r2,r7
+    s.instructions++; op_shufb(s, 0xB040820Eu);   // 067b0 shufb r2,r4,r2,r14
+    s.instructions++; op_stqd(s, 0x24010082u);   // 067b4 stqd r2,64(r1)
+    s.instructions++; op_lqd(s, 0x34014082u);   // 067b8 lqd r2,80(r1)
+    s.instructions++; op_shufb(s, 0xB040830Fu);   // 067bc shufb r2,r6,r2,r15
+    s.instructions++; op_shufb(s, 0xB0408305u);   // 067c0 shufb r2,r6,r2,r5
+    s.instructions++; op_shufb(s, 0xB0408307u);   // 067c4 shufb r2,r6,r2,r7
+    s.instructions++; op_shufb(s, 0xB040830Eu);   // 067c8 shufb r2,r6,r2,r14
+    s.instructions++; op_stqd(s, 0x24014082u);   // 067cc stqd r2,80(r1)
+L_067d0:
+    s.instructions++; op_andi(s, 0x143FCC02u);   // 067d0 andi r2,r24,255
+    s.instructions++; op_lqd(s, 0x34010083u);   // 067d4 lqd r3,64(r1)
+    s.instructions++; op_andi(s, 0x143FD204u);   // 067d8 andi r4,r36,255
+    s.instructions++; op_lqd(s, 0x3400C08Eu);   // 067dc lqd r14,48(r1)
+    s.instructions++; op_shli(s, 0x0F608102u);   // 067e0 shli r2,r2,2
+    s.instructions++; op_cdd(s, 0x3EE0008Fu);   // 067e4 cdd r15,r1,0
+    s.instructions++; op_a(s, 0x18024204u);   // 067e8 a r4,r4,r9
+    s.instructions++; op_cdd(s, 0x3EE20091u);   // 067ec cdd r17,r1,8
+    s.instructions++; op_ori(s, 0x04000505u);   // 067f0 ori r5,r10,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0058Au);   // 067f4 shlqbyi r10,r11,0
+    s.instructions++; op_ori(s, 0x0400060Bu);   // 067f8 ori r11,r12,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0068Cu);   // 067fc shlqbyi r12,r13,0
+    s.instructions++; op_a(s, 0x18020110u);   // 06800 a r16,r2,r8
+    s.instructions++; op_lqx(s, 0x38820102u);   // 06804 lqx r2,r2,r8
+    s.instructions++; op_ori(s, 0x04000986u);   // 06808 ori r6,r19,0
+    s.instructions++; op_shufb(s, 0xB1C3818Fu);   // 0680c shufb r14,r3,r14,r15
+    s.instructions++; op_ori(s, 0x04001287u);   // 06810 ori r7,r37,0
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0183u);   // 06814 rotqmbyi r3,r3,-8
+    s.instructions++; op_stqd(s, 0x2400C08Eu);   // 0681c stqd r14,48(r1)
+    s.instructions++; op_shlqbyi(s, 0x3FE20189u);   // 06820 shlqbyi r9,r3,8
+    s.instructions++; op_rotqby(s, 0x3B840103u);   // 06824 rotqby r3,r2,r16
+    s.instructions++; op_lqd(s, 0x34010082u);   // 06828 lqd r2,64(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820108u);   // 0682c rotqbyi r8,r2,8
+    s.instructions++; op_shufb(s, 0xB1A38411u);   // 06830 shufb r13,r8,r14,r17
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0408u);   // 06834 rotqmbyi r8,r8,-8
+    s.instructions++; op_stqd(s, 0x2400C08Du);   // 0683c stqd r13,48(r1)
+    s.instructions++; op_or_(s, 0x08224408u);   // 06840 or r8,r8,r9
+    s.instructions++; op_lqd(s, 0x34014082u);   // 06844 lqd r2,80(r1)
+    s.instructions++; op_lqd(s, 0x3400808Eu);   // 06848 lqd r14,32(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0109u);   // 0684c rotqmbyi r9,r2,-8
+    s.instructions++; op_shufb(s, 0xB1C3810Fu);   // 06850 shufb r14,r2,r14,r15
+    s.instructions++; op_shlqbyi(s, 0x3FE2048Du);   // 06854 shlqbyi r13,r9,8
+    s.instructions++; op_stqd(s, 0x2400808Eu);   // 06858 stqd r14,32(r1)
+    s.instructions++; op_lqd(s, 0x34014089u);   // 0685c lqd r9,80(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820489u);   // 06860 rotqbyi r9,r9,8
+    s.instructions++; op_shufb(s, 0xB0438491u);   // 06864 shufb r2,r9,r14,r17
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0489u);   // 06868 rotqmbyi r9,r9,-8
+    s.instructions++; op_stqd(s, 0x24008082u);   // 0686c stqd r2,32(r1)
+    s.instructions++; op_or_(s, 0x08234489u);   // 06870 or r9,r9,r13
+    s.instructions++; op_ai(s, 0x1C180081u);   // 06878 ai r1,r1,96
+    s.instructions++; goto L_061c8;   // 0687c br r0,0x61c8
+L_06880:
+    s.instructions++; op_andi(s, 0x14100182u);   // 06880 andi r2,r3,64
+    s.instructions++; op_shlqbyi(s, 0x3FE00304u);   // 06884 shlqbyi r4,r6,0
+    s.instructions++; if (s.pref(2) == 0) goto L_06a28;   // 0688c brz r2,0x6a28
+L_06890:
+    s.instructions++; op_andi(s, 0x1403C182u);   // 06890 andi r2,r3,15
+    s.instructions++; op_lqd(s, 0x3401008Eu);   // 06894 lqd r14,64(r1)
+    s.instructions++; op_andi(s, 0x143FCA13u);   // 06898 andi r19,r20,255
+    s.instructions++; op_cwd(s, 0x3EC00099u);   // 0689c cwd r25,r1,0
+    s.instructions++; op_a(s, 0x18008102u);   // 068a0 a r2,r2,r2
+    s.instructions++; op_cwd(s, 0x3EC1009Bu);   // 068a4 cwd r27,r1,4
+    s.instructions++; op_shli(s, 0x0F608990u);   // 068a8 shli r16,r19,2
+    s.instructions++; op_cwd(s, 0x3EC2009Du);   // 068ac cwd r29,r1,8
+    s.instructions++; op_a(s, 0x1801C103u);   // 068b0 a r3,r2,r7
+    s.instructions++; op_lqx(s, 0x3881C102u);   // 068b4 lqx r2,r2,r7
+    s.instructions++; op_il(s, 0x40800212u);   // 068b8 il r18,0x4
+    s.instructions++; op_cwd(s, 0x3EC3009Eu);   // 068bc cwd r30,r1,12
+    s.instructions++; op_ai(s, 0x1C038183u);   // 068c0 ai r3,r3,14
+    s.instructions++; op_il(s, 0x40800415u);   // 068c8 il r21,0x8
+    s.instructions++; op_il(s, 0x40800616u);   // 068cc il r22,0xc
+    s.instructions++; op_ilhu(s, 0x411FC006u);   // 068d0 ilhu r6,0x3f80
+    s.instructions++; op_rotqby(s, 0x3B80C103u);   // 068d4 rotqby r3,r2,r3
+    s.instructions++; op_ila(s, 0x427FFF82u);   // 068d8 ila r2,0xffff
+    s.instructions++; op_and_(s, 0x18208182u);   // 068dc and r2,r3,r2
+    s.instructions++; op_a(s, 0x18008205u);   // 068e0 a r5,r4,r2
+    s.instructions++; op_lqx(s, 0x38808203u);   // 068e4 lqx r3,r4,r2
+    s.instructions++; op_a(s, 0x18040297u);   // 068e8 a r23,r5,r16
+    s.instructions++; op_shlqbyi(s, 0x3FE00287u);   // 068ec shlqbyi r7,r5,0
+    s.instructions++; op_a(s, 0x18048284u);   // 068f0 a r4,r5,r18
+    s.instructions++; op_a(s, 0x18054291u);   // 068f4 a r17,r5,r21
+    s.instructions++; op_a(s, 0x18058294u);   // 068f8 a r20,r5,r22
+    s.instructions++; op_a(s, 0x18048B9Au);   // 06900 a r26,r23,r18
+    s.instructions++; op_rotqby(s, 0x3B814185u);   // 06904 rotqby r5,r3,r5
+    s.instructions++; op_a(s, 0x18054B9Cu);   // 06908 a r28,r23,r21
+    s.instructions++; op_a(s, 0x18058B9Fu);   // 0690c a r31,r23,r22
+    s.instructions++; op_frest(s, 0x37000282u);   // 06910 frest r2,r5,r0
+    s.instructions++; op_fi(s, 0x7A808282u);   // 06914 fi r2,r5,r2
+    s.instructions++; op_fm(s, 0x58C08303u);   // 06918 fm r3,r6,r2
+    s.instructions++; op_fnms(s, 0xD0A14186u);   // 0691c fnms r5,r3,r5,r6
+    s.instructions++; op_fma(s, 0xE0A08283u);   // 06920 fma r5,r5,r2,r3
+    s.instructions++; op_shufb(s, 0xB1C38299u);   // 06924 shufb r14,r5,r14,r25
+    s.instructions++; op_ori(s, 0x04000702u);   // 06928 ori r2,r14,0
+    s.instructions++; op_stqd(s, 0x2401008Eu);   // 0692c stqd r14,64(r1)
+    s.instructions++; op_lqx(s, 0x38848383u);   // 06930 lqx r3,r7,r18
+    s.instructions++; op_rotqby(s, 0x3B810183u);   // 06934 rotqby r3,r3,r4
+    s.instructions++; op_frest(s, 0x37000184u);   // 06938 frest r4,r3,r0
+    s.instructions++; op_fi(s, 0x7A810184u);   // 0693c fi r4,r3,r4
+    s.instructions++; op_fm(s, 0x58C1030Eu);   // 06940 fm r14,r6,r4
+    s.instructions++; op_fnms(s, 0xD060C706u);   // 06944 fnms r3,r14,r3,r6
+    s.instructions++; op_fma(s, 0xE061018Eu);   // 06948 fma r3,r3,r4,r14
+    s.instructions++; op_shufb(s, 0xB040819Bu);   // 0694c shufb r2,r3,r2,r27
+    s.instructions++; op_stqd(s, 0x24010082u);   // 06950 stqd r2,64(r1)
+    s.instructions++; op_lqx(s, 0x38854384u);   // 06954 lqx r4,r7,r21
+    s.instructions++; op_rotqby(s, 0x3B844204u);   // 06958 rotqby r4,r4,r17
+    s.instructions++; op_frest(s, 0x37000211u);   // 0695c frest r17,r4,r0
+    s.instructions++; op_fi(s, 0x7A844211u);   // 06960 fi r17,r4,r17
+    s.instructions++; op_fm(s, 0x58C4430Eu);   // 06964 fm r14,r6,r17
+    s.instructions++; op_fnms(s, 0xD0810706u);   // 06968 fnms r4,r14,r4,r6
+    s.instructions++; op_fma(s, 0xE084420Eu);   // 0696c fma r4,r4,r17,r14
+    s.instructions++; op_shufb(s, 0xB040821Du);   // 06970 shufb r2,r4,r2,r29
+    s.instructions++; op_stqd(s, 0x24010082u);   // 06974 stqd r2,64(r1)
+    s.instructions++; op_lqx(s, 0x38858382u);   // 06978 lqx r2,r7,r22
+    s.instructions++; op_lqd(s, 0x3401008Eu);   // 0697c lqd r14,64(r1)
+    s.instructions++; op_rotqby(s, 0x3B850102u);   // 06980 rotqby r2,r2,r20
+    s.instructions++; op_frest(s, 0x37000111u);   // 06984 frest r17,r2,r0
+    s.instructions++; op_fi(s, 0x7A844111u);   // 06988 fi r17,r2,r17
+    s.instructions++; op_fm(s, 0x58C44314u);   // 0698c fm r20,r6,r17
+    s.instructions++; op_fnms(s, 0xD0C08A06u);   // 06990 fnms r6,r20,r2,r6
+    s.instructions++; op_fma(s, 0xE0C44314u);   // 06994 fma r6,r6,r17,r20
+    s.instructions++; op_ilhu(s, 0x41400011u);   // 06998 ilhu r17,0x8000
+    s.instructions++; op_ilhu(s, 0x41400014u);   // 0699c ilhu r20,0x8000
+    s.instructions++; op_shufb(s, 0xB1C3831Eu);   // 069a0 shufb r14,r6,r14,r30
+    s.instructions++; op_stqd(s, 0x2401008Eu);   // 069a4 stqd r14,64(r1)
+    s.instructions++; op_lqx(s, 0x38840382u);   // 069ac lqx r2,r7,r16
+    s.instructions++; op_ilhu(s, 0x41400007u);   // 069b0 ilhu r7,0x8000
+    s.instructions++; op_lqd(s, 0x3401408Eu);   // 069b4 lqd r14,80(r1)
+    s.instructions++; op_rotqby(s, 0x3B85C102u);   // 069b8 rotqby r2,r2,r23
+    s.instructions++; op_xor_(s, 0x4821C102u);   // 069bc xor r2,r2,r7
+    s.instructions++; op_fm(s, 0x58C14102u);   // 069c0 fm r2,r2,r5
+    s.instructions++; op_shufb(s, 0xB1C38119u);   // 069c4 shufb r14,r2,r14,r25
+    s.instructions++; op_ori(s, 0x04000705u);   // 069c8 ori r5,r14,0
+    s.instructions++; op_stqd(s, 0x2401408Eu);   // 069cc stqd r14,80(r1)
+    s.instructions++; op_ilhu(s, 0x4140000Eu);   // 069d0 ilhu r14,0x8000
+    s.instructions++; op_lqx(s, 0x38848B82u);   // 069d4 lqx r2,r23,r18
+    s.instructions++; op_rotqby(s, 0x3B868102u);   // 069d8 rotqby r2,r2,r26
+    s.instructions++; op_xor_(s, 0x48238102u);   // 069dc xor r2,r2,r14
+    s.instructions++; op_fm(s, 0x58C0C102u);   // 069e0 fm r2,r2,r3
+    s.instructions++; op_shufb(s, 0xB0A1411Bu);   // 069e4 shufb r5,r2,r5,r27
+    s.instructions++; op_stqd(s, 0x24014085u);   // 069e8 stqd r5,80(r1)
+    s.instructions++; op_lqx(s, 0x38854B82u);   // 069ec lqx r2,r23,r21
+    s.instructions++; op_rotqby(s, 0x3B870102u);   // 069f0 rotqby r2,r2,r28
+    s.instructions++; op_xor_(s, 0x48244102u);   // 069f4 xor r2,r2,r17
+    s.instructions++; op_fm(s, 0x58C10102u);   // 069f8 fm r2,r2,r4
+    s.instructions++; op_shufb(s, 0xB061411Du);   // 069fc shufb r3,r2,r5,r29
+    s.instructions++; op_stqd(s, 0x24014083u);   // 06a00 stqd r3,80(r1)
+    s.instructions++; op_lqx(s, 0x38858B82u);   // 06a04 lqx r2,r23,r22
+    s.instructions++; op_rotqby(s, 0x3B87C102u);   // 06a08 rotqby r2,r2,r31
+    s.instructions++; op_xor_(s, 0x48250102u);   // 06a0c xor r2,r2,r20
+    s.instructions++; op_fm(s, 0x58C08306u);   // 06a10 fm r6,r6,r2
+    s.instructions++; op_shufb(s, 0xB060C31Eu);   // 06a14 shufb r3,r6,r3,r30
+    s.instructions++; op_stqd(s, 0x24014083u);   // 06a18 stqd r3,80(r1)
+    s.instructions++; goto L_067d0;   // 06a1c br r0,0x67d0
+L_06a20:
+    s.instructions++; op_ai(s, 0x1C180081u);   // 06a20 ai r1,r1,96
+    s.instructions++;   // 06a24 bi r0,r0,r0
+    s.pc = 0x06A24; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_06a28:
+    s.instructions++; op_ori(s, 0x04000284u);   // 06a28 ori r4,r5,0
+    s.instructions++; goto L_06890;   // 06a2c br r0,0x6890
+}
+bool geomfn_06a30(SPUThread& s) {
+    u32 to;
+    goto L_06a30;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x06A30: goto L_06a30;
+    case 0x06AB0: goto L_06ab0;
+    case 0x06B98: goto L_06b98;
+    case 0x06BBC: goto L_06bbc;
+    case 0x06BF0: goto L_06bf0;
+    case 0x06C28: goto L_06c28;
+    case 0x06C38: goto L_06c38;
+    case 0x07380: goto L_07380;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_06a30:
+    s.instructions++; op_il(s, 0x40FCE802u);   // 06a30 il r2,0xf9d0
+    s.instructions++; op_stqd(s, 0x24004080u);   // 06a38 stqd r0,16(r1)
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 06a3c stqd r80,-16(r1)
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 06a44 stqd r81,-32(r1)
+    s.instructions++; op_ori(s, 0x040001D1u);   // 06a48 ori r81,r3,0
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 06a4c stqd r82,-48(r1)
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 06a50 stqd r83,-64(r1)
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 06a54 stqd r84,-80(r1)
+    s.instructions++; op_stqd(s, 0x24FE80D5u);   // 06a58 stqd r85,-96(r1)
+    s.instructions++; op_stqd(s, 0x24FE40D6u);   // 06a5c stqd r86,-112(r1)
+    s.instructions++; op_stqd(s, 0x24FE00D7u);   // 06a60 stqd r87,-128(r1)
+    s.instructions++; op_stqd(s, 0x24FDC0D8u);   // 06a64 stqd r88,-144(r1)
+    s.instructions++; op_stqd(s, 0x24FD80D9u);   // 06a68 stqd r89,-160(r1)
+    s.instructions++; op_stqd(s, 0x24FD40DAu);   // 06a6c stqd r90,-176(r1)
+    s.instructions++; op_stqd(s, 0x24FD00DBu);   // 06a70 stqd r91,-192(r1)
+    s.instructions++; op_stqd(s, 0x24FCC0DCu);   // 06a74 stqd r92,-208(r1)
+    s.instructions++; op_stqd(s, 0x24FC80DDu);   // 06a7c stqd r93,-224(r1)
+    s.instructions++; op_stqd(s, 0x24FC40DEu);   // 06a80 stqd r94,-240(r1)
+    s.instructions++; op_stqd(s, 0x24E74081u);   // 06a84 stqd r1,-1584(r1)
+    s.instructions++; op_a(s, 0x18008081u);   // 06a88 a r1,r1,r2
+    s.instructions++; op_stqd(s, 0x24148084u);   // 06a8c stqd r4,1312(r1)
+    s.instructions++; op_il(s, 0x40800084u);   // 06a90 il r4,0x1
+    s.instructions++; op_lqd(s, 0x34148082u);   // 06a94 lqd r2,1312(r1)
+    s.instructions++; op_stqd(s, 0x2414C085u);   // 06a98 stqd r5,1328(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F838102u);   // 06a9c rotqbyi r2,r2,14
+    s.instructions++; op_andi(s, 0x141C0102u);   // 06aa0 andi r2,r2,112
+    s.instructions++; op_rotmi(s, 0x0F3F0150u);   // 06aa8 rotmi r80,r2,-4
+    s.instructions++; s.set_pref(0, 0x06AB0);   // 06aac brsl r0,0x8970
+    if (!geomfn_08970(s)) s.run_until(0x06AB0);
+    if (s.halted || s.pc != 0x06AB0) return false;
+L_06ab0:
+    s.instructions++; op_il(s, 0x40819A03u);   // 06ab0 il r3,0x334
+    s.instructions++; op_lqd(s, 0x340CE885u);   // 06ab4 lqd r5,816(r81)
+    s.instructions++; op_il(s, 0x4081D202u);   // 06ab8 il r2,0x3a4
+    s.instructions++; op_il(s, 0x4080010Cu);   // 06ac0 il r12,0x2
+    s.instructions++; op_lqx(s, 0x3880E886u);   // 06ac4 lqx r6,r81,r3
+    s.instructions++; op_andi(s, 0x143FE850u);   // 06ac8 andi r80,r80,255
+    s.instructions++; op_lqx(s, 0x3880A884u);   // 06acc lqx r4,r81,r2
+    s.instructions++; op_a(s, 0x1800A887u);   // 06ad0 a r7,r81,r2
+    s.instructions++; op_a(s, 0x18142802u);   // 06ad4 a r2,r80,r80
+    s.instructions++; op_a(s, 0x1800E888u);   // 06ad8 a r8,r81,r3
+    s.instructions++; op_rotqby(s, 0x3B9442D5u);   // 06adc rotqby r85,r5,r81
+    s.instructions++; op_ila(s, 0x427FFF89u);   // 06ae0 ila r9,0xffff
+    s.instructions++; op_shli(s, 0x0F60A850u);   // 06ae8 shli r80,r80,2
+    s.instructions++; op_rotqby(s, 0x3B82035Cu);   // 06aec rotqby r92,r6,r8
+    s.instructions++; op_il(s, 0x4081B006u);   // 06af0 il r6,0x360
+    s.instructions++; op_rotqby(s, 0x3B81C203u);   // 06af4 rotqby r3,r4,r7
+    s.instructions++; op_a(s, 0x18154102u);   // 06af8 a r2,r2,r85
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 06afc fsmbi r7,0x0
+    s.instructions++; op_a(s, 0x18030104u);   // 06b00 a r4,r2,r12
+    s.instructions++; op_lqx(s, 0x38830105u);   // 06b04 lqx r5,r2,r12
+    s.instructions++; op_il(s, 0x40818802u);   // 06b08 il r2,0x310
+    s.instructions++; op_ai(s, 0x1C038204u);   // 06b0c ai r4,r4,14
+    s.instructions++; op_a(s, 0x1800A8DBu);   // 06b10 a r91,r81,r2
+    s.instructions++; op_ai(s, 0x1CF00102u);   // 06b14 ai r2,r2,-64
+    s.instructions++; op_ai(s, 0x1C00C183u);   // 06b18 ai r3,r3,3
+    s.instructions++; op_a(s, 0x1800A8DAu);   // 06b20 a r90,r81,r2
+    s.instructions++; op_rotqby(s, 0x3B810284u);   // 06b24 rotqby r4,r5,r4
+    s.instructions++; op_andi(s, 0x14FF01D4u);   // 06b28 andi r84,r3,-4
+    s.instructions++; op_shlqbyi(s, 0x3FE02883u);   // 06b2c shlqbyi r3,r81,0
+    s.instructions++; op_a(s, 0x181428D0u);   // 06b30 a r80,r81,r80
+    s.instructions++; op_il(s, 0x40800805u);   // 06b34 il r5,0x10
+    s.instructions++; op_and_(s, 0x18224202u);   // 06b38 and r2,r4,r9
+    s.instructions++; op_a(s, 0x1801A806u);   // 06b3c a r6,r80,r6
+    s.instructions++; op_a(s, 0x18154108u);   // 06b40 a r8,r2,r85
+    s.instructions++; op_lqx(s, 0x38954104u);   // 06b44 lqx r4,r2,r85
+    s.instructions++; op_a(s, 0x1803040Bu);   // 06b48 a r11,r8,r12
+    s.instructions++; op_lqx(s, 0x3883040Cu);   // 06b4c lqx r12,r8,r12
+    s.instructions++; op_ai(s, 0x1C038402u);   // 06b50 ai r2,r8,14
+    s.instructions++; op_ai(s, 0x1C03858Bu);   // 06b54 ai r11,r11,14
+    s.instructions++; op_ai(s, 0x1C01045Du);   // 06b58 ai r93,r8,4
+    s.instructions++; op_rotqby(s, 0x3B808252u);   // 06b5c rotqby r82,r4,r2
+    s.instructions++; op_rotqby(s, 0x3B82C604u);   // 06b60 rotqby r4,r12,r11
+    s.instructions++; op_and_(s, 0x18226959u);   // 06b64 and r89,r82,r9
+    s.instructions++; op_and_(s, 0x18224253u);   // 06b68 and r83,r4,r9
+    s.instructions++; op_shli(s, 0x0F606C82u);   // 06b6c shli r2,r89,1
+    s.instructions++; op_mpyh(s, 0x78B4EA0Au);   // 06b70 mpyh r10,r84,r83
+    s.instructions++; op_mpyh(s, 0x78B52984u);   // 06b74 mpyh r4,r83,r84
+    s.instructions++; op_mpyu(s, 0x7994EA09u);   // 06b78 mpyu r9,r84,r83
+    s.instructions++; op_a(s, 0x18008102u);   // 06b7c a r2,r2,r2
+    s.instructions++; op_a(s, 0x18008408u);   // 06b80 a r8,r8,r2
+    s.instructions++; op_ai(s, 0x1C010458u);   // 06b84 ai r88,r8,4
+    s.instructions++; op_a(s, 0x18010504u);   // 06b88 a r4,r10,r4
+    s.instructions++; op_a(s, 0x18024204u);   // 06b90 a r4,r4,r9
+    s.instructions++; s.set_pref(0, 0x06B98);   // 06b94 brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x06B98);
+    if (s.halted || s.pc != 0x06B98) return false;
+L_06b98:
+    s.instructions++; op_il(s, 0x40801784u);   // 06b98 il r4,0x2f
+    s.instructions++; op_ori(s, 0x040001D7u);   // 06ba0 ori r87,r3,0
+    s.instructions++; op_lqd(s, 0x340EA883u);   // 06ba4 lqd r3,928(r81)
+    s.instructions++; op_rotqby(s, 0x3B9441D6u);   // 06bb8 rotqby r86,r3,r81
+L_06bbc:
+    s.instructions++; op_ai(s, 0x1CFFC204u);   // 06bbc ai r4,r4,-1
+    s.instructions++; op_ceqi(s, 0x7CFFC202u);   // 06bc0 ceqi r2,r4,-1
+    s.instructions++; if (s.pref(2) == 0) goto L_06bbc;   // 06bc4 brz r2,0x6bbc
+    s.instructions++; op_lqd(s, 0x340E2806u);   // 06bc8 lqd r6,896(r80)
+    s.instructions++; op_rotqby(s, 0x3B94035Eu);   // 06bcc rotqby r94,r6,r80
+    s.instructions++; if ((s.pref(82) & 0xFFFF) == 0) goto L_06c38;   // 06bd4 brhz r82,0x6c38
+    s.instructions++; op_il(s, 0x40810002u);   // 06bd8 il r2,0x200
+    s.instructions++; op_ai(s, 0x1C080083u);   // 06be0 ai r3,r1,32
+    s.instructions++; op_shlqbyi(s, 0x3FE02ED0u);   // 06be4 shlqbyi r80,r93,0
+    s.instructions++; op_il(s, 0x40800051u);   // 06be8 il r81,0x0
+    s.instructions++; op_a(s, 0x180081D2u);   // 06bec a r82,r3,r2
+L_06bf0:
+    s.instructions++; op_ceqi(s, 0x7C002F0Du);   // 06bf0 ceqi r13,r94,0
+    s.instructions++; op_shlqbyi(s, 0x3FE02803u);   // 06bf4 shlqbyi r3,r80,0
+    s.instructions++; op_ai(s, 0x1C0068D1u);   // 06bf8 ai r81,r81,1
+    s.instructions++; op_shlqbyi(s, 0x3FE02D84u);   // 06bfc shlqbyi r4,r91,0
+    s.instructions++; op_andc(s, 0x5823690Du);   // 06c00 andc r13,r82,r13
+    s.instructions++; op_shlqbyi(s, 0x3FE02A85u);   // 06c04 shlqbyi r5,r85,0
+    s.instructions++; op_ori(s, 0x04002E06u);   // 06c08 ori r6,r92,0
+    s.instructions++; op_shlqbyi(s, 0x3FE02C07u);   // 06c0c shlqbyi r7,r88,0
+    s.instructions++; op_ori(s, 0x04002D08u);   // 06c10 ori r8,r90,0
+    s.instructions++; op_shlqbyi(s, 0x3FE02B89u);   // 06c14 shlqbyi r9,r87,0
+    s.instructions++; op_ori(s, 0x0400298Au);   // 06c18 ori r10,r83,0
+    s.instructions++; op_shlqbyi(s, 0x3FE02B0Bu);   // 06c1c shlqbyi r11,r86,0
+    s.instructions++; op_ori(s, 0x04002A0Cu);   // 06c20 ori r12,r84,0
+    s.instructions++; s.set_pref(0, 0x06C28);   // 06c24 brsl r0,0x66b8
+    if (!geomfn_066b8(s)) s.run_until(0x06C28);
+    if (s.halted || s.pc != 0x06C28) return false;
+L_06c28:
+    s.instructions++; op_ai(s, 0x1C0C2952u);   // 06c28 ai r82,r82,48
+    s.instructions++; op_clgt(s, 0x58146C82u);   // 06c2c clgt r2,r89,r81
+    s.instructions++; op_ai(s, 0x1C012850u);   // 06c30 ai r80,r80,4
+    s.instructions++; if (s.pref(2) != 0) goto L_06bf0;   // 06c34 brnz r2,0x6bf0
+L_06c38:
+    s.instructions++; if (s.pref(94) == 0) goto L_07380;   // 06c3c brz r94,0x7380
+    s.instructions++; op_ori(s, 0x04002A03u);   // 06c40 ori r3,r84,0
+    s.instructions++; op_lqd(s, 0x3408C088u);   // 06c44 lqd r8,560(r1)
+    s.instructions++; op_ori(s, 0x04002B84u);   // 06c48 ori r4,r87,0
+    s.instructions++; op_lqd(s, 0x3402C082u);   // 06c4c lqd r2,176(r1)
+    s.instructions++; op_ila(s, 0x42917005u);   // 06c50 ila r5,0x122e0
+    s.instructions++; op_cdd(s, 0x3EE00086u);   // 06c54 cdd r6,r1,0
+    s.instructions++; op_cdd(s, 0x3EE20089u);   // 06c5c cdd r9,r1,8
+    s.instructions++; op_ori(s, 0x0400030Au);   // 06c60 ori r10,r6,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0030Eu);   // 06c64 shlqbyi r14,r6,0
+    s.instructions++; op_ori(s, 0x0400048Bu);   // 06c68 ori r11,r9,0
+    s.instructions++; op_shufb(s, 0xB0408406u);   // 06c6c shufb r2,r8,r2,r6
+    s.instructions++; op_ori(s, 0x04000493u);   // 06c70 ori r19,r9,0
+    s.instructions++; op_lqd(s, 0x34088086u);   // 06c74 lqd r6,544(r1)
+    s.instructions++; op_ori(s, 0x04000497u);   // 06c78 ori r23,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0049Du);   // 06c7c shlqbyi r29,r9,0
+    s.instructions++; op_ori(s, 0x040004A3u);   // 06c80 ori r35,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE004A9u);   // 06c84 shlqbyi r41,r9,0
+    s.instructions++; op_ori(s, 0x04000107u);   // 06c88 ori r7,r2,0
+    s.instructions++; op_stqd(s, 0x2402C082u);   // 06c8c stqd r2,176(r1)
+    s.instructions++; op_ori(s, 0x040004AFu);   // 06c90 ori r47,r9,0
+    s.instructions++; op_lqd(s, 0x3408C082u);   // 06c94 lqd r2,560(r1)
+    s.instructions++; op_ori(s, 0x04000495u);   // 06c98 ori r21,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00499u);   // 06c9c shlqbyi r25,r9,0
+    s.instructions++; op_ori(s, 0x0400049Bu);   // 06ca0 ori r27,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0049Fu);   // 06ca4 shlqbyi r31,r9,0
+    s.instructions++; op_ori(s, 0x040004A1u);   // 06ca8 ori r33,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE004A5u);   // 06cac shlqbyi r37,r9,0
+    s.instructions++; op_ori(s, 0x040004A7u);   // 06cb0 ori r39,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE004ABu);   // 06cb4 shlqbyi r43,r9,0
+    s.instructions++; op_ori(s, 0x040004ADu);   // 06cb8 ori r45,r9,0
+    s.instructions++; op_shlqbyi(s, 0x3FE004B1u);   // 06cbc shlqbyi r49,r9,0
+    s.instructions++; op_ori(s, 0x04000514u);   // 06cc0 ori r20,r10,0
+    s.instructions++; op_rotqbyi(s, 0x3F820110u);   // 06cc4 rotqbyi r16,r2,8
+    s.instructions++; op_ori(s, 0x0400051Au);   // 06cc8 ori r26,r10,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00520u);   // 06ccc shlqbyi r32,r10,0
+    s.instructions++; op_ori(s, 0x04000526u);   // 06cd0 ori r38,r10,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0052Cu);   // 06cd4 shlqbyi r44,r10,0
+    s.instructions++; op_ori(s, 0x04000532u);   // 06cd8 ori r50,r10,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00512u);   // 06cdc shlqbyi r18,r10,0
+    s.instructions++; op_ori(s, 0x04000518u);   // 06ce0 ori r24,r10,0
+    s.instructions++; op_shufb(s, 0xB0E1C809u);   // 06ce4 shufb r7,r16,r7,r9
+    s.instructions++; op_ori(s, 0x0400051Eu);   // 06ce8 ori r30,r10,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00524u);   // 06cec shlqbyi r36,r10,0
+    s.instructions++; op_ori(s, 0x0400052Au);   // 06cf0 ori r42,r10,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00530u);   // 06cf4 shlqbyi r48,r10,0
+    s.instructions++; op_ori(s, 0x04000536u);   // 06cf8 ori r54,r10,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00538u);   // 06cfc shlqbyi r56,r10,0
+    s.instructions++; op_ori(s, 0x040005B5u);   // 06d00 ori r53,r11,0
+    s.instructions++; op_stqd(s, 0x2402C087u);   // 06d04 stqd r7,176(r1)
+    s.instructions++; op_ori(s, 0x040005B3u);   // 06d08 ori r51,r11,0
+    s.instructions++; op_lqd(s, 0x3409008Du);   // 06d0c lqd r13,576(r1)
+    s.instructions++; op_ori(s, 0x040005B7u);   // 06d10 ori r55,r11,0
+    s.instructions++; op_lqd(s, 0x34030082u);   // 06d14 lqd r2,192(r1)
+    s.instructions++; op_ori(s, 0x040005B9u);   // 06d18 ori r57,r11,0
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0408u);   // 06d1c rotqmbyi r8,r8,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0810u);   // 06d20 rotqmbyi r16,r16,-8
+    s.instructions++; op_shufb(s, 0xB040868Au);   // 06d24 shufb r2,r13,r2,r10
+    s.instructions++; op_rotqmbyi(s, 0x3FBE068Du);   // 06d2c rotqmbyi r13,r13,-8
+    s.instructions++; op_ori(s, 0x04000107u);   // 06d30 ori r7,r2,0
+    s.instructions++; op_stqd(s, 0x24030082u);   // 06d34 stqd r2,192(r1)
+    s.instructions++; op_lqd(s, 0x34090082u);   // 06d38 lqd r2,576(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F82010Fu);   // 06d3c rotqbyi r15,r2,8
+    s.instructions++; op_shufb(s, 0xB0E1C789u);   // 06d40 shufb r7,r15,r7,r9
+    s.instructions++; op_rotqmbyi(s, 0x3FBE078Fu);   // 06d44 rotqmbyi r15,r15,-8
+    s.instructions++; op_stqd(s, 0x24030087u);   // 06d48 stqd r7,192(r1)
+    s.instructions++; op_lqd(s, 0x3409808Cu);   // 06d4c lqd r12,608(r1)
+    s.instructions++; op_lqd(s, 0x34034082u);   // 06d50 lqd r2,208(r1)
+    s.instructions++; op_lqd(s, 0x34094089u);   // 06d54 lqd r9,592(r1)
+    s.instructions++; op_shufb(s, 0xB040860Au);   // 06d58 shufb r2,r12,r2,r10
+    s.instructions++; op_rotqmbyi(s, 0x3FBE060Cu);   // 06d5c rotqmbyi r12,r12,-8
+    s.instructions++; op_ori(s, 0x04000107u);   // 06d60 ori r7,r2,0
+    s.instructions++; op_stqd(s, 0x24034082u);   // 06d64 stqd r2,208(r1)
+    s.instructions++; op_lqd(s, 0x34098082u);   // 06d68 lqd r2,608(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F82010Au);   // 06d6c rotqbyi r10,r2,8
+    s.instructions++; op_shufb(s, 0xB0E1C50Bu);   // 06d70 shufb r7,r10,r7,r11
+    s.instructions++; op_rotqmbyi(s, 0x3FBE050Au);   // 06d74 rotqmbyi r10,r10,-8
+    s.instructions++; op_stqd(s, 0x24034087u);   // 06d78 stqd r7,208(r1)
+    s.instructions++; op_lqd(s, 0x3409C082u);   // 06d7c lqd r2,624(r1)
+    s.instructions++; op_lqd(s, 0x34038087u);   // 06d80 lqd r7,224(r1)
+    s.instructions++; op_shufb(s, 0xB0E1C10Eu);   // 06d84 shufb r7,r2,r7,r14
+    s.instructions++; op_shlqbyi(s, 0x3FE2060Eu);   // 06d88 shlqbyi r14,r12,8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 06d8c rotqmbyi r2,r2,-8
+    s.instructions++; op_ori(s, 0x04000391u);   // 06d90 ori r17,r7,0
+    s.instructions++; op_stqd(s, 0x24038087u);   // 06d94 stqd r7,224(r1)
+    s.instructions++; op_or_(s, 0x0823850Au);   // 06d98 or r10,r10,r14
+    s.instructions++; op_lqd(s, 0x3409C087u);   // 06d9c lqd r7,624(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F82038Bu);   // 06da0 rotqbyi r11,r7,8
+    s.instructions++; op_shlqbyi(s, 0x3FE20407u);   // 06da4 shlqbyi r7,r8,8
+    s.instructions++; op_shlqbyi(s, 0x3FE20688u);   // 06da8 shlqbyi r8,r13,8
+    s.instructions++; op_shlqbyi(s, 0x3FE2010Du);   // 06dac shlqbyi r13,r2,8
+    s.instructions++; op_shufb(s, 0xB2244593u);   // 06db4 shufb r17,r11,r17,r19
+    s.instructions++; op_or_(s, 0x0821C807u);   // 06db8 or r7,r16,r7
+    s.instructions++; op_rotqmbyi(s, 0x3FBE058Bu);   // 06dbc rotqmbyi r11,r11,-8
+    s.instructions++; op_or_(s, 0x08220788u);   // 06dc0 or r8,r15,r8
+    s.instructions++; op_stqd(s, 0x24038091u);   // 06dc4 stqd r17,224(r1)
+    s.instructions++; op_or_(s, 0x0823458Bu);   // 06dc8 or r11,r11,r13
+    s.instructions++; op_lqd(s, 0x340A408Cu);   // 06dcc lqd r12,656(r1)
+    s.instructions++; op_lqd(s, 0x3403C090u);   // 06dd0 lqd r16,240(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0602u);   // 06dd4 rotqmbyi r2,r12,-8
+    s.instructions++; op_shufb(s, 0xB2040612u);   // 06dd8 shufb r16,r12,r16,r18
+    s.instructions++; op_lqd(s, 0x340A008Cu);   // 06ddc lqd r12,640(r1)
+    s.instructions++; op_shlqbyi(s, 0x3FE2010Eu);   // 06de0 shlqbyi r14,r2,8
+    s.instructions++; op_stqd(s, 0x2403C090u);   // 06de4 stqd r16,240(r1)
+    s.instructions++; op_lqd(s, 0x340A408Du);   // 06de8 lqd r13,656(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F82068Du);   // 06dec rotqbyi r13,r13,8
+    s.instructions++; op_shufb(s, 0xB0440693u);   // 06df0 shufb r2,r13,r16,r19
+    s.instructions++; op_rotqmbyi(s, 0x3FBE068Du);   // 06df4 rotqmbyi r13,r13,-8
+    s.instructions++; op_stqd(s, 0x2403C082u);   // 06dfc stqd r2,240(r1)
+    s.instructions++; op_or_(s, 0x0823868Du);   // 06e00 or r13,r13,r14
+    s.instructions++; op_lqd(s, 0x340A8082u);   // 06e04 lqd r2,672(r1)
+    s.instructions++; op_lqd(s, 0x34040090u);   // 06e08 lqd r16,256(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE010Eu);   // 06e0c rotqmbyi r14,r2,-8
+    s.instructions++; op_shufb(s, 0xB2040112u);   // 06e10 shufb r16,r2,r16,r18
+    s.instructions++; op_shlqbyi(s, 0x3FE2070Fu);   // 06e14 shlqbyi r15,r14,8
+    s.instructions++; op_stqd(s, 0x24040090u);   // 06e18 stqd r16,256(r1)
+    s.instructions++; op_lqd(s, 0x340A808Eu);   // 06e1c lqd r14,672(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F82070Eu);   // 06e20 rotqbyi r14,r14,8
+    s.instructions++; op_shufb(s, 0xB0440713u);   // 06e24 shufb r2,r14,r16,r19
+    s.instructions++; op_rotqmbyi(s, 0x3FBE070Eu);   // 06e28 rotqmbyi r14,r14,-8
+    s.instructions++; op_stqd(s, 0x24040082u);   // 06e2c stqd r2,256(r1)
+    s.instructions++; op_or_(s, 0x0823C70Eu);   // 06e30 or r14,r14,r15
+    s.instructions++; op_lqd(s, 0x340B0082u);   // 06e34 lqd r2,704(r1)
+    s.instructions++; op_lqd(s, 0x34028092u);   // 06e38 lqd r18,160(r1)
+    s.instructions++; op_lqd(s, 0x340AC08Fu);   // 06e3c lqd r15,688(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0110u);   // 06e40 rotqmbyi r16,r2,-8
+    s.instructions++; op_shufb(s, 0xB2448114u);   // 06e44 shufb r18,r2,r18,r20
+    s.instructions++; op_shlqbyi(s, 0x3FE20811u);   // 06e48 shlqbyi r17,r16,8
+    s.instructions++; op_stqd(s, 0x24028092u);   // 06e4c stqd r18,160(r1)
+    s.instructions++; op_lqd(s, 0x340B0090u);   // 06e50 lqd r16,704(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820810u);   // 06e54 rotqbyi r16,r16,8
+    s.instructions++; op_shufb(s, 0xB0448813u);   // 06e58 shufb r2,r16,r18,r19
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0810u);   // 06e5c rotqmbyi r16,r16,-8
+    s.instructions++; op_stqd(s, 0x24028082u);   // 06e64 stqd r2,160(r1)
+    s.instructions++; op_or_(s, 0x08244810u);   // 06e68 or r16,r16,r17
+    s.instructions++; op_lqd(s, 0x340B4082u);   // 06e6c lqd r2,720(r1)
+    s.instructions++; op_lqd(s, 0x34024093u);   // 06e70 lqd r19,144(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0111u);   // 06e74 rotqmbyi r17,r2,-8
+    s.instructions++; op_shufb(s, 0xB264C114u);   // 06e78 shufb r19,r2,r19,r20
+    s.instructions++; op_shlqbyi(s, 0x3FE20892u);   // 06e7c shlqbyi r18,r17,8
+    s.instructions++; op_stqd(s, 0x24024093u);   // 06e80 stqd r19,144(r1)
+    s.instructions++; op_lqd(s, 0x340B4091u);   // 06e84 lqd r17,720(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820891u);   // 06e88 rotqbyi r17,r17,8
+    s.instructions++; op_shufb(s, 0xB044C895u);   // 06e8c shufb r2,r17,r19,r21
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0891u);   // 06e90 rotqmbyi r17,r17,-8
+    s.instructions++; op_stqd(s, 0x24024082u);   // 06e94 stqd r2,144(r1)
+    s.instructions++; op_or_(s, 0x08248891u);   // 06e98 or r17,r17,r18
+    s.instructions++; op_lqd(s, 0x340BC082u);   // 06e9c lqd r2,752(r1)
+    s.instructions++; op_lqd(s, 0x3400C095u);   // 06ea0 lqd r21,48(r1)
+    s.instructions++; op_lqd(s, 0x340B8092u);   // 06ea4 lqd r18,736(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0113u);   // 06ea8 rotqmbyi r19,r2,-8
+    s.instructions++; op_shufb(s, 0xB2A54114u);   // 06eac shufb r21,r2,r21,r20
+    s.instructions++; op_shlqbyi(s, 0x3FE20994u);   // 06eb0 shlqbyi r20,r19,8
+    s.instructions++; op_stqd(s, 0x2400C095u);   // 06eb4 stqd r21,48(r1)
+    s.instructions++; op_lqd(s, 0x340BC093u);   // 06eb8 lqd r19,752(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820993u);   // 06ebc rotqbyi r19,r19,8
+    s.instructions++; op_shufb(s, 0xB0454997u);   // 06ec0 shufb r2,r19,r21,r23
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0993u);   // 06ec4 rotqmbyi r19,r19,-8
+    s.instructions++; op_stqd(s, 0x2400C082u);   // 06ecc stqd r2,48(r1)
+    s.instructions++; op_or_(s, 0x08250993u);   // 06ed0 or r19,r19,r20
+    s.instructions++; op_lqd(s, 0x340C0082u);   // 06ed4 lqd r2,768(r1)
+    s.instructions++; op_lqd(s, 0x34010096u);   // 06ed8 lqd r22,64(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0114u);   // 06edc rotqmbyi r20,r2,-8
+    s.instructions++; op_shufb(s, 0xB2C58118u);   // 06ee0 shufb r22,r2,r22,r24
+    s.instructions++; op_shlqbyi(s, 0x3FE20A15u);   // 06ee4 shlqbyi r21,r20,8
+    s.instructions++; op_stqd(s, 0x24010096u);   // 06ee8 stqd r22,64(r1)
+    s.instructions++; op_lqd(s, 0x340C0094u);   // 06eec lqd r20,768(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820A14u);   // 06ef0 rotqbyi r20,r20,8
+    s.instructions++; op_shufb(s, 0xB0458A17u);   // 06ef4 shufb r2,r20,r22,r23
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0A14u);   // 06ef8 rotqmbyi r20,r20,-8
+    s.instructions++; op_stqd(s, 0x24010082u);   // 06efc stqd r2,64(r1)
+    s.instructions++; op_or_(s, 0x08254A14u);   // 06f00 or r20,r20,r21
+    s.instructions++; op_lqd(s, 0x340C8082u);   // 06f04 lqd r2,800(r1)
+    s.instructions++; op_lqd(s, 0x34014098u);   // 06f08 lqd r24,80(r1)
+    s.instructions++; op_lqd(s, 0x340C4095u);   // 06f0c lqd r21,784(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0116u);   // 06f10 rotqmbyi r22,r2,-8
+    s.instructions++; op_shufb(s, 0xB306011Au);   // 06f14 shufb r24,r2,r24,r26
+    s.instructions++; op_shlqbyi(s, 0x3FE20B17u);   // 06f18 shlqbyi r23,r22,8
+    s.instructions++; op_stqd(s, 0x24014098u);   // 06f1c stqd r24,80(r1)
+    s.instructions++; op_lqd(s, 0x340C8096u);   // 06f20 lqd r22,800(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820B16u);   // 06f24 rotqbyi r22,r22,8
+    s.instructions++; op_shufb(s, 0xB0460B19u);   // 06f28 shufb r2,r22,r24,r25
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0B16u);   // 06f2c rotqmbyi r22,r22,-8
+    s.instructions++; op_stqd(s, 0x24014082u);   // 06f34 stqd r2,80(r1)
+    s.instructions++; op_or_(s, 0x0825CB16u);   // 06f38 or r22,r22,r23
+    s.instructions++; op_lqd(s, 0x340CC082u);   // 06f3c lqd r2,816(r1)
+    s.instructions++; op_lqd(s, 0x34018099u);   // 06f40 lqd r25,96(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0117u);   // 06f44 rotqmbyi r23,r2,-8
+    s.instructions++; op_shufb(s, 0xB326411Au);   // 06f48 shufb r25,r2,r25,r26
+    s.instructions++; op_shlqbyi(s, 0x3FE20B98u);   // 06f4c shlqbyi r24,r23,8
+    s.instructions++; op_stqd(s, 0x24018099u);   // 06f50 stqd r25,96(r1)
+    s.instructions++; op_lqd(s, 0x340CC097u);   // 06f54 lqd r23,816(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820B97u);   // 06f58 rotqbyi r23,r23,8
+    s.instructions++; op_shufb(s, 0xB0464B9Bu);   // 06f5c shufb r2,r23,r25,r27
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0B97u);   // 06f60 rotqmbyi r23,r23,-8
+    s.instructions++; op_stqd(s, 0x24018082u);   // 06f64 stqd r2,96(r1)
+    s.instructions++; op_or_(s, 0x08260B97u);   // 06f68 or r23,r23,r24
+    s.instructions++; op_lqd(s, 0x340D4082u);   // 06f6c lqd r2,848(r1)
+    s.instructions++; op_lqd(s, 0x3401C09Bu);   // 06f70 lqd r27,112(r1)
+    s.instructions++; op_lqd(s, 0x340D0098u);   // 06f74 lqd r24,832(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0119u);   // 06f78 rotqmbyi r25,r2,-8
+    s.instructions++; op_shufb(s, 0xB366C11Au);   // 06f7c shufb r27,r2,r27,r26
+    s.instructions++; op_shlqbyi(s, 0x3FE20C9Au);   // 06f80 shlqbyi r26,r25,8
+    s.instructions++; op_stqd(s, 0x2401C09Bu);   // 06f84 stqd r27,112(r1)
+    s.instructions++; op_lqd(s, 0x340D4099u);   // 06f88 lqd r25,848(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820C99u);   // 06f8c rotqbyi r25,r25,8
+    s.instructions++; op_shufb(s, 0xB046CC9Du);   // 06f90 shufb r2,r25,r27,r29
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0C99u);   // 06f94 rotqmbyi r25,r25,-8
+    s.instructions++; op_stqd(s, 0x2401C082u);   // 06f9c stqd r2,112(r1)
+    s.instructions++; op_or_(s, 0x08268C99u);   // 06fa0 or r25,r25,r26
+    s.instructions++; op_lqd(s, 0x340D8082u);   // 06fa4 lqd r2,864(r1)
+    s.instructions++; op_lqd(s, 0x3402009Cu);   // 06fa8 lqd r28,128(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE011Au);   // 06fac rotqmbyi r26,r2,-8
+    s.instructions++; op_shufb(s, 0xB387011Eu);   // 06fb0 shufb r28,r2,r28,r30
+    s.instructions++; op_shlqbyi(s, 0x3FE20D1Bu);   // 06fb4 shlqbyi r27,r26,8
+    s.instructions++; op_stqd(s, 0x2402009Cu);   // 06fb8 stqd r28,128(r1)
+    s.instructions++; op_lqd(s, 0x340D809Au);   // 06fbc lqd r26,864(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820D1Au);   // 06fc0 rotqbyi r26,r26,8
+    s.instructions++; op_shufb(s, 0xB0470D1Du);   // 06fc4 shufb r2,r26,r28,r29
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0D1Au);   // 06fc8 rotqmbyi r26,r26,-8
+    s.instructions++; op_stqd(s, 0x24020082u);   // 06fcc stqd r2,128(r1)
+    s.instructions++; op_or_(s, 0x0826CD1Au);   // 06fd0 or r26,r26,r27
+    s.instructions++; op_lqd(s, 0x340E0082u);   // 06fd4 lqd r2,896(r1)
+    s.instructions++; op_lqd(s, 0x3404409Eu);   // 06fd8 lqd r30,272(r1)
+    s.instructions++; op_lqd(s, 0x340DC09Bu);   // 06fdc lqd r27,880(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE011Cu);   // 06fe0 rotqmbyi r28,r2,-8
+    s.instructions++; op_shufb(s, 0xB3C78120u);   // 06fe4 shufb r30,r2,r30,r32
+    s.instructions++; op_shlqbyi(s, 0x3FE20E1Du);   // 06fe8 shlqbyi r29,r28,8
+    s.instructions++; op_stqd(s, 0x2404409Eu);   // 06fec stqd r30,272(r1)
+    s.instructions++; op_lqd(s, 0x340E009Cu);   // 06ff0 lqd r28,896(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820E1Cu);   // 06ff4 rotqbyi r28,r28,8
+    s.instructions++; op_shufb(s, 0xB0478E1Fu);   // 06ff8 shufb r2,r28,r30,r31
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0E1Cu);   // 06ffc rotqmbyi r28,r28,-8
+    s.instructions++; op_stqd(s, 0x24044082u);   // 07004 stqd r2,272(r1)
+    s.instructions++; op_or_(s, 0x08274E1Cu);   // 07008 or r28,r28,r29
+    s.instructions++; op_lqd(s, 0x340E4082u);   // 0700c lqd r2,912(r1)
+    s.instructions++; op_lqd(s, 0x3404809Fu);   // 07010 lqd r31,288(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE011Du);   // 07014 rotqmbyi r29,r2,-8
+    s.instructions++; op_shufb(s, 0xB3E7C120u);   // 07018 shufb r31,r2,r31,r32
+    s.instructions++; op_shlqbyi(s, 0x3FE20E9Eu);   // 0701c shlqbyi r30,r29,8
+    s.instructions++; op_stqd(s, 0x2404809Fu);   // 07020 stqd r31,288(r1)
+    s.instructions++; op_lqd(s, 0x340E409Du);   // 07024 lqd r29,912(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820E9Du);   // 07028 rotqbyi r29,r29,8
+    s.instructions++; op_shufb(s, 0xB047CEA1u);   // 0702c shufb r2,r29,r31,r33
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0E9Du);   // 07030 rotqmbyi r29,r29,-8
+    s.instructions++; op_stqd(s, 0x24048082u);   // 07034 stqd r2,288(r1)
+    s.instructions++; op_or_(s, 0x08278E9Du);   // 07038 or r29,r29,r30
+    s.instructions++; op_lqd(s, 0x340EC082u);   // 0703c lqd r2,944(r1)
+    s.instructions++; op_lqd(s, 0x3404C0A1u);   // 07040 lqd r33,304(r1)
+    s.instructions++; op_lqd(s, 0x340E809Eu);   // 07044 lqd r30,928(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE011Fu);   // 07048 rotqmbyi r31,r2,-8
+    s.instructions++; op_shufb(s, 0xB4284120u);   // 0704c shufb r33,r2,r33,r32
+    s.instructions++; op_shlqbyi(s, 0x3FE20FA0u);   // 07050 shlqbyi r32,r31,8
+    s.instructions++; op_stqd(s, 0x2404C0A1u);   // 07054 stqd r33,304(r1)
+    s.instructions++; op_lqd(s, 0x340EC09Fu);   // 07058 lqd r31,944(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820F9Fu);   // 0705c rotqbyi r31,r31,8
+    s.instructions++; op_shufb(s, 0xB0484FA3u);   // 07060 shufb r2,r31,r33,r35
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0F9Fu);   // 07064 rotqmbyi r31,r31,-8
+    s.instructions++; op_stqd(s, 0x2404C082u);   // 0706c stqd r2,304(r1)
+    s.instructions++; op_or_(s, 0x08280F9Fu);   // 07070 or r31,r31,r32
+    s.instructions++; op_lqd(s, 0x340F0082u);   // 07074 lqd r2,960(r1)
+    s.instructions++; op_lqd(s, 0x340700A2u);   // 07078 lqd r34,448(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0120u);   // 0707c rotqmbyi r32,r2,-8
+    s.instructions++; op_shufb(s, 0xB4488124u);   // 07080 shufb r34,r2,r34,r36
+    s.instructions++; op_shlqbyi(s, 0x3FE21021u);   // 07084 shlqbyi r33,r32,8
+    s.instructions++; op_stqd(s, 0x240700A2u);   // 07088 stqd r34,448(r1)
+    s.instructions++; op_lqd(s, 0x340F00A0u);   // 0708c lqd r32,960(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F821020u);   // 07090 rotqbyi r32,r32,8
+    s.instructions++; op_shufb(s, 0xB0489023u);   // 07094 shufb r2,r32,r34,r35
+    s.instructions++; op_rotqmbyi(s, 0x3FBE1020u);   // 07098 rotqmbyi r32,r32,-8
+    s.instructions++; op_stqd(s, 0x24070082u);   // 0709c stqd r2,448(r1)
+    s.instructions++; op_or_(s, 0x08285020u);   // 070a0 or r32,r32,r33
+    s.instructions++; op_lqd(s, 0x340F8082u);   // 070a4 lqd r2,992(r1)
+    s.instructions++; op_lqd(s, 0x340740A4u);   // 070a8 lqd r36,464(r1)
+    s.instructions++; op_lqd(s, 0x340F40A1u);   // 070ac lqd r33,976(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0122u);   // 070b0 rotqmbyi r34,r2,-8
+    s.instructions++; op_shufb(s, 0xB4890126u);   // 070b4 shufb r36,r2,r36,r38
+    s.instructions++; op_shlqbyi(s, 0x3FE21123u);   // 070b8 shlqbyi r35,r34,8
+    s.instructions++; op_stqd(s, 0x240740A4u);   // 070bc stqd r36,464(r1)
+    s.instructions++; op_lqd(s, 0x340F80A2u);   // 070c0 lqd r34,992(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F821122u);   // 070c4 rotqbyi r34,r34,8
+    s.instructions++; op_shufb(s, 0xB0491125u);   // 070c8 shufb r2,r34,r36,r37
+    s.instructions++; op_rotqmbyi(s, 0x3FBE1122u);   // 070cc rotqmbyi r34,r34,-8
+    s.instructions++; op_stqd(s, 0x24074082u);   // 070d4 stqd r2,464(r1)
+    s.instructions++; op_or_(s, 0x0828D122u);   // 070d8 or r34,r34,r35
+    s.instructions++; op_lqd(s, 0x340FC082u);   // 070dc lqd r2,1008(r1)
+    s.instructions++; op_lqd(s, 0x340780A5u);   // 070e0 lqd r37,480(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0123u);   // 070e4 rotqmbyi r35,r2,-8
+    s.instructions++; op_shufb(s, 0xB4A94126u);   // 070e8 shufb r37,r2,r37,r38
+    s.instructions++; op_shlqbyi(s, 0x3FE211A4u);   // 070ec shlqbyi r36,r35,8
+    s.instructions++; op_stqd(s, 0x240780A5u);   // 070f0 stqd r37,480(r1)
+    s.instructions++; op_lqd(s, 0x340FC0A3u);   // 070f4 lqd r35,1008(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F8211A3u);   // 070f8 rotqbyi r35,r35,8
+    s.instructions++; op_shufb(s, 0xB04951A7u);   // 070fc shufb r2,r35,r37,r39
+    s.instructions++; op_rotqmbyi(s, 0x3FBE11A3u);   // 07100 rotqmbyi r35,r35,-8
+    s.instructions++; op_stqd(s, 0x24078082u);   // 07104 stqd r2,480(r1)
+    s.instructions++; op_or_(s, 0x082911A3u);   // 07108 or r35,r35,r36
+    s.instructions++; op_lqd(s, 0x34104082u);   // 0710c lqd r2,1040(r1)
+    s.instructions++; op_lqd(s, 0x3407C0A7u);   // 07110 lqd r39,496(r1)
+    s.instructions++; op_lqd(s, 0x341000A4u);   // 07114 lqd r36,1024(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0125u);   // 0711c rotqmbyi r37,r2,-8
+    s.instructions++; op_shufb(s, 0xB4E9C126u);   // 07120 shufb r39,r2,r39,r38
+    s.instructions++; op_shlqbyi(s, 0x3FE212A6u);   // 07124 shlqbyi r38,r37,8
+    s.instructions++; op_stqd(s, 0x2407C0A7u);   // 07128 stqd r39,496(r1)
+    s.instructions++; op_lqd(s, 0x341040A5u);   // 0712c lqd r37,1040(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F8212A5u);   // 07130 rotqbyi r37,r37,8
+    s.instructions++; op_shufb(s, 0xB049D2A9u);   // 07134 shufb r2,r37,r39,r41
+    s.instructions++; op_rotqmbyi(s, 0x3FBE12A5u);   // 07138 rotqmbyi r37,r37,-8
+    s.instructions++; op_stqd(s, 0x2407C082u);   // 0713c stqd r2,496(r1)
+    s.instructions++; op_or_(s, 0x082992A5u);   // 07140 or r37,r37,r38
+    s.instructions++; op_lqd(s, 0x34108082u);   // 07144 lqd r2,1056(r1)
+    s.instructions++; op_lqd(s, 0x340800A8u);   // 07148 lqd r40,512(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0126u);   // 0714c rotqmbyi r38,r2,-8
+    s.instructions++; op_shufb(s, 0xB50A012Au);   // 07150 shufb r40,r2,r40,r42
+    s.instructions++; op_shlqbyi(s, 0x3FE21327u);   // 07154 shlqbyi r39,r38,8
+    s.instructions++; op_stqd(s, 0x240800A8u);   // 07158 stqd r40,512(r1)
+    s.instructions++; op_lqd(s, 0x341080A6u);   // 0715c lqd r38,1056(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F821326u);   // 07160 rotqbyi r38,r38,8
+    s.instructions++; op_shufb(s, 0xB04A1329u);   // 07164 shufb r2,r38,r40,r41
+    s.instructions++; op_rotqmbyi(s, 0x3FBE1326u);   // 07168 rotqmbyi r38,r38,-8
+    s.instructions++; op_stqd(s, 0x24080082u);   // 0716c stqd r2,512(r1)
+    s.instructions++; op_or_(s, 0x0829D326u);   // 07170 or r38,r38,r39
+    s.instructions++; op_lqd(s, 0x34110082u);   // 07174 lqd r2,1088(r1)
+    s.instructions++; op_lqd(s, 0x340840AAu);   // 07178 lqd r42,528(r1)
+    s.instructions++; op_lqd(s, 0x3410C0A7u);   // 0717c lqd r39,1072(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0128u);   // 07180 rotqmbyi r40,r2,-8
+    s.instructions++; op_shufb(s, 0xB54A812Cu);   // 07184 shufb r42,r2,r42,r44
+    s.instructions++; op_shlqbyi(s, 0x3FE21429u);   // 07188 shlqbyi r41,r40,8
+    s.instructions++; op_stqd(s, 0x240840AAu);   // 0718c stqd r42,528(r1)
+    s.instructions++; op_lqd(s, 0x341100A8u);   // 07190 lqd r40,1088(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F821428u);   // 07194 rotqbyi r40,r40,8
+    s.instructions++; op_shufb(s, 0xB04A942Bu);   // 07198 shufb r2,r40,r42,r43
+    s.instructions++; op_rotqmbyi(s, 0x3FBE1428u);   // 0719c rotqmbyi r40,r40,-8
+    s.instructions++; op_stqd(s, 0x24084082u);   // 071a4 stqd r2,528(r1)
+    s.instructions++; op_or_(s, 0x082A5428u);   // 071a8 or r40,r40,r41
+    s.instructions++; op_lqd(s, 0x34114082u);   // 071ac lqd r2,1104(r1)
+    s.instructions++; op_lqd(s, 0x3406C0ABu);   // 071b0 lqd r43,432(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0129u);   // 071b4 rotqmbyi r41,r2,-8
+    s.instructions++; op_shufb(s, 0xB56AC12Cu);   // 071b8 shufb r43,r2,r43,r44
+    s.instructions++; op_shlqbyi(s, 0x3FE214AAu);   // 071bc shlqbyi r42,r41,8
+    s.instructions++; op_stqd(s, 0x2406C0ABu);   // 071c0 stqd r43,432(r1)
+    s.instructions++; op_lqd(s, 0x341140A9u);   // 071c4 lqd r41,1104(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F8214A9u);   // 071c8 rotqbyi r41,r41,8
+    s.instructions++; op_shufb(s, 0xB04AD4ADu);   // 071cc shufb r2,r41,r43,r45
+    s.instructions++; op_rotqmbyi(s, 0x3FBE14A9u);   // 071d0 rotqmbyi r41,r41,-8
+    s.instructions++; op_stqd(s, 0x2406C082u);   // 071d4 stqd r2,432(r1)
+    s.instructions++; op_or_(s, 0x082A94A9u);   // 071d8 or r41,r41,r42
+    s.instructions++; op_lqd(s, 0x3411C082u);   // 071dc lqd r2,1136(r1)
+    s.instructions++; op_lqd(s, 0x340680ADu);   // 071e0 lqd r45,416(r1)
+    s.instructions++; op_lqd(s, 0x341180AAu);   // 071e4 lqd r42,1120(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE012Bu);   // 071e8 rotqmbyi r43,r2,-8
+    s.instructions++; op_shufb(s, 0xB5AB412Cu);   // 071ec shufb r45,r2,r45,r44
+    s.instructions++; op_shlqbyi(s, 0x3FE215ACu);   // 071f0 shlqbyi r44,r43,8
+    s.instructions++; op_stqd(s, 0x240680ADu);   // 071f4 stqd r45,416(r1)
+    s.instructions++; op_lqd(s, 0x3411C0ABu);   // 071f8 lqd r43,1136(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F8215ABu);   // 071fc rotqbyi r43,r43,8
+    s.instructions++; op_shufb(s, 0xB04B55AFu);   // 07200 shufb r2,r43,r45,r47
+    s.instructions++; op_rotqmbyi(s, 0x3FBE15ABu);   // 07204 rotqmbyi r43,r43,-8
+    s.instructions++; op_stqd(s, 0x24068082u);   // 0720c stqd r2,416(r1)
+    s.instructions++; op_or_(s, 0x082B15ABu);   // 07210 or r43,r43,r44
+    s.instructions++; op_lqd(s, 0x34120082u);   // 07214 lqd r2,1152(r1)
+    s.instructions++; op_lqd(s, 0x340500AEu);   // 07218 lqd r46,320(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE012Cu);   // 0721c rotqmbyi r44,r2,-8
+    s.instructions++; op_shufb(s, 0xB5CB8130u);   // 07220 shufb r46,r2,r46,r48
+    s.instructions++; op_shlqbyi(s, 0x3FE2162Du);   // 07224 shlqbyi r45,r44,8
+    s.instructions++; op_stqd(s, 0x240500AEu);   // 07228 stqd r46,320(r1)
+    s.instructions++; op_lqd(s, 0x341200ACu);   // 0722c lqd r44,1152(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F82162Cu);   // 07230 rotqbyi r44,r44,8
+    s.instructions++; op_shufb(s, 0xB04B962Fu);   // 07234 shufb r2,r44,r46,r47
+    s.instructions++; op_rotqmbyi(s, 0x3FBE162Cu);   // 07238 rotqmbyi r44,r44,-8
+    s.instructions++; op_stqd(s, 0x24050082u);   // 0723c stqd r2,320(r1)
+    s.instructions++; op_or_(s, 0x082B562Cu);   // 07240 or r44,r44,r45
+    s.instructions++; op_lqd(s, 0x34128082u);   // 07244 lqd r2,1184(r1)
+    s.instructions++; op_lqd(s, 0x340540B0u);   // 07248 lqd r48,336(r1)
+    s.instructions++; op_lqd(s, 0x341240ADu);   // 0724c lqd r45,1168(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE012Eu);   // 07250 rotqmbyi r46,r2,-8
+    s.instructions++; op_shufb(s, 0xB60C0132u);   // 07254 shufb r48,r2,r48,r50
+    s.instructions++; op_shlqbyi(s, 0x3FE2172Fu);   // 07258 shlqbyi r47,r46,8
+    s.instructions++; op_stqd(s, 0x240540B0u);   // 0725c stqd r48,336(r1)
+    s.instructions++; op_lqd(s, 0x341280AEu);   // 07260 lqd r46,1184(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F82172Eu);   // 07264 rotqbyi r46,r46,8
+    s.instructions++; op_shufb(s, 0xB04C1731u);   // 07268 shufb r2,r46,r48,r49
+    s.instructions++; op_rotqmbyi(s, 0x3FBE172Eu);   // 0726c rotqmbyi r46,r46,-8
+    s.instructions++; op_stqd(s, 0x24054082u);   // 07274 stqd r2,336(r1)
+    s.instructions++; op_or_(s, 0x082BD72Eu);   // 07278 or r46,r46,r47
+    s.instructions++; op_lqd(s, 0x3412C082u);   // 0727c lqd r2,1200(r1)
+    s.instructions++; op_lqd(s, 0x340580B1u);   // 07280 lqd r49,352(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE012Fu);   // 07284 rotqmbyi r47,r2,-8
+    s.instructions++; op_shufb(s, 0xB62C4132u);   // 07288 shufb r49,r2,r49,r50
+    s.instructions++; op_shlqbyi(s, 0x3FE217B0u);   // 0728c shlqbyi r48,r47,8
+    s.instructions++; op_stqd(s, 0x240580B1u);   // 07290 stqd r49,352(r1)
+    s.instructions++; op_lqd(s, 0x3412C0AFu);   // 07294 lqd r47,1200(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F8217AFu);   // 07298 rotqbyi r47,r47,8
+    s.instructions++; op_shufb(s, 0xB04C57B3u);   // 0729c shufb r2,r47,r49,r51
+    s.instructions++; op_rotqmbyi(s, 0x3FBE17AFu);   // 072a0 rotqmbyi r47,r47,-8
+    s.instructions++; op_stqd(s, 0x24058082u);   // 072a4 stqd r2,352(r1)
+    s.instructions++; op_or_(s, 0x082C17AFu);   // 072a8 or r47,r47,r48
+    s.instructions++; op_lqd(s, 0x34134082u);   // 072ac lqd r2,1232(r1)
+    s.instructions++; op_lqd(s, 0x3405C0B3u);   // 072b0 lqd r51,368(r1)
+    s.instructions++; op_lqd(s, 0x341300B0u);   // 072b4 lqd r48,1216(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0131u);   // 072b8 rotqmbyi r49,r2,-8
+    s.instructions++; op_shufb(s, 0xB66CC132u);   // 072bc shufb r51,r2,r51,r50
+    s.instructions++; op_shlqbyi(s, 0x3FE218B2u);   // 072c0 shlqbyi r50,r49,8
+    s.instructions++; op_stqd(s, 0x2405C0B3u);   // 072c4 stqd r51,368(r1)
+    s.instructions++; op_lqd(s, 0x341340B1u);   // 072c8 lqd r49,1232(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F8218B1u);   // 072cc rotqbyi r49,r49,8
+    s.instructions++; op_shufb(s, 0xB04CD8B5u);   // 072d0 shufb r2,r49,r51,r53
+    s.instructions++; op_rotqmbyi(s, 0x3FBE18B1u);   // 072d4 rotqmbyi r49,r49,-8
+    s.instructions++; op_stqd(s, 0x2405C082u);   // 072dc stqd r2,368(r1)
+    s.instructions++; op_or_(s, 0x082C98B1u);   // 072e0 or r49,r49,r50
+    s.instructions++; op_lqd(s, 0x34138082u);   // 072e4 lqd r2,1248(r1)
+    s.instructions++; op_lqd(s, 0x340600B4u);   // 072e8 lqd r52,384(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0132u);   // 072ec rotqmbyi r50,r2,-8
+    s.instructions++; op_shufb(s, 0xB68D0136u);   // 072f0 shufb r52,r2,r52,r54
+    s.instructions++; op_shlqbyi(s, 0x3FE21933u);   // 072f4 shlqbyi r51,r50,8
+    s.instructions++; op_stqd(s, 0x240600B4u);   // 072f8 stqd r52,384(r1)
+    s.instructions++; op_lqd(s, 0x341380B2u);   // 072fc lqd r50,1248(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F821932u);   // 07300 rotqbyi r50,r50,8
+    s.instructions++; op_shufb(s, 0xB04D1935u);   // 07304 shufb r2,r50,r52,r53
+    s.instructions++; op_rotqmbyi(s, 0x3FBE1932u);   // 07308 rotqmbyi r50,r50,-8
+    s.instructions++; op_stqd(s, 0x24060082u);   // 0730c stqd r2,384(r1)
+    s.instructions++; op_or_(s, 0x082CD932u);   // 07310 or r50,r50,r51
+    s.instructions++; op_lqd(s, 0x34140082u);   // 07314 lqd r2,1280(r1)
+    s.instructions++; op_lqd(s, 0x340640B6u);   // 07318 lqd r54,400(r1)
+    s.instructions++; op_lqd(s, 0x3413C0B3u);   // 0731c lqd r51,1264(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0134u);   // 07320 rotqmbyi r52,r2,-8
+    s.instructions++; op_shufb(s, 0xB6CD8138u);   // 07324 shufb r54,r2,r54,r56
+    s.instructions++; op_shlqbyi(s, 0x3FE21A35u);   // 07328 shlqbyi r53,r52,8
+    s.instructions++; op_stqd(s, 0x240640B6u);   // 0732c stqd r54,400(r1)
+    s.instructions++; op_lqd(s, 0x341400B4u);   // 07330 lqd r52,1280(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F821A34u);   // 07334 rotqbyi r52,r52,8
+    s.instructions++; op_shufb(s, 0xB04D9A37u);   // 07338 shufb r2,r52,r54,r55
+    s.instructions++; op_rotqmbyi(s, 0x3FBE1A34u);   // 0733c rotqmbyi r52,r52,-8
+    s.instructions++; op_stqd(s, 0x24064082u);   // 07344 stqd r2,400(r1)
+    s.instructions++; op_or_(s, 0x082D5A34u);   // 07348 or r52,r52,r53
+    s.instructions++; op_lqd(s, 0x34144082u);   // 0734c lqd r2,1296(r1)
+    s.instructions++; op_lqd(s, 0x340080B7u);   // 07350 lqd r55,32(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0135u);   // 07354 rotqmbyi r53,r2,-8
+    s.instructions++; op_shufb(s, 0xB6EDC138u);   // 07358 shufb r55,r2,r55,r56
+    s.instructions++; op_shlqbyi(s, 0x3FE21AB6u);   // 0735c shlqbyi r54,r53,8
+    s.instructions++; op_stqd(s, 0x240080B7u);   // 07360 stqd r55,32(r1)
+    s.instructions++; op_lqd(s, 0x341440B5u);   // 07364 lqd r53,1296(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F821AB5u);   // 07368 rotqbyi r53,r53,8
+    s.instructions++; op_shufb(s, 0xB04DDAB9u);   // 0736c shufb r2,r53,r55,r57
+    s.instructions++; op_rotqmbyi(s, 0x3FBE1AB5u);   // 07370 rotqmbyi r53,r53,-8
+    s.instructions++; op_stqd(s, 0x24008082u);   // 07374 stqd r2,32(r1)
+    s.instructions++; op_or_(s, 0x082D9AB5u);   // 07378 or r53,r53,r54
+    s.instructions++;   // 0737c bisl r0,r94,r0
+    s.pc = 0x0737C; op_bisl(s, 0x35202F00u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x07380)) return false;   // indirect call
+L_07380:
+    s.instructions++; op_il(s, 0x40831802u);   // 07380 il r2,0x630
+    s.instructions++; op_a(s, 0x18008081u);   // 07384 a r1,r1,r2
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 07388 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 0738c lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 07390 lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 07394 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 07398 lqd r84,-80(r1)
+    s.instructions++; op_lqd(s, 0x34FE80D5u);   // 0739c lqd r85,-96(r1)
+    s.instructions++; op_lqd(s, 0x34FE40D6u);   // 073a0 lqd r86,-112(r1)
+    s.instructions++; op_lqd(s, 0x34FE00D7u);   // 073a4 lqd r87,-128(r1)
+    s.instructions++; op_lqd(s, 0x34FDC0D8u);   // 073a8 lqd r88,-144(r1)
+    s.instructions++; op_lqd(s, 0x34FD80D9u);   // 073ac lqd r89,-160(r1)
+    s.instructions++; op_lqd(s, 0x34FD40DAu);   // 073b0 lqd r90,-176(r1)
+    s.instructions++; op_lqd(s, 0x34FD00DBu);   // 073b4 lqd r91,-192(r1)
+    s.instructions++; op_lqd(s, 0x34FCC0DCu);   // 073b8 lqd r92,-208(r1)
+    s.instructions++; op_lqd(s, 0x34FC80DDu);   // 073bc lqd r93,-224(r1)
+    s.instructions++; op_lqd(s, 0x34FC40DEu);   // 073c0 lqd r94,-240(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 073c4 lqd r0,16(r1)
+    s.instructions++;   // 073c8 bi r0,r0,r0
+    s.pc = 0x073C8; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_07580(SPUThread& s) {
+    u32 to;
+    goto L_07580;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x07580: goto L_07580;
+    case 0x075D0: goto L_075d0;
+    case 0x0BA80: goto L_0ba80;
+    case 0x0BBC0: goto L_0bbc0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_07580:
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 07584 stqd r82,-48(r1)
+    s.instructions++; op_ila(s, 0x427FFFD2u);   // 07588 ila r82,0xffff
+    s.instructions++; op_lqd(s, 0x34040182u);   // 0758c lqd r2,256(r3)
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 07594 stqd r81,-32(r1)
+    s.instructions++; op_and_(s, 0x183482D1u);   // 07598 and r81,r5,r82
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0759c stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x04000250u);   // 075a0 ori r80,r4,0
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 075a4 stqd r84,-80(r1)
+    s.instructions++; op_ai(s, 0x1C03E884u);   // 075a8 ai r4,r81,15
+    s.instructions++; op_stqd(s, 0x24004080u);   // 075ac stqd r0,16(r1)
+    s.instructions++; op_ori(s, 0x04000354u);   // 075b0 ori r84,r6,0
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 075b4 stqd r83,-64(r1)
+    s.instructions++; op_andi(s, 0x14FC0204u);   // 075b8 andi r4,r4,-16
+    s.instructions++; op_rotqby(s, 0x3B80C153u);   // 075bc rotqby r83,r2,r3
+    s.instructions++; op_and_(s, 0x1834A850u);   // 075c0 and r80,r80,r82
+    s.instructions++; op_stqd(s, 0x24FE4081u);   // 075c4 stqd r1,-112(r1)
+    s.instructions++; op_ai(s, 0x1CE40081u);   // 075c8 ai r1,r1,-112
+    s.instructions++; s.set_pref(0, 0x075D0);   // 075cc brsl r0,0x41c0
+    if (!geomfn_041c0(s)) s.run_until(0x075D0);
+    if (s.halted || s.pc != 0x075D0) return false;
+L_075d0:
+    s.instructions++; op_ai(s, 0x1C1C0081u);   // 075d0 ai r1,r1,112
+    s.instructions++; op_a(s, 0x18142984u);   // 075d8 a r4,r83,r80
+    s.instructions++; op_lqd(s, 0x34002A02u);   // 075dc lqd r2,0(r84)
+    s.instructions++; op_ori(s, 0x04002885u);   // 075e0 ori r5,r81,0
+    s.instructions++; op_cwd(s, 0x3EC02A06u);   // 075e4 cwd r6,r84,0
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 075e8 shufb r2,r3,r2,r6
+    s.instructions++; op_stqd(s, 0x24002A02u);   // 075ec stqd r2,0(r84)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 075f0 lqd r0,16(r1)
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 075f4 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 075f8 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 075fc lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 07600 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 07604 lqd r84,-80(r1)
+    s.instructions++; goto L_0ba80;   // 07608 br r0,0xba80
+    s.pc = 0x0760C; return false;   // (falls out of the scanned code)
+L_0ba80:
+    s.instructions++; op_ila(s, 0x42810182u);   // 0ba80 ila r2,0x10203
+    s.instructions++;   // 0ba84 biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BA84; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_shufb(s, 0xB0810202u);   // 0ba88 shufb r4,r4,r4,r2
+    s.instructions++; op_shufb(s, 0xB060C182u);   // 0ba8c shufb r3,r3,r3,r2
+    s.instructions++; op_shufb(s, 0xB0A14282u);   // 0ba90 shufb r5,r5,r5,r2
+    s.pc = 0x0BA94; s.instructions++; op_lqr(s, 0x338D8982u);   // 0ba94 lqr r2,0x126e0
+    s.instructions++; op_ilh(s, 0x41818186u);   // 0ba98 ilh r6,0x303
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 0ba9c fsmbi r7,0x0
+    s.instructions++; op_andi(s, 0x1403C208u);   // 0baa0 andi r8,r4,15
+    s.instructions++; op_andi(s, 0x1403C189u);   // 0baa8 andi r9,r3,15
+    s.instructions++; op_sfi(s, 0x0C00048Au);   // 0bab0 sfi r10,r9,0
+    s.instructions++; op_ilh(s, 0x41FFFF8Bu);   // 0bab4 ilh r11,0xffff
+    s.instructions++; op_ori(s, 0x0400010Cu);   // 0bab8 ori r12,r2,0
+    s.instructions++; op_sf(s, 0x08020488u);   // 0babc sf r8,r9,r8
+    s.instructions++; op_rotqmby(s, 0x3BA28589u);   // 0bac4 rotqmby r9,r11,r10
+    s.instructions++; op_cgti(s, 0x4C00040Au);   // 0bac8 cgti r10,r8,0
+    s.instructions++; op_il(s, 0x4080080Du);   // 0bad0 il r13,0x10
+    s.instructions++; op_selb(s, 0x8141C68Au);   // 0bad4 selb r10,r13,r7,r10
+    s.instructions++; op_a(s, 0x18020508u);   // 0bad8 a r8,r10,r8
+    s.instructions++; op_sf(s, 0x08010504u);   // 0badc sf r4,r10,r4
+    s.instructions++; op_shufb(s, 0xB0C20406u);   // 0bae4 shufb r6,r8,r8,r6
+    s.instructions++; op_a(s, 0x18018102u);   // 0bae8 a r2,r2,r6
+    s.instructions++; op_a(s, 0x1800C286u);   // 0baec a r6,r5,r3
+    s.instructions++; op_andi(s, 0x1403C306u);   // 0baf0 andi r6,r6,15
+    s.instructions++; op_sfi(s, 0x0C040306u);   // 0baf4 sfi r6,r6,16
+    s.instructions++; op_shlqby(s, 0x3BE18586u);   // 0bafc shlqby r6,r11,r6
+    s.instructions++; op_andi(s, 0x1403C188u);   // 0bb00 andi r8,r3,15
+    s.instructions++; op_andi(s, 0x140FC28Du);   // 0bb08 andi r13,r5,63
+    s.instructions++; op_a(s, 0x18020688u);   // 0bb0c a r8,r13,r8
+    s.instructions++; op_andi(s, 0x1403C40Du);   // 0bb10 andi r13,r8,15
+    s.instructions++; op_sfi(s, 0x0C00068Du);   // 0bb14 sfi r13,r13,0
+    s.instructions++; op_cgti(s, 0x4C03C40Eu);   // 0bb18 cgti r14,r8,15
+    s.instructions++; op_rotqmby(s, 0x3BA3458Du);   // 0bb1c rotqmby r13,r11,r13
+    s.instructions++; op_selb(s, 0x81C2C30Eu);   // 0bb20 selb r14,r6,r11,r14
+    s.instructions++; op_cgti(s, 0x4C03C40Fu);   // 0bb28 cgti r15,r8,15
+    s.instructions++; op_selb(s, 0x81E1838Fu);   // 0bb2c selb r15,r7,r6,r15
+    s.instructions++; op_cgti(s, 0x4C07C410u);   // 0bb30 cgti r16,r8,31
+    s.instructions++; op_selb(s, 0x81E2C790u);   // 0bb34 selb r15,r15,r11,r16
+    s.instructions++; op_cgti(s, 0x4C07C410u);   // 0bb38 cgti r16,r8,31
+    s.instructions++; op_selb(s, 0x82018390u);   // 0bb3c selb r16,r7,r6,r16
+    s.instructions++; op_cgti(s, 0x4C0BC411u);   // 0bb40 cgti r17,r8,47
+    s.instructions++; op_selb(s, 0x8202C811u);   // 0bb44 selb r16,r16,r11,r17
+    s.instructions++; op_cgti(s, 0x4C0BC411u);   // 0bb48 cgti r17,r8,47
+    s.instructions++; op_selb(s, 0x80C18391u);   // 0bb4c selb r6,r7,r6,r17
+    s.instructions++; op_cgti(s, 0x4C0FC407u);   // 0bb50 cgti r7,r8,63
+    s.instructions++; op_selb(s, 0x80C2C307u);   // 0bb54 selb r6,r6,r11,r7
+    s.instructions++; op_selb(s, 0x80E2C507u);   // 0bb58 selb r7,r10,r11,r7
+    s.instructions++; op_rotmi(s, 0x0F3E8288u);   // 0bb5c rotmi r8,r5,-6
+    s.instructions++; op_ai(s, 0x1C004405u);   // 0bb60 ai r5,r8,1
+    s.instructions++; op_shli(s, 0x0F618285u);   // 0bb64 shli r5,r5,6
+    s.instructions++; op_a(s, 0x1801420Au);   // 0bb68 a r10,r4,r5
+    s.instructions++; op_ai(s, 0x1C040511u);   // 0bb6c ai r17,r10,16
+    s.instructions++; op_ai(s, 0x1C080512u);   // 0bb70 ai r18,r10,32
+    s.instructions++; op_ai(s, 0x1C0C0513u);   // 0bb74 ai r19,r10,48
+    s.instructions++; op_ai(s, 0x1C100514u);   // 0bb78 ai r20,r10,64
+    s.instructions++; op_sfi(s, 0x0C000295u);   // 0bb7c sfi r21,r5,0
+    s.instructions++; op_il(s, 0x40800016u);   // 0bb80 il r22,0x0
+    s.instructions++; op_lqd(s, 0x34000197u);   // 0bb84 lqd r23,0(r3)
+    s.instructions++; op_shli(s, 0x0F618408u);   // 0bb88 shli r8,r8,6
+    s.instructions++; op_lqx(s, 0x3885450Au);   // 0bb8c lqx r10,r10,r21
+    s.instructions++; op_a(s, 0x1800C408u);   // 0bb90 a r8,r8,r3
+    s.instructions++; op_lqx(s, 0x38854898u);   // 0bb94 lqx r24,r17,r21
+    s.instructions++; op_shufb(s, 0xB1460502u);   // 0bb98 shufb r10,r10,r24,r2
+    s.instructions++; op_lqd(s, 0x34000418u);   // 0bb9c lqd r24,0(r8)
+    s.instructions++; op_lqd(s, 0x34004419u);   // 0bba0 lqd r25,16(r8)
+    s.instructions++; op_lqd(s, 0x3400841Au);   // 0bba4 lqd r26,32(r8)
+    s.instructions++; op_andc(s, 0x58224B97u);   // 0bba8 andc r23,r23,r9
+    s.instructions++; op_lqd(s, 0x3400C408u);   // 0bbac lqd r8,48(r8)
+    s.instructions++; op_and_(s, 0x1822450Au);   // 0bbb0 and r10,r10,r9
+    s.instructions++; op_or_(s, 0x08228B8Au);   // 0bbb4 or r10,r23,r10
+    s.instructions++; op_ori(s, 0x04000489u);   // 0bbb8 ori r9,r9,0
+L_0bbc0:
+    s.instructions++; op_lqx(s, 0x3885489Eu);   // 0bbc0 lqx r30,r17,r21
+    s.instructions++; op_lqx(s, 0x3885491Fu);   // 0bbc4 lqx r31,r18,r21
+    s.instructions++; op_lqx(s, 0x388549A0u);   // 0bbc8 lqx r32,r19,r21
+    s.instructions++; op_lqx(s, 0x38854A21u);   // 0bbcc lqx r33,r20,r21
+    s.instructions++; op_ai(s, 0x1C100A95u);   // 0bbd0 ai r21,r21,64
+    s.instructions++; op_stqd(s, 0x24000197u);   // 0bbd4 stqd r23,0(r3)
+    s.instructions++; op_stqd(s, 0x2400419Bu);   // 0bbd8 stqd r27,16(r3)
+    s.instructions++; op_stqd(s, 0x2400819Cu);   // 0bbdc stqd r28,32(r3)
+    s.instructions++; op_ori(s, 0x040004A2u);   // 0bbe0 ori r34,r9,0
+    s.instructions++; op_stqd(s, 0x2400C19Du);   // 0bbe4 stqd r29,48(r3)
+    s.instructions++; op_a(s, 0x18058183u);   // 0bbe8 a r3,r3,r22
+    s.instructions++; op_shufb(s, 0xB2E7850Cu);   // 0bbec shufb r23,r10,r30,r12
+    s.instructions++; op_il(s, 0x40802016u);   // 0bbf0 il r22,0x40
+    s.instructions++; op_shufb(s, 0xB367CF02u);   // 0bbf4 shufb r27,r30,r31,r2
+    s.instructions++; op_or_(s, 0x0820810Cu);   // 0bbf8 or r12,r2,r2
+    s.instructions++; op_shufb(s, 0xB3880F82u);   // 0bbfc shufb r28,r31,r32,r2
+    s.instructions++; op_or_(s, 0x0828508Au);   // 0bc00 or r10,r33,r33
+    s.instructions++; op_shufb(s, 0xB3A85002u);   // 0bc04 shufb r29,r32,r33,r2
+    s.instructions++; op_ori(s, 0x04000589u);   // 0bc08 ori r9,r11,0
+    s.instructions++; if (s.pref(21) != 0) goto L_0bbc0;   // 0bc0c brnz r21,0xbbc0
+    s.instructions++; op_and_(s, 0x18239109u);   // 0bc10 and r9,r34,r14
+    s.instructions++; op_selb(s, 0x8125CC09u);   // 0bc14 selb r9,r24,r23,r9
+    s.instructions++; op_selb(s, 0x8146CC8Fu);   // 0bc18 selb r10,r25,r27,r15
+    s.instructions++; op_selb(s, 0x81670D10u);   // 0bc1c selb r11,r26,r28,r16
+    s.instructions++; op_stqd(s, 0x24000189u);   // 0bc20 stqd r9,0(r3)
+    s.instructions++; op_selb(s, 0x80C74406u);   // 0bc24 selb r6,r8,r29,r6
+    s.instructions++; op_stqd(s, 0x2400418Au);   // 0bc28 stqd r10,16(r3)
+    s.instructions++; op_stqd(s, 0x2400818Bu);   // 0bc2c stqd r11,32(r3)
+    s.instructions++; op_stqd(s, 0x2400C186u);   // 0bc30 stqd r6,48(r3)
+    s.instructions++;   // 0bc34 biz r7,r0,r0
+    if (s.pref(7) == 0) {
+        s.pc = 0x0BC34; op_biz(s, 0x25000007u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_lqx(s, 0x38854886u);   // 0bc38 lqx r6,r17,r21
+    s.instructions++; op_shufb(s, 0xB0419082u);   // 0bc3c shufb r2,r33,r6,r2
+    s.instructions++; op_selb(s, 0x8046010Du);   // 0bc40 selb r2,r2,r24,r13
+    s.instructions++; op_stqd(s, 0x24010182u);   // 0bc48 stqd r2,64(r3)
+    s.instructions++;   // 0bc4c bi r0,r0,r0
+    s.pc = 0x0BC4C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_07610(SPUThread& s) {
+    u32 to;
+    goto L_07610;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x07610: goto L_07610;
+    case 0x07668: goto L_07668;
+    case 0x0BC80: goto L_0bc80;
+    case 0x0BCD0: goto L_0bcd0;
+    case 0x0BCF8: goto L_0bcf8;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_07610:
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 07614 stqd r82,-48(r1)
+    s.instructions++; op_ila(s, 0x427FFFD2u);   // 07618 ila r82,0xffff
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0761c stqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34040182u);   // 07624 lqd r2,256(r3)
+    s.instructions++; op_and_(s, 0x183482D0u);   // 07628 and r80,r5,r82
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 0762c stqd r84,-80(r1)
+    s.instructions++; op_ori(s, 0x04000354u);   // 07630 ori r84,r6,0
+    s.instructions++; op_stqd(s, 0x24004080u);   // 07634 stqd r0,16(r1)
+    s.instructions++; op_ai(s, 0x1C03E850u);   // 07638 ai r80,r80,15
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 0763c stqd r81,-32(r1)
+    s.instructions++; op_ori(s, 0x04000251u);   // 07640 ori r81,r4,0
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 07644 stqd r83,-64(r1)
+    s.instructions++; op_andi(s, 0x14FC2850u);   // 07648 andi r80,r80,-16
+    s.instructions++; op_stqd(s, 0x24FE4081u);   // 0764c stqd r1,-112(r1)
+    s.instructions++; op_ai(s, 0x1CE40081u);   // 07650 ai r1,r1,-112
+    s.instructions++; op_rotqby(s, 0x3B80C153u);   // 07654 rotqby r83,r2,r3
+    s.instructions++; op_ori(s, 0x04002804u);   // 07658 ori r4,r80,0
+    s.instructions++; op_and_(s, 0x1834A8D1u);   // 0765c and r81,r81,r82
+    s.instructions++; s.set_pref(0, 0x07668);   // 07664 brsl r0,0x41c0
+    if (!geomfn_041c0(s)) s.run_until(0x07668);
+    if (s.halted || s.pc != 0x07668) return false;
+L_07668:
+    s.instructions++; op_ai(s, 0x1C1C0081u);   // 07668 ai r1,r1,112
+    s.instructions++; op_a(s, 0x18146984u);   // 07670 a r4,r83,r81
+    s.instructions++; op_lqd(s, 0x34002A02u);   // 07674 lqd r2,0(r84)
+    s.instructions++; op_ori(s, 0x04002805u);   // 07678 ori r5,r80,0
+    s.instructions++; op_cwd(s, 0x3EC02A06u);   // 0767c cwd r6,r84,0
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 07680 shufb r2,r3,r2,r6
+    s.instructions++; op_stqd(s, 0x24002A02u);   // 07684 stqd r2,0(r84)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 07688 lqd r0,16(r1)
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 0768c lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 07690 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 07694 lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 07698 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 0769c lqd r84,-80(r1)
+    s.instructions++; goto L_0bc80;   // 076a0 br r0,0xbc80
+    s.pc = 0x076A4; return false;   // (falls out of the scanned code)
+L_0bc80:
+    s.instructions++; op_sfi(s, 0x0C200282u);   // 0bc80 sfi r2,r5,128
+    s.instructions++;   // 0bc84 biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BC84; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_andi(s, 0x141C0102u);   // 0bc8c andi r2,r2,112
+    s.instructions++; op_sf(s, 0x08010104u);   // 0bc90 sf r4,r2,r4
+    s.instructions++; op_ila(s, 0x425E7C06u);   // 0bc94 ila r6,0xbcf8
+    s.instructions++; op_sf(s, 0x0800C103u);   // 0bc98 sf r3,r2,r3
+    s.instructions++; op_lqd(s, 0x34000207u);   // 0bc9c lqd r7,0(r4)
+    s.instructions++; op_rotmi(s, 0x0F3F8108u);   // 0bca0 rotmi r8,r2,-2
+    s.instructions++; op_lqd(s, 0x34004209u);   // 0bca4 lqd r9,16(r4)
+    s.instructions++; op_ai(s, 0x1CE00285u);   // 0bca8 ai r5,r5,-128
+    s.instructions++; op_lqd(s, 0x3400820Au);   // 0bcac lqd r10,32(r4)
+    s.instructions++; op_lqd(s, 0x3400C20Bu);   // 0bcb0 lqd r11,48(r4)
+    s.instructions++; op_lqd(s, 0x3401020Cu);   // 0bcb4 lqd r12,64(r4)
+    s.instructions++; op_a(s, 0x18008285u);   // 0bcb8 a r5,r5,r2
+    s.instructions++; op_lqd(s, 0x34014202u);   // 0bcbc lqd r2,80(r4)
+    s.instructions++; op_a(s, 0x18020306u);   // 0bcc0 a r6,r6,r8
+    s.instructions++; op_lqd(s, 0x34018208u);   // 0bcc4 lqd r8,96(r4)
+    s.instructions++; op_lqd(s, 0x3401C20Du);   // 0bcc8 lqd r13,112(r4)
+    s.instructions++;   // 0bccc bi r0,r6,r0
+    s.pc = 0x0BCCC; op_bi(s, 0x35000300u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_0bcd0:
+    s.instructions++; op_ai(s, 0x1CE00285u);   // 0bcd0 ai r5,r5,-128
+    s.instructions++; op_lqd(s, 0x34000207u);   // 0bcd4 lqd r7,0(r4)
+    s.instructions++; op_lqd(s, 0x34004209u);   // 0bcdc lqd r9,16(r4)
+    s.instructions++; op_lqd(s, 0x3400820Au);   // 0bce0 lqd r10,32(r4)
+    s.instructions++; op_lqd(s, 0x3400C20Bu);   // 0bce4 lqd r11,48(r4)
+    s.instructions++; op_lqd(s, 0x3401020Cu);   // 0bce8 lqd r12,64(r4)
+    s.instructions++; op_lqd(s, 0x34014202u);   // 0bcec lqd r2,80(r4)
+    s.instructions++; op_lqd(s, 0x34018208u);   // 0bcf0 lqd r8,96(r4)
+    s.instructions++; op_lqd(s, 0x3401C20Du);   // 0bcf4 lqd r13,112(r4)
+L_0bcf8:
+    s.instructions++; op_stqd(s, 0x24000187u);   // 0bcf8 stqd r7,0(r3)
+    s.instructions++; op_stqd(s, 0x24004189u);   // 0bcfc stqd r9,16(r3)
+    s.instructions++; op_stqd(s, 0x2400818Au);   // 0bd00 stqd r10,32(r3)
+    s.instructions++; op_stqd(s, 0x2400C18Bu);   // 0bd04 stqd r11,48(r3)
+    s.instructions++; op_stqd(s, 0x2401018Cu);   // 0bd08 stqd r12,64(r3)
+    s.instructions++; op_stqd(s, 0x24014182u);   // 0bd0c stqd r2,80(r3)
+    s.instructions++; op_stqd(s, 0x24018188u);   // 0bd10 stqd r8,96(r3)
+    s.instructions++; op_stqd(s, 0x2401C18Du);   // 0bd14 stqd r13,112(r3)
+    s.instructions++; op_ai(s, 0x1C200204u);   // 0bd18 ai r4,r4,128
+    s.instructions++;   // 0bd1c biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BD1C; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_ai(s, 0x1C200183u);   // 0bd20 ai r3,r3,128
+    s.instructions++; goto L_0bcd0;   // 0bd24 br r0,0xbcd0
+}
+bool geomfn_076a8(SPUThread& s) {
+    u32 to;
+    goto L_076a8;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x076A8: goto L_076a8;
+    case 0x076C0: goto L_076c0;
+    case 0x076E8: goto L_076e8;
+    case 0x07780: goto L_07780;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_076a8:
+    s.instructions++; op_ori(s, 0x04000294u);   // 076a8 ori r20,r5,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00196u);   // 076ac shlqbyi r22,r3,0
+    s.instructions++; op_ori(s, 0x04000215u);   // 076b0 ori r21,r4,0
+    s.instructions++; op_fsmbi(s, 0x32800005u);   // 076b4 fsmbi r5,0x0
+    s.instructions++; op_il(s, 0x40800013u);   // 076b8 il r19,0x0
+    s.instructions++;   // 076bc biz r20,r0,r0
+    if (s.pref(20) == 0) {
+        s.pc = 0x076BC; op_biz(s, 0x25000014u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+L_076c0:
+    s.instructions++; op_ai(s, 0x1C020993u);   // 076c0 ai r19,r19,8
+    s.instructions++; op_shli(s, 0x0F608282u);   // 076c8 shli r2,r5,2
+    s.instructions++; op_fsmbi(s, 0x3280000Au);   // 076cc fsmbi r10,0x0
+    s.instructions++; op_shli(s, 0x0F60C283u);   // 076d0 shli r3,r5,3
+    s.instructions++; op_clgt(s, 0x58014984u);   // 076d4 clgt r4,r19,r5
+    s.instructions++; op_sf(s, 0x0804C292u);   // 076d8 sf r18,r5,r19
+    s.instructions++; op_a(s, 0x18008B08u);   // 076dc a r8,r22,r2
+    s.instructions++; op_a(s, 0x1800CA86u);   // 076e0 a r6,r21,r3
+    s.instructions++; if (s.pref(4) == 0) goto L_07780;   // 076e4 brz r4,0x7780
+L_076e8:
+    s.instructions++; op_ilhu(s, 0x41000783u);   // 076e8 ilhu r3,0xf
+    s.instructions++; op_lqd(s, 0x34000402u);   // 076ec lqd r2,0(r8)
+    s.instructions++; op_il(s, 0x4080010Du);   // 076f0 il r13,0x2
+    s.instructions++; op_lqd(s, 0x34000307u);   // 076f4 lqd r7,0(r6)
+    s.instructions++; op_iohl(s, 0x60FE0003u);   // 076f8 iohl r3,0xfc00
+    s.instructions++; op_chd(s, 0x3EA0030Eu);   // 076fc chd r14,r6,0
+    s.instructions++; op_il(s, 0x4080020Bu);   // 07700 il r11,0x4
+    s.instructions++; op_chx(s, 0x3AA34310u);   // 07704 chx r16,r6,r13
+    s.instructions++; op_il(s, 0x4080030Cu);   // 07708 il r12,0x6
+    s.instructions++; op_ai(s, 0x1C00450Au);   // 07710 ai r10,r10,1
+    s.instructions++; op_chx(s, 0x3AA2C311u);   // 07714 chx r17,r6,r11
+    s.instructions++; op_rotqby(s, 0x3B820104u);   // 0771c rotqby r4,r2,r8
+    s.instructions++; op_il(s, 0x4081FF82u);   // 07720 il r2,0x3ff
+    s.instructions++; op_chx(s, 0x3AA3030Fu);   // 07724 chx r15,r6,r12
+    s.instructions++; op_ceq(s, 0x78048505u);   // 07728 ceq r5,r10,r18
+    s.instructions++; op_ai(s, 0x1C010408u);   // 0772c ai r8,r8,4
+    s.instructions++; op_and_(s, 0x18208209u);   // 07730 and r9,r4,r2
+    s.instructions++; op_ilhu(s, 0x411FF802u);   // 07734 ilhu r2,0x3ff0
+    s.instructions++; op_and_(s, 0x1820C203u);   // 07738 and r3,r4,r3
+    s.instructions++; op_shufb(s, 0xB0E1C48Eu);   // 0773c shufb r7,r9,r7,r14
+    s.instructions++; op_and_(s, 0x18208204u);   // 07740 and r4,r4,r2
+    s.instructions++; op_rotmi(s, 0x0F3D8183u);   // 07744 rotmi r3,r3,-10
+    s.instructions++; op_rotmi(s, 0x0F3B0204u);   // 07748 rotmi r4,r4,-20
+    s.instructions++; op_stqd(s, 0x24000307u);   // 0774c stqd r7,0(r6)
+    s.instructions++; op_lqx(s, 0x38834302u);   // 07750 lqx r2,r6,r13
+    s.instructions++; op_shufb(s, 0xB0408190u);   // 07754 shufb r2,r3,r2,r16
+    s.instructions++; op_stqx(s, 0x28834302u);   // 07758 stqx r2,r6,r13
+    s.instructions++; op_lqx(s, 0x3882C302u);   // 0775c lqx r2,r6,r11
+    s.instructions++; op_shufb(s, 0xB0408211u);   // 07760 shufb r2,r4,r2,r17
+    s.instructions++; op_stqx(s, 0x2882C302u);   // 07764 stqx r2,r6,r11
+    s.instructions++; op_lqx(s, 0x38830302u);   // 07768 lqx r2,r6,r12
+    s.instructions++; op_shufb(s, 0xB040848Fu);   // 0776c shufb r2,r9,r2,r15
+    s.instructions++; op_stqx(s, 0x28830302u);   // 07774 stqx r2,r6,r12
+    s.instructions++; op_ai(s, 0x1C020306u);   // 07778 ai r6,r6,8
+    s.instructions++; if (s.pref(5) == 0) goto L_076e8;   // 0777c brz r5,0x76e8
+L_07780:
+    s.instructions++; op_clgt(s, 0x5804CA02u);   // 07780 clgt r2,r20,r19
+    s.instructions++; op_shlqbyi(s, 0x3FE00985u);   // 07784 shlqbyi r5,r19,0
+    s.instructions++; if (s.pref(2) != 0) goto L_076c0;   // 07788 brnz r2,0x76c0
+    s.instructions++;   // 0778c bi r0,r0,r0
+    s.pc = 0x0778C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_07790(SPUThread& s) {
+    u32 to;
+    goto L_07790;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x07790: goto L_07790;
+    case 0x077D0: goto L_077d0;
+    case 0x07820: goto L_07820;
+    case 0x07848: goto L_07848;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_07790:
+    s.instructions++; op_il(s, 0x40812006u);   // 07790 il r6,0x240
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0779c stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x040001D0u);   // 077a0 ori r80,r3,0
+    s.instructions++; op_stqd(s, 0x24004080u);   // 077a4 stqd r0,16(r1)
+    s.instructions++; op_a(s, 0x18018186u);   // 077a8 a r6,r3,r6
+    s.instructions++; op_stqd(s, 0x24FEC081u);   // 077ac stqd r1,-80(r1)
+    s.instructions++; op_ai(s, 0x1CEC0081u);   // 077b0 ai r1,r1,-80
+    s.instructions++; op_stqd(s, 0x24008084u);   // 077b4 stqd r4,32(r1)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 077b8 lqd r2,32(r1)
+    s.instructions++; op_stqd(s, 0x2400C085u);   // 077bc stqd r5,48(r1)
+    s.instructions++; op_il(s, 0x40804805u);   // 077c0 il r5,0x90
+    s.instructions++; op_ori(s, 0x04000104u);   // 077c4 ori r4,r2,0
+    s.instructions++; s.set_pref(0, 0x077D0);   // 077cc brsl r0,0x7580
+    if (!geomfn_07580(s)) s.run_until(0x077D0);
+    if (s.halted || s.pc != 0x077D0) return false;
+L_077d0:
+    s.instructions++; op_il(s, 0x40808405u);   // 077d0 il r5,0x108
+    s.instructions++; op_lqd(s, 0x34092803u);   // 077d4 lqd r3,576(r80)
+    s.instructions++; op_il(s, 0x40801402u);   // 077d8 il r2,0x28
+    s.instructions++; op_a(s, 0x18016806u);   // 077dc a r6,r80,r5
+    s.instructions++; op_rotqby(s, 0x3B940184u);   // 077e4 rotqby r4,r3,r80
+    s.instructions++; op_a(s, 0x18008203u);   // 077e8 a r3,r4,r2
+    s.instructions++; op_lqx(s, 0x38808202u);   // 077ec lqx r2,r4,r2
+    s.instructions++; op_rotqby(s, 0x3B80C102u);   // 077f0 rotqby r2,r2,r3
+    s.instructions++; if (s.pref(2) == 0) goto L_07848;   // 077f4 brz r2,0x7848
+    s.instructions++; op_lqa(s, 0x30A58002u);   // 077f8 lqa r2,0x12c00
+    s.instructions++; op_lqd(s, 0x34004207u);   // 077fc lqd r7,16(r4)
+    s.instructions++; op_lqx(s, 0x38816805u);   // 07800 lqx r5,r80,r5
+    s.instructions++; op_lqd(s, 0x34000103u);   // 07804 lqd r3,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B810384u);   // 07808 rotqby r4,r7,r4
+    s.instructions++; op_rotqby(s, 0x3B818285u);   // 0780c rotqby r5,r5,r6
+    s.instructions++; op_shli(s, 0x0F610183u);   // 07810 shli r3,r3,4
+    s.instructions++; op_a(s, 0x1800C204u);   // 07814 a r4,r4,r3
+    s.instructions++; op_ila(s, 0x423C1002u);   // 07818 ila r2,0x7820
+    s.instructions++;   // 0781c bi r0,r2,r32
+    s.pc = 0x0781C; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_07820:
+    s.instructions++; op_ai(s, 0x1C3C2802u);   // 07820 ai r2,r80,240
+    s.pc = 0x07824; s.instructions++; op_wrch(s, 0x21A00802u);   // 07824 wrch ch16,r2
+    if (s.halted) { s.pc = 0x07828; return false; }
+    s.pc = 0x07828; s.instructions++; op_wrch(s, 0x21A00904u);   // 07828 wrch ch18,r4
+    if (s.halted) { s.pc = 0x0782C; return false; }
+    s.instructions++; op_il(s, 0x40800802u);   // 0782c il r2,0x10
+    s.pc = 0x07830; s.instructions++; op_wrch(s, 0x21A00982u);   // 07830 wrch ch19,r2
+    if (s.halted) { s.pc = 0x07834; return false; }
+    s.pc = 0x07834; s.instructions++; op_wrch(s, 0x21A00A05u);   // 07834 wrch ch20,r5
+    if (s.halted) { s.pc = 0x07838; return false; }
+    s.instructions++; op_il(s, 0x40802002u);   // 07838 il r2,0x40
+    s.pc = 0x0783C; s.instructions++; op_wrch(s, 0x21A00A82u);   // 0783c wrch ch21,r2
+    if (s.halted) { s.pc = 0x07840; return false; }
+    s.instructions++; op_ila(s, 0x423C2402u);   // 07840 ila r2,0x7848
+    s.instructions++;   // 07844 bi r0,r2,r16
+    s.pc = 0x07844; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_07848:
+    s.instructions++; op_ai(s, 0x1C140081u);   // 07848 ai r1,r1,80
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 0784c lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 07850 lqd r0,16(r1)
+    s.instructions++;   // 07854 bi r0,r0,r0
+    s.pc = 0x07854; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_07888(SPUThread& s) {
+    u32 to;
+    goto L_07888;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x07610: goto L_07610;
+    case 0x07668: goto L_07668;
+    case 0x07888: goto L_07888;
+    case 0x078D8: goto L_078d8;
+    case 0x07910: goto L_07910;
+    case 0x07940: goto L_07940;
+    case 0x07954: goto L_07954;
+    case 0x0BC80: goto L_0bc80;
+    case 0x0BCD0: goto L_0bcd0;
+    case 0x0BCF8: goto L_0bcf8;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_07610:
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 07614 stqd r82,-48(r1)
+    s.instructions++; op_ila(s, 0x427FFFD2u);   // 07618 ila r82,0xffff
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0761c stqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34040182u);   // 07624 lqd r2,256(r3)
+    s.instructions++; op_and_(s, 0x183482D0u);   // 07628 and r80,r5,r82
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 0762c stqd r84,-80(r1)
+    s.instructions++; op_ori(s, 0x04000354u);   // 07630 ori r84,r6,0
+    s.instructions++; op_stqd(s, 0x24004080u);   // 07634 stqd r0,16(r1)
+    s.instructions++; op_ai(s, 0x1C03E850u);   // 07638 ai r80,r80,15
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 0763c stqd r81,-32(r1)
+    s.instructions++; op_ori(s, 0x04000251u);   // 07640 ori r81,r4,0
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 07644 stqd r83,-64(r1)
+    s.instructions++; op_andi(s, 0x14FC2850u);   // 07648 andi r80,r80,-16
+    s.instructions++; op_stqd(s, 0x24FE4081u);   // 0764c stqd r1,-112(r1)
+    s.instructions++; op_ai(s, 0x1CE40081u);   // 07650 ai r1,r1,-112
+    s.instructions++; op_rotqby(s, 0x3B80C153u);   // 07654 rotqby r83,r2,r3
+    s.instructions++; op_ori(s, 0x04002804u);   // 07658 ori r4,r80,0
+    s.instructions++; op_and_(s, 0x1834A8D1u);   // 0765c and r81,r81,r82
+    s.instructions++; s.set_pref(0, 0x07668);   // 07664 brsl r0,0x41c0
+    if (!geomfn_041c0(s)) s.run_until(0x07668);
+    if (s.halted || s.pc != 0x07668) return false;
+L_07668:
+    s.instructions++; op_ai(s, 0x1C1C0081u);   // 07668 ai r1,r1,112
+    s.instructions++; op_a(s, 0x18146984u);   // 07670 a r4,r83,r81
+    s.instructions++; op_lqd(s, 0x34002A02u);   // 07674 lqd r2,0(r84)
+    s.instructions++; op_ori(s, 0x04002805u);   // 07678 ori r5,r80,0
+    s.instructions++; op_cwd(s, 0x3EC02A06u);   // 0767c cwd r6,r84,0
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 07680 shufb r2,r3,r2,r6
+    s.instructions++; op_stqd(s, 0x24002A02u);   // 07684 stqd r2,0(r84)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 07688 lqd r0,16(r1)
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 0768c lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 07690 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 07694 lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 07698 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 0769c lqd r84,-80(r1)
+    s.instructions++; goto L_0bc80;   // 076a0 br r0,0xbc80
+    s.pc = 0x076A4; return false;   // (falls out of the scanned code)
+L_07888:
+    s.instructions++; op_il(s, 0x40819802u);   // 07888 il r2,0x330
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0788c stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x040001D0u);   // 07890 ori r80,r3,0
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 07894 stqd r81,-32(r1)
+    s.instructions++; op_a(s, 0x18008186u);   // 07898 a r6,r3,r2
+    s.instructions++; op_stqd(s, 0x24004080u);   // 0789c stqd r0,16(r1)
+    s.instructions++; op_stqd(s, 0x24FE8081u);   // 078a0 stqd r1,-96(r1)
+    s.instructions++; op_ai(s, 0x1CE80081u);   // 078a4 ai r1,r1,-96
+    s.instructions++; op_stqd(s, 0x24008084u);   // 078a8 stqd r4,32(r1)
+    s.instructions++; op_stqd(s, 0x2400C085u);   // 078ac stqd r5,48(r1)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 078b0 lqd r2,32(r1)
+    s.instructions++; op_lqd(s, 0x34040188u);   // 078b4 lqd r8,256(r3)
+    s.instructions++; op_ori(s, 0x04000105u);   // 078b8 ori r5,r2,0
+    s.instructions++; op_ila(s, 0x427FFF82u);   // 078c0 ila r2,0xffff
+    s.instructions++; op_rotqby(s, 0x3B80C451u);   // 078c4 rotqby r81,r8,r3
+    s.instructions++; op_ori(s, 0x04000284u);   // 078c8 ori r4,r5,0
+    s.instructions++; op_and_(s, 0x18208287u);   // 078d0 and r7,r5,r2
+    s.instructions++; if ((s.pref(5) & 0xFFFF) != 0) goto L_07940;   // 078d4 brhnz r5,0x7940
+L_078d8:
+    s.instructions++; op_il(s, 0x40819A02u);   // 078d8 il r2,0x334
+    s.instructions++; op_lqd(s, 0x34008084u);   // 078dc lqd r4,32(r1)
+    s.instructions++; op_ori(s, 0x04002803u);   // 078e0 ori r3,r80,0
+    s.instructions++; op_a(s, 0x1800A806u);   // 078e4 a r6,r80,r2
+    s.instructions++; op_ila(s, 0x427FFF82u);   // 078e8 ila r2,0xffff
+    s.instructions++; op_rotqbyi(s, 0x3F808204u);   // 078ec rotqbyi r4,r4,2
+    s.instructions++; op_and_(s, 0x18208205u);   // 078f0 and r5,r4,r2
+    s.instructions++; if ((s.pref(4) & 0xFFFF) != 0) goto L_07910;   // 078f4 brhnz r4,0x7910
+    s.instructions++; op_ai(s, 0x1C180081u);   // 078f8 ai r1,r1,96
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 078fc lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 07900 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 07904 lqd r0,16(r1)
+    s.instructions++;   // 0790c bi r0,r0,r0
+    s.pc = 0x0790C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_07910:
+    s.instructions++; op_a(s, 0x18016882u);   // 07910 a r2,r81,r5
+    s.instructions++; op_ai(s, 0x1C180081u);   // 07918 ai r1,r1,96
+    s.instructions++; op_lqx(s, 0x38816885u);   // 0791c lqx r5,r81,r5
+    s.instructions++; op_ai(s, 0x1C038102u);   // 07920 ai r2,r2,14
+    s.instructions++; op_lqd(s, 0x34004080u);   // 07924 lqd r0,16(r1)
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 07928 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 0792c lqd r81,-32(r1)
+    s.instructions++; op_rotqby(s, 0x3B808285u);   // 07930 rotqby r5,r5,r2
+    s.instructions++; goto L_07610;   // 0793c br r0,0x7610
+L_07940:
+    s.instructions++; op_a(s, 0x1801E882u);   // 07940 a r2,r81,r7
+    s.instructions++; op_lqx(s, 0x3881E885u);   // 07944 lqx r5,r81,r7
+    s.instructions++; op_ai(s, 0x1C038102u);   // 07948 ai r2,r2,14
+    s.instructions++; op_rotqby(s, 0x3B808285u);   // 0794c rotqby r5,r5,r2
+    s.instructions++; s.set_pref(0, 0x07954);   // 07950 brsl r0,0x7610
+    if (!geomfn_07610(s)) s.run_until(0x07954);
+    if (s.halted || s.pc != 0x07954) return false;
+L_07954:
+    s.instructions++; goto L_078d8;   // 07954 br r0,0x78d8
+    s.pc = 0x07958; return false;   // (falls out of the scanned code)
+L_0bc80:
+    s.instructions++; op_sfi(s, 0x0C200282u);   // 0bc80 sfi r2,r5,128
+    s.instructions++;   // 0bc84 biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BC84; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_andi(s, 0x141C0102u);   // 0bc8c andi r2,r2,112
+    s.instructions++; op_sf(s, 0x08010104u);   // 0bc90 sf r4,r2,r4
+    s.instructions++; op_ila(s, 0x425E7C06u);   // 0bc94 ila r6,0xbcf8
+    s.instructions++; op_sf(s, 0x0800C103u);   // 0bc98 sf r3,r2,r3
+    s.instructions++; op_lqd(s, 0x34000207u);   // 0bc9c lqd r7,0(r4)
+    s.instructions++; op_rotmi(s, 0x0F3F8108u);   // 0bca0 rotmi r8,r2,-2
+    s.instructions++; op_lqd(s, 0x34004209u);   // 0bca4 lqd r9,16(r4)
+    s.instructions++; op_ai(s, 0x1CE00285u);   // 0bca8 ai r5,r5,-128
+    s.instructions++; op_lqd(s, 0x3400820Au);   // 0bcac lqd r10,32(r4)
+    s.instructions++; op_lqd(s, 0x3400C20Bu);   // 0bcb0 lqd r11,48(r4)
+    s.instructions++; op_lqd(s, 0x3401020Cu);   // 0bcb4 lqd r12,64(r4)
+    s.instructions++; op_a(s, 0x18008285u);   // 0bcb8 a r5,r5,r2
+    s.instructions++; op_lqd(s, 0x34014202u);   // 0bcbc lqd r2,80(r4)
+    s.instructions++; op_a(s, 0x18020306u);   // 0bcc0 a r6,r6,r8
+    s.instructions++; op_lqd(s, 0x34018208u);   // 0bcc4 lqd r8,96(r4)
+    s.instructions++; op_lqd(s, 0x3401C20Du);   // 0bcc8 lqd r13,112(r4)
+    s.instructions++;   // 0bccc bi r0,r6,r0
+    s.pc = 0x0BCCC; op_bi(s, 0x35000300u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_0bcd0:
+    s.instructions++; op_ai(s, 0x1CE00285u);   // 0bcd0 ai r5,r5,-128
+    s.instructions++; op_lqd(s, 0x34000207u);   // 0bcd4 lqd r7,0(r4)
+    s.instructions++; op_lqd(s, 0x34004209u);   // 0bcdc lqd r9,16(r4)
+    s.instructions++; op_lqd(s, 0x3400820Au);   // 0bce0 lqd r10,32(r4)
+    s.instructions++; op_lqd(s, 0x3400C20Bu);   // 0bce4 lqd r11,48(r4)
+    s.instructions++; op_lqd(s, 0x3401020Cu);   // 0bce8 lqd r12,64(r4)
+    s.instructions++; op_lqd(s, 0x34014202u);   // 0bcec lqd r2,80(r4)
+    s.instructions++; op_lqd(s, 0x34018208u);   // 0bcf0 lqd r8,96(r4)
+    s.instructions++; op_lqd(s, 0x3401C20Du);   // 0bcf4 lqd r13,112(r4)
+L_0bcf8:
+    s.instructions++; op_stqd(s, 0x24000187u);   // 0bcf8 stqd r7,0(r3)
+    s.instructions++; op_stqd(s, 0x24004189u);   // 0bcfc stqd r9,16(r3)
+    s.instructions++; op_stqd(s, 0x2400818Au);   // 0bd00 stqd r10,32(r3)
+    s.instructions++; op_stqd(s, 0x2400C18Bu);   // 0bd04 stqd r11,48(r3)
+    s.instructions++; op_stqd(s, 0x2401018Cu);   // 0bd08 stqd r12,64(r3)
+    s.instructions++; op_stqd(s, 0x24014182u);   // 0bd0c stqd r2,80(r3)
+    s.instructions++; op_stqd(s, 0x24018188u);   // 0bd10 stqd r8,96(r3)
+    s.instructions++; op_stqd(s, 0x2401C18Du);   // 0bd14 stqd r13,112(r3)
+    s.instructions++; op_ai(s, 0x1C200204u);   // 0bd18 ai r4,r4,128
+    s.instructions++;   // 0bd1c biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BD1C; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_ai(s, 0x1C200183u);   // 0bd20 ai r3,r3,128
+    s.instructions++; goto L_0bcd0;   // 0bd24 br r0,0xbcd0
+}
+bool geomfn_079b0(SPUThread& s) {
+    u32 to;
+    goto L_079b0;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x079B0: goto L_079b0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_079b0:
+    s.instructions++; op_il(s, 0x4080BA08u);   // 079b0 il r8,0x174
+    s.instructions++; op_stqd(s, 0x24FF0081u);   // 079b4 stqd r1,-64(r1)
+    s.instructions++; op_ai(s, 0x1CF00081u);   // 079b8 ai r1,r1,-64
+    s.instructions++; op_cwd(s, 0x3EDC0187u);   // 079bc cwd r7,r3,-16
+    s.instructions++; op_il(s, 0x4080BC09u);   // 079c0 il r9,0x178
+    s.instructions++; op_cwx(s, 0x3AC2018Au);   // 079c4 cwx r10,r3,r8
+    s.instructions++; op_ori(s, 0x04000185u);   // 079c8 ori r5,r3,0
+    s.instructions++; op_stqd(s, 0x24008084u);   // 079cc stqd r4,32(r1)
+    s.instructions++; op_ila(s, 0x427FFF84u);   // 079d0 ila r4,0xffff
+    s.instructions++; op_lqd(s, 0x34008082u);   // 079d4 lqd r2,32(r1)
+    s.instructions++; op_ai(s, 0x1C100081u);   // 079d8 ai r1,r1,64
+    s.instructions++; op_lqd(s, 0x3405C186u);   // 079dc lqd r6,368(r3)
+    s.instructions++; op_cwx(s, 0x3AC2418Bu);   // 079e0 cwx r11,r3,r9
+    s.instructions++; op_ori(s, 0x04000103u);   // 079e8 ori r3,r2,0
+    s.instructions++; op_rotqbyi(s, 0x3F808102u);   // 079ec rotqbyi r2,r2,2
+    s.instructions++; op_and_(s, 0x18210183u);   // 079f0 and r3,r3,r4
+    s.instructions++; op_and_(s, 0x18210102u);   // 079f8 and r2,r2,r4
+    s.instructions++; op_shufb(s, 0xB0C18187u);   // 079fc shufb r6,r3,r6,r7
+    s.instructions++; op_sf(s, 0x0800C103u);   // 07a00 sf r3,r2,r3
+    s.instructions++; op_stqd(s, 0x2405C286u);   // 07a04 stqd r6,368(r5)
+    s.instructions++; op_lqx(s, 0x38820284u);   // 07a08 lqx r4,r5,r8
+    s.instructions++; op_shufb(s, 0xB081010Au);   // 07a0c shufb r4,r2,r4,r10
+    s.instructions++; op_stqx(s, 0x28820284u);   // 07a10 stqx r4,r5,r8
+    s.instructions++; op_lqx(s, 0x38824282u);   // 07a14 lqx r2,r5,r9
+    s.instructions++; op_shufb(s, 0xB040818Bu);   // 07a18 shufb r2,r3,r2,r11
+    s.instructions++; op_stqx(s, 0x28824282u);   // 07a1c stqx r2,r5,r9
+    s.instructions++;   // 07a20 bi r0,r0,r0
+    s.pc = 0x07A20; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_07c50(SPUThread& s) {
+    u32 to;
+    goto L_07c50;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x07C50: goto L_07c50;
+    case 0x07CA4: goto L_07ca4;
+    case 0x07CF0: goto L_07cf0;
+    case 0x07D44: goto L_07d44;
+    case 0x07D58: goto L_07d58;
+    case 0x07D5C: goto L_07d5c;
+    case 0x07D70: goto L_07d70;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_07c50:
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 07c54 stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x040001D0u);   // 07c58 ori r80,r3,0
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 07c5c stqd r81,-32(r1)
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 07c64 stqd r82,-48(r1)
+    s.instructions++; op_ila(s, 0x427FFFD2u);   // 07c68 ila r82,0xffff
+    s.instructions++; op_stqd(s, 0x24004080u);   // 07c6c stqd r0,16(r1)
+    s.instructions++; op_stqd(s, 0x24FE4081u);   // 07c74 stqd r1,-112(r1)
+    s.instructions++; op_ai(s, 0x1CE40081u);   // 07c78 ai r1,r1,-112
+    s.instructions++; op_stqd(s, 0x24008084u);   // 07c80 stqd r4,32(r1)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 07c84 lqd r2,32(r1)
+    s.instructions++; op_stqd(s, 0x2400C085u);   // 07c88 stqd r5,48(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F808102u);   // 07c8c rotqbyi r2,r2,2
+    s.instructions++; op_and_(s, 0x18348151u);   // 07c90 and r81,r2,r82
+    s.instructions++; op_ai(s, 0x1C01E884u);   // 07c94 ai r4,r81,7
+    s.instructions++; op_andi(s, 0x14FE0204u);   // 07c98 andi r4,r4,-8
+    s.instructions++; op_shli(s, 0x0F60C204u);   // 07c9c shli r4,r4,3
+    s.instructions++; s.set_pref(0, 0x07CA4);   // 07ca0 brsl r0,0x41c0
+    if (!geomfn_041c0(s)) s.run_until(0x07CA4);
+    if (s.halted || s.pc != 0x07CA4) return false;
+L_07ca4:
+    s.instructions++; op_cwd(s, 0x3EC42802u);   // 07ca4 cwd r2,r80,16
+    s.instructions++; op_ori(s, 0x04002885u);   // 07ca8 ori r5,r81,0
+    s.instructions++; op_ori(s, 0x04000186u);   // 07cb0 ori r6,r3,0
+    s.instructions++; op_lqd(s, 0x34066803u);   // 07cb4 lqd r3,400(r80)
+    s.instructions++; op_ori(s, 0x04000304u);   // 07cb8 ori r4,r6,0
+    s.instructions++; op_shufb(s, 0xB060C302u);   // 07cbc shufb r3,r6,r3,r2
+    s.instructions++; op_lqd(s, 0x34008082u);   // 07cc0 lqd r2,32(r1)
+    s.instructions++; op_stqd(s, 0x24066803u);   // 07cc4 stqd r3,400(r80)
+    s.instructions++; op_lqd(s, 0x34042807u);   // 07cc8 lqd r7,256(r80)
+    s.instructions++; op_rotqbyi(s, 0x3F838102u);   // 07ccc rotqbyi r2,r2,14
+    s.instructions++; op_andbi(s, 0x1603C102u);   // 07cd0 andbi r2,r2,15
+    s.instructions++; op_rotqby(s, 0x3B940387u);   // 07cd4 rotqby r7,r7,r80
+    s.instructions++; op_ceqbi(s, 0x7E004103u);   // 07cd8 ceqbi r3,r2,1
+    s.instructions++; op_ceqbi(s, 0x7E000102u);   // 07cdc ceqbi r2,r2,0
+    s.instructions++; op_xsbh(s, 0x56C00183u);   // 07ce0 xsbh r3,r3,r0
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 07ce4 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_07d44;   // 07ce8 brhnz r2,0x7d44
+    s.instructions++; if ((s.pref(3) & 0xFFFF) != 0) goto L_07d5c;   // 07cec brhnz r3,0x7d5c
+L_07cf0:
+    s.instructions++; op_a(s, 0x18146882u);   // 07cf0 a r2,r81,r81
+    s.instructions++; op_lqd(s, 0x34062803u);   // 07cf4 lqd r3,384(r80)
+    s.instructions++; op_il(s, 0x4080C205u);   // 07cf8 il r5,0x184
+    s.instructions++; op_cwd(s, 0x3EC02804u);   // 07cfc cwd r4,r80,0
+    s.instructions++; op_a(s, 0x18144102u);   // 07d00 a r2,r2,r81
+    s.instructions++; op_cwx(s, 0x3AC16806u);   // 07d04 cwx r6,r80,r5
+    s.instructions++; op_shufb(s, 0xB060C104u);   // 07d08 shufb r3,r2,r3,r4
+    s.instructions++; op_lqd(s, 0x34008082u);   // 07d0c lqd r2,32(r1)
+    s.instructions++; op_ai(s, 0x1C1C0081u);   // 07d10 ai r1,r1,112
+    s.instructions++; op_stqd(s, 0x24062803u);   // 07d14 stqd r3,384(r80)
+    s.instructions++; op_rotqbyi(s, 0x3F810102u);   // 07d1c rotqbyi r2,r2,4
+    s.instructions++; op_mpyui(s, 0x7500C104u);   // 07d20 mpyui r4,r2,3
+    s.instructions++; op_lqx(s, 0x38816802u);   // 07d24 lqx r2,r80,r5
+    s.instructions++; op_shufb(s, 0xB0408206u);   // 07d28 shufb r2,r4,r2,r6
+    s.instructions++; op_stqx(s, 0x28816802u);   // 07d2c stqx r2,r80,r5
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 07d30 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 07d34 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 07d38 lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 07d3c lqd r0,16(r1)
+    s.instructions++;   // 07d40 bi r0,r0,r0
+    s.pc = 0x07D40; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_07d44:
+    s.instructions++; op_lqd(s, 0x34008082u);   // 07d44 lqd r2,32(r1)
+    s.instructions++; op_ori(s, 0x04000103u);   // 07d48 ori r3,r2,0
+    s.instructions++; op_and_(s, 0x18348183u);   // 07d4c and r3,r3,r82
+    s.instructions++; op_a(s, 0x1800C383u);   // 07d50 a r3,r7,r3
+    s.instructions++; s.set_pref(0, 0x07D58);   // 07d54 brsl r0,0xbd80
+    if (!geomfn_0bd80(s)) s.run_until(0x07D58);
+    if (s.halted || s.pc != 0x07D58) return false;
+L_07d58:
+    s.instructions++; goto L_07cf0;   // 07d58 br r0,0x7cf0
+L_07d5c:
+    s.instructions++; op_lqd(s, 0x34008082u);   // 07d5c lqd r2,32(r1)
+    s.instructions++; op_ori(s, 0x04000103u);   // 07d60 ori r3,r2,0
+    s.instructions++; op_and_(s, 0x18348183u);   // 07d64 and r3,r3,r82
+    s.instructions++; op_a(s, 0x1800C383u);   // 07d68 a r3,r7,r3
+    s.instructions++; s.set_pref(0, 0x07D70);   // 07d6c brsl r0,0x76a8
+    if (!geomfn_076a8(s)) s.run_until(0x07D70);
+    if (s.halted || s.pc != 0x07D70) return false;
+L_07d70:
+    s.instructions++; goto L_07cf0;   // 07d70 br r0,0x7cf0
+}
+bool geomfn_07e40(SPUThread& s) {
+    u32 to;
+    goto L_07e40;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x07580: goto L_07580;
+    case 0x075D0: goto L_075d0;
+    case 0x07E40: goto L_07e40;
+    case 0x0BA80: goto L_0ba80;
+    case 0x0BBC0: goto L_0bbc0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_07580:
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 07584 stqd r82,-48(r1)
+    s.instructions++; op_ila(s, 0x427FFFD2u);   // 07588 ila r82,0xffff
+    s.instructions++; op_lqd(s, 0x34040182u);   // 0758c lqd r2,256(r3)
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 07594 stqd r81,-32(r1)
+    s.instructions++; op_and_(s, 0x183482D1u);   // 07598 and r81,r5,r82
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0759c stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x04000250u);   // 075a0 ori r80,r4,0
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 075a4 stqd r84,-80(r1)
+    s.instructions++; op_ai(s, 0x1C03E884u);   // 075a8 ai r4,r81,15
+    s.instructions++; op_stqd(s, 0x24004080u);   // 075ac stqd r0,16(r1)
+    s.instructions++; op_ori(s, 0x04000354u);   // 075b0 ori r84,r6,0
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 075b4 stqd r83,-64(r1)
+    s.instructions++; op_andi(s, 0x14FC0204u);   // 075b8 andi r4,r4,-16
+    s.instructions++; op_rotqby(s, 0x3B80C153u);   // 075bc rotqby r83,r2,r3
+    s.instructions++; op_and_(s, 0x1834A850u);   // 075c0 and r80,r80,r82
+    s.instructions++; op_stqd(s, 0x24FE4081u);   // 075c4 stqd r1,-112(r1)
+    s.instructions++; op_ai(s, 0x1CE40081u);   // 075c8 ai r1,r1,-112
+    s.instructions++; s.set_pref(0, 0x075D0);   // 075cc brsl r0,0x41c0
+    if (!geomfn_041c0(s)) s.run_until(0x075D0);
+    if (s.halted || s.pc != 0x075D0) return false;
+L_075d0:
+    s.instructions++; op_ai(s, 0x1C1C0081u);   // 075d0 ai r1,r1,112
+    s.instructions++; op_a(s, 0x18142984u);   // 075d8 a r4,r83,r80
+    s.instructions++; op_lqd(s, 0x34002A02u);   // 075dc lqd r2,0(r84)
+    s.instructions++; op_ori(s, 0x04002885u);   // 075e0 ori r5,r81,0
+    s.instructions++; op_cwd(s, 0x3EC02A06u);   // 075e4 cwd r6,r84,0
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 075e8 shufb r2,r3,r2,r6
+    s.instructions++; op_stqd(s, 0x24002A02u);   // 075ec stqd r2,0(r84)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 075f0 lqd r0,16(r1)
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 075f4 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 075f8 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 075fc lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 07600 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 07604 lqd r84,-80(r1)
+    s.instructions++; goto L_0ba80;   // 07608 br r0,0xba80
+    s.pc = 0x0760C; return false;   // (falls out of the scanned code)
+L_07e40:
+    s.instructions++; op_il(s, 0x40812806u);   // 07e40 il r6,0x250
+    s.instructions++; op_stqd(s, 0x24FF0081u);   // 07e48 stqd r1,-64(r1)
+    s.instructions++; op_ai(s, 0x1CF00081u);   // 07e4c ai r1,r1,-64
+    s.instructions++; op_a(s, 0x18018186u);   // 07e50 a r6,r3,r6
+    s.instructions++; op_stqd(s, 0x24008084u);   // 07e54 stqd r4,32(r1)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 07e58 lqd r2,32(r1)
+    s.instructions++; op_stqd(s, 0x2400C085u);   // 07e5c stqd r5,48(r1)
+    s.instructions++; op_il(s, 0x40803405u);   // 07e60 il r5,0x68
+    s.instructions++; op_ai(s, 0x1C100081u);   // 07e64 ai r1,r1,64
+    s.instructions++; op_ori(s, 0x04000104u);   // 07e68 ori r4,r2,0
+    s.instructions++; goto L_07580;   // 07e6c br r0,0x7580
+    s.pc = 0x07E70; return false;   // (falls out of the scanned code)
+L_0ba80:
+    s.instructions++; op_ila(s, 0x42810182u);   // 0ba80 ila r2,0x10203
+    s.instructions++;   // 0ba84 biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BA84; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_shufb(s, 0xB0810202u);   // 0ba88 shufb r4,r4,r4,r2
+    s.instructions++; op_shufb(s, 0xB060C182u);   // 0ba8c shufb r3,r3,r3,r2
+    s.instructions++; op_shufb(s, 0xB0A14282u);   // 0ba90 shufb r5,r5,r5,r2
+    s.pc = 0x0BA94; s.instructions++; op_lqr(s, 0x338D8982u);   // 0ba94 lqr r2,0x126e0
+    s.instructions++; op_ilh(s, 0x41818186u);   // 0ba98 ilh r6,0x303
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 0ba9c fsmbi r7,0x0
+    s.instructions++; op_andi(s, 0x1403C208u);   // 0baa0 andi r8,r4,15
+    s.instructions++; op_andi(s, 0x1403C189u);   // 0baa8 andi r9,r3,15
+    s.instructions++; op_sfi(s, 0x0C00048Au);   // 0bab0 sfi r10,r9,0
+    s.instructions++; op_ilh(s, 0x41FFFF8Bu);   // 0bab4 ilh r11,0xffff
+    s.instructions++; op_ori(s, 0x0400010Cu);   // 0bab8 ori r12,r2,0
+    s.instructions++; op_sf(s, 0x08020488u);   // 0babc sf r8,r9,r8
+    s.instructions++; op_rotqmby(s, 0x3BA28589u);   // 0bac4 rotqmby r9,r11,r10
+    s.instructions++; op_cgti(s, 0x4C00040Au);   // 0bac8 cgti r10,r8,0
+    s.instructions++; op_il(s, 0x4080080Du);   // 0bad0 il r13,0x10
+    s.instructions++; op_selb(s, 0x8141C68Au);   // 0bad4 selb r10,r13,r7,r10
+    s.instructions++; op_a(s, 0x18020508u);   // 0bad8 a r8,r10,r8
+    s.instructions++; op_sf(s, 0x08010504u);   // 0badc sf r4,r10,r4
+    s.instructions++; op_shufb(s, 0xB0C20406u);   // 0bae4 shufb r6,r8,r8,r6
+    s.instructions++; op_a(s, 0x18018102u);   // 0bae8 a r2,r2,r6
+    s.instructions++; op_a(s, 0x1800C286u);   // 0baec a r6,r5,r3
+    s.instructions++; op_andi(s, 0x1403C306u);   // 0baf0 andi r6,r6,15
+    s.instructions++; op_sfi(s, 0x0C040306u);   // 0baf4 sfi r6,r6,16
+    s.instructions++; op_shlqby(s, 0x3BE18586u);   // 0bafc shlqby r6,r11,r6
+    s.instructions++; op_andi(s, 0x1403C188u);   // 0bb00 andi r8,r3,15
+    s.instructions++; op_andi(s, 0x140FC28Du);   // 0bb08 andi r13,r5,63
+    s.instructions++; op_a(s, 0x18020688u);   // 0bb0c a r8,r13,r8
+    s.instructions++; op_andi(s, 0x1403C40Du);   // 0bb10 andi r13,r8,15
+    s.instructions++; op_sfi(s, 0x0C00068Du);   // 0bb14 sfi r13,r13,0
+    s.instructions++; op_cgti(s, 0x4C03C40Eu);   // 0bb18 cgti r14,r8,15
+    s.instructions++; op_rotqmby(s, 0x3BA3458Du);   // 0bb1c rotqmby r13,r11,r13
+    s.instructions++; op_selb(s, 0x81C2C30Eu);   // 0bb20 selb r14,r6,r11,r14
+    s.instructions++; op_cgti(s, 0x4C03C40Fu);   // 0bb28 cgti r15,r8,15
+    s.instructions++; op_selb(s, 0x81E1838Fu);   // 0bb2c selb r15,r7,r6,r15
+    s.instructions++; op_cgti(s, 0x4C07C410u);   // 0bb30 cgti r16,r8,31
+    s.instructions++; op_selb(s, 0x81E2C790u);   // 0bb34 selb r15,r15,r11,r16
+    s.instructions++; op_cgti(s, 0x4C07C410u);   // 0bb38 cgti r16,r8,31
+    s.instructions++; op_selb(s, 0x82018390u);   // 0bb3c selb r16,r7,r6,r16
+    s.instructions++; op_cgti(s, 0x4C0BC411u);   // 0bb40 cgti r17,r8,47
+    s.instructions++; op_selb(s, 0x8202C811u);   // 0bb44 selb r16,r16,r11,r17
+    s.instructions++; op_cgti(s, 0x4C0BC411u);   // 0bb48 cgti r17,r8,47
+    s.instructions++; op_selb(s, 0x80C18391u);   // 0bb4c selb r6,r7,r6,r17
+    s.instructions++; op_cgti(s, 0x4C0FC407u);   // 0bb50 cgti r7,r8,63
+    s.instructions++; op_selb(s, 0x80C2C307u);   // 0bb54 selb r6,r6,r11,r7
+    s.instructions++; op_selb(s, 0x80E2C507u);   // 0bb58 selb r7,r10,r11,r7
+    s.instructions++; op_rotmi(s, 0x0F3E8288u);   // 0bb5c rotmi r8,r5,-6
+    s.instructions++; op_ai(s, 0x1C004405u);   // 0bb60 ai r5,r8,1
+    s.instructions++; op_shli(s, 0x0F618285u);   // 0bb64 shli r5,r5,6
+    s.instructions++; op_a(s, 0x1801420Au);   // 0bb68 a r10,r4,r5
+    s.instructions++; op_ai(s, 0x1C040511u);   // 0bb6c ai r17,r10,16
+    s.instructions++; op_ai(s, 0x1C080512u);   // 0bb70 ai r18,r10,32
+    s.instructions++; op_ai(s, 0x1C0C0513u);   // 0bb74 ai r19,r10,48
+    s.instructions++; op_ai(s, 0x1C100514u);   // 0bb78 ai r20,r10,64
+    s.instructions++; op_sfi(s, 0x0C000295u);   // 0bb7c sfi r21,r5,0
+    s.instructions++; op_il(s, 0x40800016u);   // 0bb80 il r22,0x0
+    s.instructions++; op_lqd(s, 0x34000197u);   // 0bb84 lqd r23,0(r3)
+    s.instructions++; op_shli(s, 0x0F618408u);   // 0bb88 shli r8,r8,6
+    s.instructions++; op_lqx(s, 0x3885450Au);   // 0bb8c lqx r10,r10,r21
+    s.instructions++; op_a(s, 0x1800C408u);   // 0bb90 a r8,r8,r3
+    s.instructions++; op_lqx(s, 0x38854898u);   // 0bb94 lqx r24,r17,r21
+    s.instructions++; op_shufb(s, 0xB1460502u);   // 0bb98 shufb r10,r10,r24,r2
+    s.instructions++; op_lqd(s, 0x34000418u);   // 0bb9c lqd r24,0(r8)
+    s.instructions++; op_lqd(s, 0x34004419u);   // 0bba0 lqd r25,16(r8)
+    s.instructions++; op_lqd(s, 0x3400841Au);   // 0bba4 lqd r26,32(r8)
+    s.instructions++; op_andc(s, 0x58224B97u);   // 0bba8 andc r23,r23,r9
+    s.instructions++; op_lqd(s, 0x3400C408u);   // 0bbac lqd r8,48(r8)
+    s.instructions++; op_and_(s, 0x1822450Au);   // 0bbb0 and r10,r10,r9
+    s.instructions++; op_or_(s, 0x08228B8Au);   // 0bbb4 or r10,r23,r10
+    s.instructions++; op_ori(s, 0x04000489u);   // 0bbb8 ori r9,r9,0
+L_0bbc0:
+    s.instructions++; op_lqx(s, 0x3885489Eu);   // 0bbc0 lqx r30,r17,r21
+    s.instructions++; op_lqx(s, 0x3885491Fu);   // 0bbc4 lqx r31,r18,r21
+    s.instructions++; op_lqx(s, 0x388549A0u);   // 0bbc8 lqx r32,r19,r21
+    s.instructions++; op_lqx(s, 0x38854A21u);   // 0bbcc lqx r33,r20,r21
+    s.instructions++; op_ai(s, 0x1C100A95u);   // 0bbd0 ai r21,r21,64
+    s.instructions++; op_stqd(s, 0x24000197u);   // 0bbd4 stqd r23,0(r3)
+    s.instructions++; op_stqd(s, 0x2400419Bu);   // 0bbd8 stqd r27,16(r3)
+    s.instructions++; op_stqd(s, 0x2400819Cu);   // 0bbdc stqd r28,32(r3)
+    s.instructions++; op_ori(s, 0x040004A2u);   // 0bbe0 ori r34,r9,0
+    s.instructions++; op_stqd(s, 0x2400C19Du);   // 0bbe4 stqd r29,48(r3)
+    s.instructions++; op_a(s, 0x18058183u);   // 0bbe8 a r3,r3,r22
+    s.instructions++; op_shufb(s, 0xB2E7850Cu);   // 0bbec shufb r23,r10,r30,r12
+    s.instructions++; op_il(s, 0x40802016u);   // 0bbf0 il r22,0x40
+    s.instructions++; op_shufb(s, 0xB367CF02u);   // 0bbf4 shufb r27,r30,r31,r2
+    s.instructions++; op_or_(s, 0x0820810Cu);   // 0bbf8 or r12,r2,r2
+    s.instructions++; op_shufb(s, 0xB3880F82u);   // 0bbfc shufb r28,r31,r32,r2
+    s.instructions++; op_or_(s, 0x0828508Au);   // 0bc00 or r10,r33,r33
+    s.instructions++; op_shufb(s, 0xB3A85002u);   // 0bc04 shufb r29,r32,r33,r2
+    s.instructions++; op_ori(s, 0x04000589u);   // 0bc08 ori r9,r11,0
+    s.instructions++; if (s.pref(21) != 0) goto L_0bbc0;   // 0bc0c brnz r21,0xbbc0
+    s.instructions++; op_and_(s, 0x18239109u);   // 0bc10 and r9,r34,r14
+    s.instructions++; op_selb(s, 0x8125CC09u);   // 0bc14 selb r9,r24,r23,r9
+    s.instructions++; op_selb(s, 0x8146CC8Fu);   // 0bc18 selb r10,r25,r27,r15
+    s.instructions++; op_selb(s, 0x81670D10u);   // 0bc1c selb r11,r26,r28,r16
+    s.instructions++; op_stqd(s, 0x24000189u);   // 0bc20 stqd r9,0(r3)
+    s.instructions++; op_selb(s, 0x80C74406u);   // 0bc24 selb r6,r8,r29,r6
+    s.instructions++; op_stqd(s, 0x2400418Au);   // 0bc28 stqd r10,16(r3)
+    s.instructions++; op_stqd(s, 0x2400818Bu);   // 0bc2c stqd r11,32(r3)
+    s.instructions++; op_stqd(s, 0x2400C186u);   // 0bc30 stqd r6,48(r3)
+    s.instructions++;   // 0bc34 biz r7,r0,r0
+    if (s.pref(7) == 0) {
+        s.pc = 0x0BC34; op_biz(s, 0x25000007u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_lqx(s, 0x38854886u);   // 0bc38 lqx r6,r17,r21
+    s.instructions++; op_shufb(s, 0xB0419082u);   // 0bc3c shufb r2,r33,r6,r2
+    s.instructions++; op_selb(s, 0x8046010Du);   // 0bc40 selb r2,r2,r24,r13
+    s.instructions++; op_stqd(s, 0x24010182u);   // 0bc48 stqd r2,64(r3)
+    s.instructions++;   // 0bc4c bi r0,r0,r0
+    s.pc = 0x0BC4C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_07e70(SPUThread& s) {
+    u32 to;
+    goto L_07e70;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x07580: goto L_07580;
+    case 0x075D0: goto L_075d0;
+    case 0x07E70: goto L_07e70;
+    case 0x0BA80: goto L_0ba80;
+    case 0x0BBC0: goto L_0bbc0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_07580:
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 07584 stqd r82,-48(r1)
+    s.instructions++; op_ila(s, 0x427FFFD2u);   // 07588 ila r82,0xffff
+    s.instructions++; op_lqd(s, 0x34040182u);   // 0758c lqd r2,256(r3)
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 07594 stqd r81,-32(r1)
+    s.instructions++; op_and_(s, 0x183482D1u);   // 07598 and r81,r5,r82
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0759c stqd r80,-16(r1)
+    s.instructions++; op_ori(s, 0x04000250u);   // 075a0 ori r80,r4,0
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 075a4 stqd r84,-80(r1)
+    s.instructions++; op_ai(s, 0x1C03E884u);   // 075a8 ai r4,r81,15
+    s.instructions++; op_stqd(s, 0x24004080u);   // 075ac stqd r0,16(r1)
+    s.instructions++; op_ori(s, 0x04000354u);   // 075b0 ori r84,r6,0
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 075b4 stqd r83,-64(r1)
+    s.instructions++; op_andi(s, 0x14FC0204u);   // 075b8 andi r4,r4,-16
+    s.instructions++; op_rotqby(s, 0x3B80C153u);   // 075bc rotqby r83,r2,r3
+    s.instructions++; op_and_(s, 0x1834A850u);   // 075c0 and r80,r80,r82
+    s.instructions++; op_stqd(s, 0x24FE4081u);   // 075c4 stqd r1,-112(r1)
+    s.instructions++; op_ai(s, 0x1CE40081u);   // 075c8 ai r1,r1,-112
+    s.instructions++; s.set_pref(0, 0x075D0);   // 075cc brsl r0,0x41c0
+    if (!geomfn_041c0(s)) s.run_until(0x075D0);
+    if (s.halted || s.pc != 0x075D0) return false;
+L_075d0:
+    s.instructions++; op_ai(s, 0x1C1C0081u);   // 075d0 ai r1,r1,112
+    s.instructions++; op_a(s, 0x18142984u);   // 075d8 a r4,r83,r80
+    s.instructions++; op_lqd(s, 0x34002A02u);   // 075dc lqd r2,0(r84)
+    s.instructions++; op_ori(s, 0x04002885u);   // 075e0 ori r5,r81,0
+    s.instructions++; op_cwd(s, 0x3EC02A06u);   // 075e4 cwd r6,r84,0
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 075e8 shufb r2,r3,r2,r6
+    s.instructions++; op_stqd(s, 0x24002A02u);   // 075ec stqd r2,0(r84)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 075f0 lqd r0,16(r1)
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 075f4 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 075f8 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 075fc lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 07600 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 07604 lqd r84,-80(r1)
+    s.instructions++; goto L_0ba80;   // 07608 br r0,0xba80
+    s.pc = 0x0760C; return false;   // (falls out of the scanned code)
+L_07e70:
+    s.instructions++; op_il(s, 0x40813006u);   // 07e70 il r6,0x260
+    s.instructions++; op_stqd(s, 0x24FF0081u);   // 07e78 stqd r1,-64(r1)
+    s.instructions++; op_ai(s, 0x1CF00081u);   // 07e7c ai r1,r1,-64
+    s.instructions++; op_a(s, 0x18018186u);   // 07e80 a r6,r3,r6
+    s.instructions++; op_stqd(s, 0x24008084u);   // 07e84 stqd r4,32(r1)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 07e88 lqd r2,32(r1)
+    s.instructions++; op_stqd(s, 0x2400C085u);   // 07e8c stqd r5,48(r1)
+    s.instructions++; op_il(s, 0x40802005u);   // 07e90 il r5,0x40
+    s.instructions++; op_ai(s, 0x1C100081u);   // 07e94 ai r1,r1,64
+    s.instructions++; op_ori(s, 0x04000104u);   // 07e98 ori r4,r2,0
+    s.instructions++; goto L_07580;   // 07e9c br r0,0x7580
+    s.pc = 0x07EA0; return false;   // (falls out of the scanned code)
+L_0ba80:
+    s.instructions++; op_ila(s, 0x42810182u);   // 0ba80 ila r2,0x10203
+    s.instructions++;   // 0ba84 biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BA84; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_shufb(s, 0xB0810202u);   // 0ba88 shufb r4,r4,r4,r2
+    s.instructions++; op_shufb(s, 0xB060C182u);   // 0ba8c shufb r3,r3,r3,r2
+    s.instructions++; op_shufb(s, 0xB0A14282u);   // 0ba90 shufb r5,r5,r5,r2
+    s.pc = 0x0BA94; s.instructions++; op_lqr(s, 0x338D8982u);   // 0ba94 lqr r2,0x126e0
+    s.instructions++; op_ilh(s, 0x41818186u);   // 0ba98 ilh r6,0x303
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 0ba9c fsmbi r7,0x0
+    s.instructions++; op_andi(s, 0x1403C208u);   // 0baa0 andi r8,r4,15
+    s.instructions++; op_andi(s, 0x1403C189u);   // 0baa8 andi r9,r3,15
+    s.instructions++; op_sfi(s, 0x0C00048Au);   // 0bab0 sfi r10,r9,0
+    s.instructions++; op_ilh(s, 0x41FFFF8Bu);   // 0bab4 ilh r11,0xffff
+    s.instructions++; op_ori(s, 0x0400010Cu);   // 0bab8 ori r12,r2,0
+    s.instructions++; op_sf(s, 0x08020488u);   // 0babc sf r8,r9,r8
+    s.instructions++; op_rotqmby(s, 0x3BA28589u);   // 0bac4 rotqmby r9,r11,r10
+    s.instructions++; op_cgti(s, 0x4C00040Au);   // 0bac8 cgti r10,r8,0
+    s.instructions++; op_il(s, 0x4080080Du);   // 0bad0 il r13,0x10
+    s.instructions++; op_selb(s, 0x8141C68Au);   // 0bad4 selb r10,r13,r7,r10
+    s.instructions++; op_a(s, 0x18020508u);   // 0bad8 a r8,r10,r8
+    s.instructions++; op_sf(s, 0x08010504u);   // 0badc sf r4,r10,r4
+    s.instructions++; op_shufb(s, 0xB0C20406u);   // 0bae4 shufb r6,r8,r8,r6
+    s.instructions++; op_a(s, 0x18018102u);   // 0bae8 a r2,r2,r6
+    s.instructions++; op_a(s, 0x1800C286u);   // 0baec a r6,r5,r3
+    s.instructions++; op_andi(s, 0x1403C306u);   // 0baf0 andi r6,r6,15
+    s.instructions++; op_sfi(s, 0x0C040306u);   // 0baf4 sfi r6,r6,16
+    s.instructions++; op_shlqby(s, 0x3BE18586u);   // 0bafc shlqby r6,r11,r6
+    s.instructions++; op_andi(s, 0x1403C188u);   // 0bb00 andi r8,r3,15
+    s.instructions++; op_andi(s, 0x140FC28Du);   // 0bb08 andi r13,r5,63
+    s.instructions++; op_a(s, 0x18020688u);   // 0bb0c a r8,r13,r8
+    s.instructions++; op_andi(s, 0x1403C40Du);   // 0bb10 andi r13,r8,15
+    s.instructions++; op_sfi(s, 0x0C00068Du);   // 0bb14 sfi r13,r13,0
+    s.instructions++; op_cgti(s, 0x4C03C40Eu);   // 0bb18 cgti r14,r8,15
+    s.instructions++; op_rotqmby(s, 0x3BA3458Du);   // 0bb1c rotqmby r13,r11,r13
+    s.instructions++; op_selb(s, 0x81C2C30Eu);   // 0bb20 selb r14,r6,r11,r14
+    s.instructions++; op_cgti(s, 0x4C03C40Fu);   // 0bb28 cgti r15,r8,15
+    s.instructions++; op_selb(s, 0x81E1838Fu);   // 0bb2c selb r15,r7,r6,r15
+    s.instructions++; op_cgti(s, 0x4C07C410u);   // 0bb30 cgti r16,r8,31
+    s.instructions++; op_selb(s, 0x81E2C790u);   // 0bb34 selb r15,r15,r11,r16
+    s.instructions++; op_cgti(s, 0x4C07C410u);   // 0bb38 cgti r16,r8,31
+    s.instructions++; op_selb(s, 0x82018390u);   // 0bb3c selb r16,r7,r6,r16
+    s.instructions++; op_cgti(s, 0x4C0BC411u);   // 0bb40 cgti r17,r8,47
+    s.instructions++; op_selb(s, 0x8202C811u);   // 0bb44 selb r16,r16,r11,r17
+    s.instructions++; op_cgti(s, 0x4C0BC411u);   // 0bb48 cgti r17,r8,47
+    s.instructions++; op_selb(s, 0x80C18391u);   // 0bb4c selb r6,r7,r6,r17
+    s.instructions++; op_cgti(s, 0x4C0FC407u);   // 0bb50 cgti r7,r8,63
+    s.instructions++; op_selb(s, 0x80C2C307u);   // 0bb54 selb r6,r6,r11,r7
+    s.instructions++; op_selb(s, 0x80E2C507u);   // 0bb58 selb r7,r10,r11,r7
+    s.instructions++; op_rotmi(s, 0x0F3E8288u);   // 0bb5c rotmi r8,r5,-6
+    s.instructions++; op_ai(s, 0x1C004405u);   // 0bb60 ai r5,r8,1
+    s.instructions++; op_shli(s, 0x0F618285u);   // 0bb64 shli r5,r5,6
+    s.instructions++; op_a(s, 0x1801420Au);   // 0bb68 a r10,r4,r5
+    s.instructions++; op_ai(s, 0x1C040511u);   // 0bb6c ai r17,r10,16
+    s.instructions++; op_ai(s, 0x1C080512u);   // 0bb70 ai r18,r10,32
+    s.instructions++; op_ai(s, 0x1C0C0513u);   // 0bb74 ai r19,r10,48
+    s.instructions++; op_ai(s, 0x1C100514u);   // 0bb78 ai r20,r10,64
+    s.instructions++; op_sfi(s, 0x0C000295u);   // 0bb7c sfi r21,r5,0
+    s.instructions++; op_il(s, 0x40800016u);   // 0bb80 il r22,0x0
+    s.instructions++; op_lqd(s, 0x34000197u);   // 0bb84 lqd r23,0(r3)
+    s.instructions++; op_shli(s, 0x0F618408u);   // 0bb88 shli r8,r8,6
+    s.instructions++; op_lqx(s, 0x3885450Au);   // 0bb8c lqx r10,r10,r21
+    s.instructions++; op_a(s, 0x1800C408u);   // 0bb90 a r8,r8,r3
+    s.instructions++; op_lqx(s, 0x38854898u);   // 0bb94 lqx r24,r17,r21
+    s.instructions++; op_shufb(s, 0xB1460502u);   // 0bb98 shufb r10,r10,r24,r2
+    s.instructions++; op_lqd(s, 0x34000418u);   // 0bb9c lqd r24,0(r8)
+    s.instructions++; op_lqd(s, 0x34004419u);   // 0bba0 lqd r25,16(r8)
+    s.instructions++; op_lqd(s, 0x3400841Au);   // 0bba4 lqd r26,32(r8)
+    s.instructions++; op_andc(s, 0x58224B97u);   // 0bba8 andc r23,r23,r9
+    s.instructions++; op_lqd(s, 0x3400C408u);   // 0bbac lqd r8,48(r8)
+    s.instructions++; op_and_(s, 0x1822450Au);   // 0bbb0 and r10,r10,r9
+    s.instructions++; op_or_(s, 0x08228B8Au);   // 0bbb4 or r10,r23,r10
+    s.instructions++; op_ori(s, 0x04000489u);   // 0bbb8 ori r9,r9,0
+L_0bbc0:
+    s.instructions++; op_lqx(s, 0x3885489Eu);   // 0bbc0 lqx r30,r17,r21
+    s.instructions++; op_lqx(s, 0x3885491Fu);   // 0bbc4 lqx r31,r18,r21
+    s.instructions++; op_lqx(s, 0x388549A0u);   // 0bbc8 lqx r32,r19,r21
+    s.instructions++; op_lqx(s, 0x38854A21u);   // 0bbcc lqx r33,r20,r21
+    s.instructions++; op_ai(s, 0x1C100A95u);   // 0bbd0 ai r21,r21,64
+    s.instructions++; op_stqd(s, 0x24000197u);   // 0bbd4 stqd r23,0(r3)
+    s.instructions++; op_stqd(s, 0x2400419Bu);   // 0bbd8 stqd r27,16(r3)
+    s.instructions++; op_stqd(s, 0x2400819Cu);   // 0bbdc stqd r28,32(r3)
+    s.instructions++; op_ori(s, 0x040004A2u);   // 0bbe0 ori r34,r9,0
+    s.instructions++; op_stqd(s, 0x2400C19Du);   // 0bbe4 stqd r29,48(r3)
+    s.instructions++; op_a(s, 0x18058183u);   // 0bbe8 a r3,r3,r22
+    s.instructions++; op_shufb(s, 0xB2E7850Cu);   // 0bbec shufb r23,r10,r30,r12
+    s.instructions++; op_il(s, 0x40802016u);   // 0bbf0 il r22,0x40
+    s.instructions++; op_shufb(s, 0xB367CF02u);   // 0bbf4 shufb r27,r30,r31,r2
+    s.instructions++; op_or_(s, 0x0820810Cu);   // 0bbf8 or r12,r2,r2
+    s.instructions++; op_shufb(s, 0xB3880F82u);   // 0bbfc shufb r28,r31,r32,r2
+    s.instructions++; op_or_(s, 0x0828508Au);   // 0bc00 or r10,r33,r33
+    s.instructions++; op_shufb(s, 0xB3A85002u);   // 0bc04 shufb r29,r32,r33,r2
+    s.instructions++; op_ori(s, 0x04000589u);   // 0bc08 ori r9,r11,0
+    s.instructions++; if (s.pref(21) != 0) goto L_0bbc0;   // 0bc0c brnz r21,0xbbc0
+    s.instructions++; op_and_(s, 0x18239109u);   // 0bc10 and r9,r34,r14
+    s.instructions++; op_selb(s, 0x8125CC09u);   // 0bc14 selb r9,r24,r23,r9
+    s.instructions++; op_selb(s, 0x8146CC8Fu);   // 0bc18 selb r10,r25,r27,r15
+    s.instructions++; op_selb(s, 0x81670D10u);   // 0bc1c selb r11,r26,r28,r16
+    s.instructions++; op_stqd(s, 0x24000189u);   // 0bc20 stqd r9,0(r3)
+    s.instructions++; op_selb(s, 0x80C74406u);   // 0bc24 selb r6,r8,r29,r6
+    s.instructions++; op_stqd(s, 0x2400418Au);   // 0bc28 stqd r10,16(r3)
+    s.instructions++; op_stqd(s, 0x2400818Bu);   // 0bc2c stqd r11,32(r3)
+    s.instructions++; op_stqd(s, 0x2400C186u);   // 0bc30 stqd r6,48(r3)
+    s.instructions++;   // 0bc34 biz r7,r0,r0
+    if (s.pref(7) == 0) {
+        s.pc = 0x0BC34; op_biz(s, 0x25000007u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_lqx(s, 0x38854886u);   // 0bc38 lqx r6,r17,r21
+    s.instructions++; op_shufb(s, 0xB0419082u);   // 0bc3c shufb r2,r33,r6,r2
+    s.instructions++; op_selb(s, 0x8046010Du);   // 0bc40 selb r2,r2,r24,r13
+    s.instructions++; op_stqd(s, 0x24010182u);   // 0bc48 stqd r2,64(r3)
+    s.instructions++;   // 0bc4c bi r0,r0,r0
+    s.pc = 0x0BC4C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_08660(SPUThread& s) {
+    u32 to;
+    goto L_08660;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x08660: goto L_08660;
+    case 0x08670: goto L_08670;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_08660:
+    s.instructions++; op_clgt(s, 0x5800C202u);   // 08660 clgt r2,r4,r3
+    s.instructions++;   // 08668 biz r2,r0,r0
+    if (s.pref(2) == 0) {
+        s.pc = 0x08668; op_biz(s, 0x25000002u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_il(s, 0x40800006u);   // 0866c il r6,0x0
+L_08670:
+    s.instructions++; op_lqd(s, 0x34000182u);   // 08670 lqd r2,0(r3)
+    s.instructions++; op_cwd(s, 0x3EC00185u);   // 08674 cwd r5,r3,0
+    s.instructions++; op_shufb(s, 0xB0408305u);   // 08678 shufb r2,r6,r2,r5
+    s.instructions++; op_stqd(s, 0x24000182u);   // 0867c stqd r2,0(r3)
+    s.instructions++; op_ai(s, 0x1C010183u);   // 08680 ai r3,r3,4
+    s.instructions++; op_clgt(s, 0x5800C202u);   // 08684 clgt r2,r4,r3
+    s.instructions++; if (s.pref(2) != 0) goto L_08670;   // 08688 brnz r2,0x8670
+    s.instructions++;   // 0868c bi r0,r0,r0
+    s.pc = 0x0868C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_08690(SPUThread& s) {
+    u32 to;
+    goto L_08690;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x08690: goto L_08690;
+    case 0x087F8: goto L_087f8;
+    case 0x08808: goto L_08808;
+    case 0x08830: goto L_08830;
+    case 0x08840: goto L_08840;
+    case 0x08878: goto L_08878;
+    case 0x08880: goto L_08880;
+    case 0x088B0: goto L_088b0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_08690:
+    s.instructions++; op_ori(s, 0x04000189u);   // 08690 ori r9,r3,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00288u);   // 08694 shlqbyi r8,r5,0
+    s.instructions++; op_ori(s, 0x04000203u);   // 08698 ori r3,r4,0
+    s.instructions++; if (s.pref(5) == 0) goto L_08878;   // 0869c brz r5,0x8878
+    s.instructions++; op_ilhu(s, 0x413FFF82u);   // 086a0 ilhu r2,0x7fff
+    s.instructions++; op_lqd(s, 0x34000485u);   // 086a4 lqd r5,0(r9)
+    s.instructions++; op_andi(s, 0x147FC204u);   // 086a8 andi r4,r4,511
+    s.instructions++; op_cwd(s, 0x3EC00487u);   // 086ac cwd r7,r9,0
+    s.instructions++; op_iohl(s, 0x60FFFF82u);   // 086b0 iohl r2,0xffff
+    s.instructions++; op_cwd(s, 0x3EC40493u);   // 086b4 cwd r19,r9,16
+    s.instructions++; op_il(s, 0x4080020Du);   // 086b8 il r13,0x4
+    s.instructions++; op_and_(s, 0x1820818Cu);   // 086bc and r12,r3,r2
+    s.instructions++; op_ilhu(s, 0x41000402u);   // 086c0 ilhu r2,0x8
+    s.instructions++; op_cwx(s, 0x3AC3448Fu);   // 086c4 cwx r15,r9,r13
+    s.instructions++; op_rotmi(s, 0x0F384183u);   // 086c8 rotmi r3,r3,-31
+    s.instructions++; op_iohl(s, 0x608C0E02u);   // 086cc iohl r2,0x181c
+    s.instructions++; op_il(s, 0x4080040Eu);   // 086d0 il r14,0x8
+    s.instructions++; op_il(s, 0x40800610u);   // 086d8 il r16,0xc
+    s.instructions++; op_shufb(s, 0xB0A14107u);   // 086dc shufb r5,r2,r5,r7
+    s.instructions++; op_il(s, 0x40810002u);   // 086e0 il r2,0x200
+    s.instructions++; op_cwx(s, 0x3AC38491u);   // 086e4 cwx r17,r9,r14
+    s.instructions++; op_andi(s, 0x143FC306u);   // 086e8 andi r6,r6,255
+    s.instructions++; op_cwx(s, 0x3AC40492u);   // 086ec cwx r18,r9,r16
+    s.instructions++; op_sf(s, 0x08008202u);   // 086f0 sf r2,r4,r2
+    s.instructions++; op_ori(s, 0x04040184u);   // 086f8 ori r4,r3,16
+    s.instructions++; op_stqd(s, 0x24000485u);   // 086fc stqd r5,0(r9)
+    s.instructions++; op_rotmi(s, 0x0F3FC10Au);   // 08700 rotmi r10,r2,-1
+    s.instructions++; op_lqx(s, 0x38834487u);   // 08704 lqx r7,r9,r13
+    s.instructions++; op_il(s, 0x40800005u);   // 08708 il r5,0x0
+    s.instructions++; op_cgt(s, 0x4802050Bu);   // 0870c cgt r11,r10,r8
+    s.instructions++; op_sf(s, 0x08020503u);   // 08710 sf r3,r10,r8
+    s.instructions++; op_ceqi(s, 0x7C000582u);   // 08718 ceqi r2,r11,0
+    s.instructions++; op_shufb(s, 0xB0E1C60Fu);   // 0871c shufb r7,r12,r7,r15
+    s.instructions++; op_ori(s, 0x0400040Cu);   // 08720 ori r12,r8,0
+    s.instructions++; op_selb(s, 0x80A0C282u);   // 08724 selb r5,r5,r3,r2
+    s.instructions++; op_ceqi(s, 0x7C000588u);   // 08728 ceqi r8,r11,0
+    s.instructions++; op_cgti(s, 0x4CFFC283u);   // 08730 cgti r3,r5,-1
+    s.instructions++; op_stqx(s, 0x28834487u);   // 08734 stqx r7,r9,r13
+    s.instructions++; op_ai(s, 0x1C3FC282u);   // 08738 ai r2,r5,255
+    s.instructions++; op_lqx(s, 0x38838487u);   // 0873c lqx r7,r9,r14
+    s.instructions++; op_selb(s, 0x81428608u);   // 08740 selb r10,r12,r10,r8
+    s.instructions++; op_selb(s, 0x80414103u);   // 08744 selb r2,r2,r5,r3
+    s.instructions++; op_ceqi(s, 0x7C000503u);   // 08748 ceqi r3,r10,0
+    s.instructions++; op_rotmai(s, 0x0F5E010Bu);   // 0874c rotmai r11,r2,-8
+    s.instructions++; op_nor(s, 0x0920C183u);   // 08750 nor r3,r3,r3
+    s.instructions++; op_il(s, 0x40800A0Cu);   // 08758 il r12,0x14
+    s.instructions++; op_shufb(s, 0xB0E1C211u);   // 0875c shufb r7,r4,r7,r17
+    s.instructions++; op_sfi(s, 0x0C000183u);   // 08760 sfi r3,r3,0
+    s.instructions++; op_shli(s, 0x0F620582u);   // 08768 shli r2,r11,8
+    s.instructions++; op_cwx(s, 0x3AC3048Du);   // 0876c cwx r13,r9,r12
+    s.instructions++; op_andi(s, 0x143FC184u);   // 08770 andi r4,r3,255
+    s.instructions++; op_ceqbi(s, 0x7E000183u);   // 08778 ceqbi r3,r3,0
+    s.instructions++; op_stqx(s, 0x28838487u);   // 0877c stqx r7,r9,r14
+    s.instructions++; op_ai(s, 0x1C060487u);   // 08780 ai r7,r9,24
+    s.instructions++; op_lqx(s, 0x38840488u);   // 08784 lqx r8,r9,r16
+    s.instructions++; op_sf(s, 0x08014105u);   // 08788 sf r5,r2,r5
+    s.instructions++; op_xsbh(s, 0x56C00183u);   // 0878c xsbh r3,r3,r0
+    s.instructions++; op_ceqi(s, 0x7C000282u);   // 08790 ceqi r2,r5,0
+    s.instructions++; op_nor(s, 0x09208102u);   // 08794 nor r2,r2,r2
+    s.instructions++; op_sfi(s, 0x0C00010Eu);   // 08798 sfi r14,r2,0
+    s.instructions++; op_ilhu(s, 0x41000202u);   // 0879c ilhu r2,0x4
+    s.instructions++; op_iohl(s, 0x608C0402u);   // 087a0 iohl r2,0x1808
+    s.instructions++; op_shufb(s, 0xB1020112u);   // 087a4 shufb r8,r2,r8,r18
+    s.instructions++; op_andi(s, 0x143FC702u);   // 087a8 andi r2,r14,255
+    s.instructions++; op_a(s, 0x1802C102u);   // 087ac a r2,r2,r11
+    s.instructions++; op_stqx(s, 0x28840488u);   // 087b4 stqx r8,r9,r16
+    s.instructions++; op_a(s, 0x18008204u);   // 087b8 a r4,r4,r2
+    s.instructions++; op_lqd(s, 0x34004488u);   // 087bc lqd r8,16(r9)
+    s.instructions++; op_ilhu(s, 0x41200002u);   // 087c0 ilhu r2,0x4000
+    s.instructions++; op_shli(s, 0x0F648204u);   // 087c4 shli r4,r4,18
+    s.instructions++; op_iohl(s, 0x608C1202u);   // 087c8 iohl r2,0x1824
+    s.instructions++; op_or_(s, 0x08208204u);   // 087d0 or r4,r4,r2
+    s.instructions++; op_shufb(s, 0xB1020313u);   // 087d4 shufb r8,r6,r8,r19
+    s.instructions++; op_stqd(s, 0x24004488u);   // 087d8 stqd r8,16(r9)
+    s.instructions++; op_lqx(s, 0x38830482u);   // 087dc lqx r2,r9,r12
+    s.instructions++; op_shufb(s, 0xB040820Du);   // 087e0 shufb r2,r4,r2,r13
+    s.instructions++; op_stqx(s, 0x28830482u);   // 087e4 stqx r2,r9,r12
+    s.instructions++; if ((s.pref(3) & 0xFFFF) == 0) goto L_088b0;   // 087ec brhz r3,0x88b0
+    s.instructions++; op_ori(s, 0x04000503u);   // 087f0 ori r3,r10,0
+    s.instructions++; if (s.pref(11) == 0) goto L_08830;   // 087f4 brz r11,0x8830
+L_087f8:
+    s.instructions++; op_il(s, 0x40800009u);   // 087f8 il r9,0x0
+    s.instructions++; op_ilhu(s, 0x417F800Au);   // 08800 ilhu r10,0xff00
+L_08808:
+    s.instructions++; op_or_(s, 0x08228188u);   // 08808 or r8,r3,r10
+    s.instructions++; op_lqd(s, 0x34000384u);   // 0880c lqd r4,0(r7)
+    s.instructions++; op_ai(s, 0x1C004489u);   // 08810 ai r9,r9,1
+    s.instructions++; op_cwd(s, 0x3EC00386u);   // 08814 cwd r6,r7,0
+    s.instructions++; op_ai(s, 0x1C400183u);   // 08818 ai r3,r3,256
+    s.instructions++; op_clgt(s, 0x58024582u);   // 0881c clgt r2,r11,r9
+    s.instructions++; op_shufb(s, 0xB0810406u);   // 08820 shufb r4,r8,r4,r6
+    s.instructions++; op_stqd(s, 0x24000384u);   // 08824 stqd r4,0(r7)
+    s.instructions++; op_ai(s, 0x1C010387u);   // 08828 ai r7,r7,4
+    s.instructions++; if (s.pref(2) != 0) goto L_08808;   // 0882c brnz r2,0x8808
+L_08830:
+    s.instructions++; op_ceqbi(s, 0x7E000702u);   // 08830 ceqbi r2,r14,0
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 08834 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_08880;   // 0883c brhz r2,0x8880
+L_08840:
+    s.instructions++; op_ilhu(s, 0x41000202u);   // 08840 ilhu r2,0x4
+    s.instructions++; op_lqd(s, 0x34000383u);   // 08844 lqd r3,0(r7)
+    s.instructions++; op_il(s, 0x40800205u);   // 08848 il r5,0x4
+    s.instructions++; op_cwd(s, 0x3EC00384u);   // 0884c cwd r4,r7,0
+    s.instructions++; op_iohl(s, 0x608C0402u);   // 08850 iohl r2,0x1808
+    s.instructions++; op_ai(s, 0x1C020389u);   // 08858 ai r9,r7,8
+    s.instructions++; op_cwx(s, 0x3AC14386u);   // 0885c cwx r6,r7,r5
+    s.instructions++; op_shufb(s, 0xB060C104u);   // 08860 shufb r3,r2,r3,r4
+    s.instructions++; op_stqd(s, 0x24000383u);   // 08864 stqd r3,0(r7)
+    s.instructions++; op_il(s, 0x40800003u);   // 08868 il r3,0x0
+    s.instructions++; op_lqx(s, 0x38814382u);   // 0886c lqx r2,r7,r5
+    s.instructions++; op_shufb(s, 0xB0408186u);   // 08870 shufb r2,r3,r2,r6
+    s.instructions++; op_stqx(s, 0x28814382u);   // 08874 stqx r2,r7,r5
+L_08878:
+    s.instructions++; op_ori(s, 0x04000483u);   // 08878 ori r3,r9,0
+    s.instructions++;   // 0887c bi r0,r0,r0
+    s.pc = 0x0887C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_08880:
+    s.instructions++; op_ai(s, 0x1CFFC282u);   // 08880 ai r2,r5,-1
+    s.instructions++; op_lqd(s, 0x34000384u);   // 0888c lqd r4,0(r7)
+    s.instructions++; op_shli(s, 0x0F660102u);   // 08890 shli r2,r2,24
+    s.instructions++; op_cwd(s, 0x3EC00385u);   // 08894 cwd r5,r7,0
+    s.instructions++; op_or_(s, 0x0820C102u);   // 08898 or r2,r2,r3
+    s.instructions++; op_shufb(s, 0xB0810105u);   // 0889c shufb r4,r2,r4,r5
+    s.instructions++; op_stqd(s, 0x24000384u);   // 088a0 stqd r4,0(r7)
+    s.instructions++; op_ai(s, 0x1C010387u);   // 088a4 ai r7,r7,4
+    s.instructions++; goto L_08840;   // 088ac br r0,0x8840
+L_088b0:
+    s.instructions++; op_ai(s, 0x1CFFC502u);   // 088b0 ai r2,r10,-1
+    s.instructions++; op_lqd(s, 0x34000383u);   // 088bc lqd r3,0(r7)
+    s.instructions++; op_shli(s, 0x0F660102u);   // 088c0 shli r2,r2,24
+    s.instructions++; op_cwd(s, 0x3EC00384u);   // 088c4 cwd r4,r7,0
+    s.instructions++; op_shufb(s, 0xB060C104u);   // 088c8 shufb r3,r2,r3,r4
+    s.instructions++; op_stqd(s, 0x24000383u);   // 088cc stqd r3,0(r7)
+    s.instructions++; op_ai(s, 0x1C070487u);   // 088d0 ai r7,r9,28
+    s.instructions++; op_shlqbyi(s, 0x3FE00503u);   // 088d4 shlqbyi r3,r10,0
+    s.instructions++; if (s.pref(11) == 0) goto L_08830;   // 088d8 brz r11,0x8830
+    s.instructions++; goto L_087f8;   // 088dc br r0,0x87f8
+}
+bool geomfn_088e0(SPUThread& s) {
+    u32 to;
+    goto L_088e0;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x088E0: goto L_088e0;
+    case 0x08910: goto L_08910;
+    case 0x08938: goto L_08938;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_088e0:
+    s.instructions++; op_il(s, 0x4080BC02u);   // 088e0 il r2,0x178
+    s.instructions++; op_lqd(s, 0x340E8185u);   // 088ec lqd r5,928(r3)
+    s.instructions++; op_a(s, 0x18008184u);   // 088f0 a r4,r3,r2
+    s.instructions++; op_lqx(s, 0x38808182u);   // 088f4 lqx r2,r3,r2
+    s.instructions++; op_rotqby(s, 0x3B80C288u);   // 088f8 rotqby r8,r5,r3
+    s.instructions++; op_rotqby(s, 0x3B81010Bu);   // 088fc rotqby r11,r2,r4
+    s.instructions++; op_ai(s, 0x1C01C582u);   // 08900 ai r2,r11,7
+    s.instructions++; op_andi(s, 0x14FE010Au);   // 08904 andi r10,r2,-8
+    s.instructions++; if (s.pref(10) == 0) goto L_08938;   // 08908 brz r10,0x8938
+    s.instructions++; op_il(s, 0x40800007u);   // 0890c il r7,0x0
+L_08910:
+    s.instructions++; op_a(s, 0x1801C385u);   // 08910 a r5,r7,r7
+    s.instructions++; op_shlhi(s, 0x0FE10389u);   // 08914 shlhi r9,r7,4
+    s.instructions++; op_ai(s, 0x1C004387u);   // 08918 ai r7,r7,1
+    s.instructions++; op_lqx(s, 0x38820284u);   // 0891c lqx r4,r5,r8
+    s.instructions++; op_chx(s, 0x3AA20286u);   // 08920 chx r6,r5,r8
+    s.instructions++; op_ceq(s, 0x7801C502u);   // 08924 ceq r2,r10,r7
+    s.instructions++; op_shufb(s, 0xB0810486u);   // 08928 shufb r4,r9,r4,r6
+    s.instructions++; op_stqx(s, 0x28820284u);   // 0892c stqx r4,r5,r8
+    s.instructions++; if (s.pref(2) == 0) goto L_08910;   // 08934 brz r2,0x8910
+L_08938:
+    s.instructions++; op_il(s, 0x4081D205u);   // 08938 il r5,0x3a4
+    s.instructions++; op_il(s, 0x4081D406u);   // 08940 il r6,0x3a8
+    s.instructions++; op_lqx(s, 0x38814182u);   // 08944 lqx r2,r3,r5
+    s.instructions++; op_cwx(s, 0x3AC14184u);   // 08948 cwx r4,r3,r5
+    s.instructions++; op_cwx(s, 0x3AC18187u);   // 0894c cwx r7,r3,r6
+    s.instructions++; op_shufb(s, 0xB0408584u);   // 08950 shufb r2,r11,r2,r4
+    s.instructions++; op_il(s, 0x40FFFF84u);   // 08954 il r4,0xffff
+    s.instructions++; op_stqx(s, 0x28814182u);   // 08958 stqx r2,r3,r5
+    s.instructions++; op_lqx(s, 0x38818182u);   // 0895c lqx r2,r3,r6
+    s.instructions++; op_shufb(s, 0xB0408207u);   // 08960 shufb r2,r4,r2,r7
+    s.instructions++; op_stqx(s, 0x28818182u);   // 08964 stqx r2,r3,r6
+    s.instructions++;   // 08968 bi r0,r0,r0
+    s.pc = 0x08968; op_bi(s, 0x35000000u);
     if (s.interrupts && (s.event_stat & s.event_mask)) return false;
     return true;
 }
@@ -114,7 +3808,8 @@ L_089bc:
     s.instructions++; op_andi(s, 0x14FC0204u);   // 089c8 andi r4,r4,-16
     s.instructions++; op_a(s, 0x18010204u);   // 089d0 a r4,r4,r4
     s.instructions++; s.set_pref(0, 0x089D8);   // 089d4 brsl r0,0x41c0
-    if (!geomfn_041c0(s) || s.pc != 0x089D8) return false;
+    if (!geomfn_041c0(s)) s.run_until(0x089D8);
+    if (s.halted || s.pc != 0x089D8) return false;
 L_089d8:
     s.instructions++; op_lqd(s, 0x340EA805u);   // 089dc lqd r5,928(r80)
     s.instructions++; op_il(s, 0x4081D207u);   // 089e0 il r7,0x3a4
@@ -140,6 +3835,1634 @@ L_089d8:
     s.instructions++; op_lqd(s, 0x34FF80D1u);   // 08a34 lqd r81,-32(r1)
     s.instructions++; op_lqd(s, 0x34FF40D2u);   // 08a38 lqd r82,-48(r1)
     s.instructions++; goto L_088e0;   // 08a3c br r0,0x88e0
+}
+bool geomfn_08ab0(SPUThread& s) {
+    u32 to;
+    goto L_08ab0;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x08AB0: goto L_08ab0;
+    case 0x08B10: goto L_08b10;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_08ab0:
+    s.instructions++; op_il(s, 0x40810C02u);   // 08ab0 il r2,0x218
+    s.instructions++; op_lqd(s, 0x34084187u);   // 08ab4 lqd r7,528(r3)
+    s.instructions++; op_il(s, 0x40800109u);   // 08ab8 il r9,0x2
+    s.instructions++; op_a(s, 0x18008186u);   // 08ac0 a r6,r3,r2
+    s.instructions++; op_lqx(s, 0x38808184u);   // 08ac4 lqx r4,r3,r2
+    s.instructions++; op_ai(s, 0x1C010102u);   // 08ac8 ai r2,r2,4
+    s.instructions++; op_a(s, 0x18008185u);   // 08ad0 a r5,r3,r2
+    s.instructions++; op_lqx(s, 0x38808182u);   // 08ad4 lqx r2,r3,r2
+    s.instructions++; op_rotqby(s, 0x3B80C38Du);   // 08ad8 rotqby r13,r7,r3
+    s.instructions++; op_rotqby(s, 0x3B818208u);   // 08adc rotqby r8,r4,r6
+    s.instructions++; op_rotqby(s, 0x3B81410Fu);   // 08ae4 rotqby r15,r2,r5
+    s.instructions++; op_a(s, 0x18024402u);   // 08ae8 a r2,r8,r9
+    s.instructions++; op_lqx(s, 0x38824403u);   // 08aec lqx r3,r8,r9
+    s.instructions++; op_ai(s, 0x1C038102u);   // 08af0 ai r2,r2,14
+    s.instructions++; op_rotqby(s, 0x3B808182u);   // 08af4 rotqby r2,r3,r2
+    s.instructions++;   // 08afc bihz r2,r0,r0
+    if ((s.pref(2) & 0xFFFF) == 0) {
+        s.pc = 0x08AFC; op_bihz(s, 0x25400002u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_ila(s, 0x427FFF93u);   // 08b00 ila r19,0xffff
+    s.instructions++; op_il(s, 0x40800410u);   // 08b08 il r16,0x8
+    s.instructions++; op_il(s, 0x40800312u);   // 08b0c il r18,0x6
+L_08b10:
+    s.instructions++; op_ai(s, 0x1C038403u);   // 08b10 ai r3,r8,14
+    s.instructions++; op_lqd(s, 0x34000405u);   // 08b14 lqd r5,0(r8)
+    s.instructions++; op_and_(s, 0x1824C102u);   // 08b18 and r2,r2,r19
+    s.instructions++; op_a(s, 0x1804840Bu);   // 08b1c a r11,r8,r18
+    s.instructions++; op_shli(s, 0x0F610102u);   // 08b20 shli r2,r2,4
+    s.instructions++; op_ai(s, 0x1C03858Bu);   // 08b24 ai r11,r11,14
+    s.instructions++; op_ai(s, 0x1C010404u);   // 08b28 ai r4,r8,4
+    s.instructions++; op_rotqby(s, 0x3B80C283u);   // 08b2c rotqby r3,r5,r3
+    s.instructions++; op_a(s, 0x18008689u);   // 08b30 a r9,r13,r2
+    s.instructions++; op_lqx(s, 0x38808685u);   // 08b34 lqx r5,r13,r2
+    s.instructions++; op_cdx(s, 0x3AE0868Eu);   // 08b38 cdx r14,r13,r2
+    s.instructions++; op_cdx(s, 0x3AE40491u);   // 08b3c cdx r17,r9,r16
+    s.instructions++; op_and_(s, 0x1824C183u);   // 08b40 and r3,r3,r19
+    s.instructions++; op_shli(s, 0x0F610183u);   // 08b44 shli r3,r3,4
+    s.instructions++; op_a(s, 0x1800C78Au);   // 08b48 a r10,r15,r3
+    s.instructions++; op_lqx(s, 0x3880C786u);   // 08b4c lqx r6,r15,r3
+    s.instructions++; op_a(s, 0x1804050Cu);   // 08b50 a r12,r10,r16
+    s.instructions++; op_rotqby(s, 0x3B828303u);   // 08b54 rotqby r3,r6,r10
+    s.instructions++; op_shufb(s, 0xB0A1418Eu);   // 08b58 shufb r5,r3,r5,r14
+    s.instructions++; op_stqx(s, 0x28808685u);   // 08b5c stqx r5,r13,r2
+    s.instructions++; op_lqx(s, 0x38840503u);   // 08b60 lqx r3,r10,r16
+    s.instructions++; op_lqx(s, 0x38840482u);   // 08b64 lqx r2,r9,r16
+    s.instructions++; op_rotqby(s, 0x3B830183u);   // 08b68 rotqby r3,r3,r12
+    s.instructions++; op_shufb(s, 0xB0408191u);   // 08b6c shufb r2,r3,r2,r17
+    s.instructions++; op_stqx(s, 0x28840482u);   // 08b70 stqx r2,r9,r16
+    s.instructions++; op_lqx(s, 0x38848402u);   // 08b74 lqx r2,r8,r18
+    s.instructions++; op_ori(s, 0x04000208u);   // 08b78 ori r8,r4,0
+    s.instructions++; op_rotqby(s, 0x3B82C102u);   // 08b7c rotqby r2,r2,r11
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_08b10;   // 08b80 brhnz r2,0x8b10
+    s.instructions++;   // 08b84 bi r0,r0,r0
+    s.pc = 0x08B84; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_08c80(SPUThread& s) {
+    u32 to;
+    goto L_08c80;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x08C80: goto L_08c80;
+    case 0x08CDC: goto L_08cdc;
+    case 0x08CF0: goto L_08cf0;
+    case 0x08D08: goto L_08d08;
+    case 0x08D14: goto L_08d14;
+    case 0x08D38: goto L_08d38;
+    case 0x08D80: goto L_08d80;
+    case 0x08DD8: goto L_08dd8;
+    case 0x08DF8: goto L_08df8;
+    case 0x08E08: goto L_08e08;
+    case 0x08E90: goto L_08e90;
+    case 0x08EB0: goto L_08eb0;
+    case 0x08EF0: goto L_08ef0;
+    case 0x08F00: goto L_08f00;
+    case 0x08F10: goto L_08f10;
+    case 0x08F20: goto L_08f20;
+    case 0x08F88: goto L_08f88;
+    case 0x08FD4: goto L_08fd4;
+    case 0x09008: goto L_09008;
+    case 0x09038: goto L_09038;
+    case 0x090B0: goto L_090b0;
+    case 0x090C8: goto L_090c8;
+    case 0x090D0: goto L_090d0;
+    case 0x090E8: goto L_090e8;
+    case 0x09108: goto L_09108;
+    case 0x09138: goto L_09138;
+    case 0x09180: goto L_09180;
+    case 0x09188: goto L_09188;
+    case 0x09210: goto L_09210;
+    case 0x09218: goto L_09218;
+    case 0x09230: goto L_09230;
+    case 0x092D8: goto L_092d8;
+    case 0x09308: goto L_09308;
+    case 0x09378: goto L_09378;
+    case 0x09388: goto L_09388;
+    case 0x093C0: goto L_093c0;
+    case 0x093E8: goto L_093e8;
+    case 0x09420: goto L_09420;
+    case 0x0942C: goto L_0942c;
+    case 0x09498: goto L_09498;
+    case 0x094B4: goto L_094b4;
+    case 0x094D0: goto L_094d0;
+    case 0x09500: goto L_09500;
+    case 0x09680: goto L_09680;
+    case 0x09694: goto L_09694;
+    case 0x096C0: goto L_096c0;
+    case 0x096D8: goto L_096d8;
+    case 0x096F8: goto L_096f8;
+    case 0x096FC: goto L_096fc;
+    case 0x09718: goto L_09718;
+    case 0x09730: goto L_09730;
+    case 0x09740: goto L_09740;
+    case 0x09750: goto L_09750;
+    case 0x09760: goto L_09760;
+    case 0x097D0: goto L_097d0;
+    case 0x09808: goto L_09808;
+    case 0x09830: goto L_09830;
+    case 0x09838: goto L_09838;
+    case 0x098A8: goto L_098a8;
+    case 0x098D0: goto L_098d0;
+    case 0x098D8: goto L_098d8;
+    case 0x098F8: goto L_098f8;
+    case 0x09900: goto L_09900;
+    case 0x09940: goto L_09940;
+    case 0x09988: goto L_09988;
+    case 0x099A0: goto L_099a0;
+    case 0x099A8: goto L_099a8;
+    case 0x09A20: goto L_09a20;
+    case 0x09A28: goto L_09a28;
+    case 0x09A38: goto L_09a38;
+    case 0x09A48: goto L_09a48;
+    case 0x09A98: goto L_09a98;
+    case 0x09B00: goto L_09b00;
+    case 0x09B08: goto L_09b08;
+    case 0x09B20: goto L_09b20;
+    case 0x09B90: goto L_09b90;
+    case 0x09BA8: goto L_09ba8;
+    case 0x09C80: goto L_09c80;
+    case 0x09C90: goto L_09c90;
+    case 0x09CC0: goto L_09cc0;
+    case 0x09CC8: goto L_09cc8;
+    case 0x09CE0: goto L_09ce0;
+    case 0x09D10: goto L_09d10;
+    case 0x09D20: goto L_09d20;
+    case 0x09D98: goto L_09d98;
+    case 0x09DC0: goto L_09dc0;
+    case 0x09EC0: goto L_09ec0;
+    case 0x09EC8: goto L_09ec8;
+    case 0x09ED0: goto L_09ed0;
+    case 0x09F00: goto L_09f00;
+    case 0x09F18: goto L_09f18;
+    case 0x09F20: goto L_09f20;
+    case 0x09FAC: goto L_09fac;
+    case 0x09FB0: goto L_09fb0;
+    case 0x09FC0: goto L_09fc0;
+    case 0x09FC8: goto L_09fc8;
+    case 0x09FCC: goto L_09fcc;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_08c80:
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 08c84 stqd r82,-48(r1)
+    s.instructions++; op_ori(s, 0x040001D2u);   // 08c88 ori r82,r3,0
+    s.instructions++; op_stqd(s, 0x24FE40D6u);   // 08c8c stqd r86,-112(r1)
+    s.instructions++; op_stqd(s, 0x24004080u);   // 08c90 stqd r0,16(r1)
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 08c94 stqd r80,-16(r1)
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 08c98 stqd r81,-32(r1)
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 08c9c stqd r83,-64(r1)
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 08ca0 stqd r84,-80(r1)
+    s.instructions++; op_stqd(s, 0x24FE80D5u);   // 08ca4 stqd r85,-96(r1)
+    s.instructions++; op_stqd(s, 0x24FE00D7u);   // 08ca8 stqd r87,-128(r1)
+    s.instructions++; op_stqd(s, 0x24FDC0D8u);   // 08cac stqd r88,-144(r1)
+    s.instructions++; op_stqd(s, 0x24FD80D9u);   // 08cb0 stqd r89,-160(r1)
+    s.instructions++; op_stqd(s, 0x24FD40DAu);   // 08cb4 stqd r90,-176(r1)
+    s.instructions++; op_stqd(s, 0x24FD00DBu);   // 08cb8 stqd r91,-192(r1)
+    s.instructions++; op_stqd(s, 0x24F84081u);   // 08cbc stqd r1,-496(r1)
+    s.instructions++; op_ai(s, 0x1C840081u);   // 08cc0 ai r1,r1,-496
+    s.instructions++; op_stqd(s, 0x24044084u);   // 08ccc stqd r4,272(r1)
+    s.instructions++; op_il(s, 0x40800084u);   // 08cd0 il r4,0x1
+    s.instructions++; op_stqd(s, 0x24048085u);   // 08cd4 stqd r5,288(r1)
+    s.instructions++; s.set_pref(0, 0x08CDC);   // 08cd8 brsl r0,0x8970
+    if (!geomfn_08970(s)) s.run_until(0x08CDC);
+    if (s.halted || s.pc != 0x08CDC) return false;
+L_08cdc:
+    s.instructions++; op_lqd(s, 0x34086903u);   // 08cdc lqd r3,528(r82)
+    s.instructions++; op_il(s, 0x40810802u);   // 08ce0 il r2,0x210
+    s.instructions++; op_a(s, 0x1800A956u);   // 08ce4 a r86,r82,r2
+    s.instructions++; op_rotqby(s, 0x3B948183u);   // 08ce8 rotqby r3,r3,r82
+    s.instructions++; if (s.pref(3) != 0) goto L_09ec8;   // 08cec brnz r3,0x9ec8
+L_08cf0:
+    s.instructions++; op_il(s, 0x40823802u);   // 08cf0 il r2,0x470
+    s.instructions++; op_lqd(s, 0x3411E903u);   // 08cf4 lqd r3,1136(r82)
+    s.instructions++; op_a(s, 0x1800A95Bu);   // 08cf8 a r91,r82,r2
+    s.instructions++; op_rotqby(s, 0x3B948183u);   // 08cfc rotqby r3,r3,r82
+    s.instructions++; if (s.pref(3) != 0) goto L_09d20;   // 08d04 brnz r3,0x9d20
+L_08d08:
+    s.instructions++; op_ori(s, 0x04002903u);   // 08d08 ori r3,r82,0
+    s.instructions++; op_fsmbi(s, 0x32800004u);   // 08d0c fsmbi r4,0x0
+    s.instructions++; s.set_pref(0, 0x08D14);   // 08d10 brsl r0,0x44c8
+    if (!geomfn_044c8(s)) s.run_until(0x08D14);
+    if (s.halted || s.pc != 0x08D14) return false;
+L_08d14:
+    s.instructions++; op_lqd(s, 0x34092903u);   // 08d14 lqd r3,576(r82)
+    s.instructions++; op_il(s, 0x40812002u);   // 08d18 il r2,0x240
+    s.instructions++; op_a(s, 0x1800A953u);   // 08d1c a r83,r82,r2
+    s.instructions++; op_rotqby(s, 0x3B9481D1u);   // 08d20 rotqby r81,r3,r82
+    s.instructions++; op_ai(s, 0x1C062883u);   // 08d24 ai r3,r81,24
+    s.instructions++; op_lqd(s, 0x34000182u);   // 08d28 lqd r2,0(r3)
+    s.instructions++; op_rotqby(s, 0x3B80C159u);   // 08d2c rotqby r89,r2,r3
+    s.instructions++; if (s.pref(89) != 0) goto L_09cc8;   // 08d34 brnz r89,0x9cc8
+L_08d38:
+    s.instructions++; op_ai(s, 0x1C092888u);   // 08d38 ai r8,r81,36
+    s.instructions++; op_ai(s, 0x1C612902u);   // 08d40 ai r2,r82,388
+    s.instructions++; op_lqd(s, 0x34062904u);   // 08d44 lqd r4,384(r82)
+    s.instructions++; op_ori(s, 0x04002903u);   // 08d48 ori r3,r82,0
+    s.instructions++; op_lqd(s, 0x34000409u);   // 08d4c lqd r9,0(r8)
+    s.instructions++; op_il(s, 0x40800805u);   // 08d50 il r5,0x10
+    s.instructions++; op_lqd(s, 0x3400010Au);   // 08d54 lqd r10,0(r2)
+    s.instructions++; op_il(s, 0x40800006u);   // 08d58 il r6,0x0
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 08d5c fsmbi r7,0x0
+    s.instructions++; op_rotqby(s, 0x3B948204u);   // 08d60 rotqby r4,r4,r82
+    s.instructions++; op_rotqby(s, 0x3B8204D0u);   // 08d64 rotqby r80,r9,r8
+    s.instructions++; op_rotqby(s, 0x3B808502u);   // 08d6c rotqby r2,r10,r2
+    s.instructions++; op_sf(s, 0x08010154u);   // 08d70 sf r84,r2,r4
+    s.instructions++; op_shlqbyi(s, 0x3FE02804u);   // 08d74 shlqbyi r4,r80,0
+    s.instructions++; op_andi(s, 0x14FF2850u);   // 08d78 andi r80,r80,-4
+    s.instructions++; s.set_pref(0, 0x08D80);   // 08d7c brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x08D80);
+    if (s.halted || s.pc != 0x08D80) return false;
+L_08d80:
+    s.instructions++; op_lqd(s, 0x34002B02u);   // 08d80 lqd r2,0(r86)
+    s.instructions++; op_ori(s, 0x0400018Bu);   // 08d84 ori r11,r3,0
+    s.instructions++; op_a(s, 0x181401D0u);   // 08d88 a r80,r3,r80
+    s.instructions++; op_rotqby(s, 0x3B958102u);   // 08d8c rotqby r2,r2,r86
+    s.instructions++; if (s.pref(2) == 0) goto L_08dd8;   // 08d94 brz r2,0x8dd8
+    s.instructions++; op_ilhu(s, 0x41000202u);   // 08d98 ilhu r2,0x4
+    s.instructions++; op_lqd(s, 0x34000184u);   // 08d9c lqd r4,0(r3)
+    s.instructions++; op_ai(s, 0x1C010185u);   // 08da0 ai r5,r3,4
+    s.instructions++; op_cwd(s, 0x3EC00186u);   // 08da4 cwd r6,r3,0
+    s.instructions++; op_iohl(s, 0x60847202u);   // 08da8 iohl r2,0x8e4
+    s.instructions++; op_ai(s, 0x1C02018Bu);   // 08db0 ai r11,r3,8
+    s.instructions++; op_cwd(s, 0x3EC00287u);   // 08db4 cwd r7,r5,0
+    s.instructions++; op_shufb(s, 0xB0810106u);   // 08db8 shufb r4,r2,r4,r6
+    s.instructions++; op_stqd(s, 0x24000184u);   // 08dbc stqd r4,0(r3)
+    s.instructions++; op_lqd(s, 0x3408A903u);   // 08dc0 lqd r3,544(r82)
+    s.instructions++; op_lqd(s, 0x34000282u);   // 08dc4 lqd r2,0(r5)
+    s.instructions++; op_rotqby(s, 0x3B948183u);   // 08dc8 rotqby r3,r3,r82
+    s.instructions++; op_shufb(s, 0xB0408187u);   // 08dcc shufb r2,r3,r2,r7
+    s.instructions++; op_stqd(s, 0x24000282u);   // 08dd4 stqd r2,0(r5)
+L_08dd8:
+    s.instructions++; op_il(s, 0x40819802u);   // 08dd8 il r2,0x330
+    s.instructions++; op_fsmbi(s, 0x3280000Du);   // 08ddc fsmbi r13,0x0
+    s.instructions++; op_il(s, 0x4081B003u);   // 08de0 il r3,0x360
+    s.instructions++; op_a(s, 0x1800A910u);   // 08de4 a r16,r82,r2
+    s.instructions++; op_a(s, 0x1800E90Au);   // 08de8 a r10,r82,r3
+    s.instructions++; op_il(s, 0x40800111u);   // 08dec il r17,0x2
+    s.instructions++; op_ila(s, 0x427FFF92u);   // 08df0 ila r18,0xffff
+    s.instructions++; goto L_08e08;   // 08df4 br r0,0x8e08
+L_08df8:
+    s.instructions++; op_ai(s, 0x1C00868Du);   // 08df8 ai r13,r13,2
+    s.instructions++; op_ai(s, 0x1C01050Au);   // 08dfc ai r10,r10,4
+    s.instructions++; op_ceqi(s, 0x7C040682u);   // 08e00 ceqi r2,r13,16
+    s.instructions++; if (s.pref(2) != 0) goto L_08f00;   // 08e04 brnz r2,0x8f00
+L_08e08:
+    s.instructions++; op_lqd(s, 0x34000802u);   // 08e08 lqd r2,0(r16)
+    s.instructions++; op_lqd(s, 0x34000503u);   // 08e0c lqd r3,0(r10)
+    s.instructions++; op_rotqby(s, 0x3B840104u);   // 08e14 rotqby r4,r2,r16
+    s.instructions++; op_rotqby(s, 0x3B82818Fu);   // 08e18 rotqby r15,r3,r10
+    s.instructions++; op_a(s, 0x18010683u);   // 08e1c a r3,r13,r4
+    s.instructions++; op_ceqi(s, 0x7C000785u);   // 08e20 ceqi r5,r15,0
+    s.instructions++; op_a(s, 0x18044182u);   // 08e28 a r2,r3,r17
+    s.instructions++; op_lqx(s, 0x38844183u);   // 08e2c lqx r3,r3,r17
+    s.instructions++; op_ori(s, 0x04000286u);   // 08e30 ori r6,r5,0
+    s.instructions++; op_ai(s, 0x1C038102u);   // 08e34 ai r2,r2,14
+    s.instructions++; op_rotqby(s, 0x3B808182u);   // 08e38 rotqby r2,r3,r2
+    s.instructions++; op_and_(s, 0x18248102u);   // 08e3c and r2,r2,r18
+    s.instructions++; op_a(s, 0x18010103u);   // 08e40 a r3,r2,r4
+    s.instructions++; op_lqx(s, 0x38810105u);   // 08e44 lqx r5,r2,r4
+    s.instructions++; op_ori(s, 0x04000182u);   // 08e48 ori r2,r3,0
+    s.instructions++; op_ai(s, 0x1C038183u);   // 08e4c ai r3,r3,14
+    s.instructions++; op_ceqi(s, 0x7C000104u);   // 08e50 ceqi r4,r2,0
+    s.instructions++; op_ai(s, 0x1C010107u);   // 08e54 ai r7,r2,4
+    s.instructions++; op_rotqby(s, 0x3B80C282u);   // 08e58 rotqby r2,r5,r3
+    s.instructions++; op_ceqhi(s, 0x7D000103u);   // 08e5c ceqhi r3,r2,0
+    s.instructions++; op_and_(s, 0x1824810Eu);   // 08e60 and r14,r2,r18
+    s.instructions++; op_xshw(s, 0x55C00183u);   // 08e64 xshw r3,r3,r0
+    s.instructions++; op_or_(s, 0x0820C303u);   // 08e68 or r3,r6,r3
+    s.instructions++; op_ceqi(s, 0x7C000183u);   // 08e6c ceqi r3,r3,0
+    s.instructions++; op_nor(s, 0x0920C183u);   // 08e70 nor r3,r3,r3
+    s.instructions++; op_or_(s, 0x0820C202u);   // 08e74 or r2,r4,r3
+    s.instructions++; if (s.pref(2) != 0) goto L_08df8;   // 08e78 brnz r2,0x8df8
+    s.instructions++; op_il(s, 0x4080000Cu);   // 08e7c il r12,0x0
+    s.instructions++; op_il(s, 0x40800193u);   // 08e80 il r19,0x3
+    s.instructions++; op_il(s, 0x408B4015u);   // 08e84 il r21,0x1680
+    s.instructions++; op_ilhu(s, 0x41000214u);   // 08e88 ilhu r20,0x4
+L_08e90:
+    s.instructions++; op_ai(s, 0x1C034382u);   // 08e90 ai r2,r7,13
+    s.instructions++; op_il(s, 0x40800003u);   // 08e98 il r3,0x0
+    s.instructions++; op_lqd(s, 0x34000384u);   // 08e9c lqd r4,0(r7)
+    s.instructions++; op_il(s, 0x40800005u);   // 08ea0 il r5,0x0
+    s.instructions++; op_rotqby(s, 0x3B808202u);   // 08ea4 rotqby r2,r4,r2
+    s.instructions++; op_andi(s, 0x143FC106u);   // 08ea8 andi r6,r2,255
+L_08eb0:
+    s.instructions++; op_a(s, 0x18016882u);   // 08eb0 a r2,r81,r5
+    s.instructions++; op_lqx(s, 0x38816884u);   // 08eb4 lqx r4,r81,r5
+    s.instructions++; op_ai(s, 0x1C004285u);   // 08eb8 ai r5,r5,1
+    s.instructions++; op_ai(s, 0x1C034102u);   // 08ebc ai r2,r2,13
+    s.instructions++; op_rotqby(s, 0x3B808202u);   // 08ec0 rotqby r2,r4,r2
+    s.instructions++; op_andi(s, 0x143FC102u);   // 08ec4 andi r2,r2,255
+    s.instructions++; op_ceq(s, 0x78018102u);   // 08ec8 ceq r2,r2,r6
+    s.instructions++; if (s.pref(2) != 0) goto L_09308;   // 08ecc brnz r2,0x9308
+    s.instructions++; op_ahi(s, 0x1D004183u);   // 08ed0 ahi r3,r3,1
+    s.instructions++; op_ceqbi(s, 0x7E040182u);   // 08ed4 ceqbi r2,r3,16
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 08ed8 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_08eb0;   // 08edc brhz r2,0x8eb0
+    s.instructions++; op_ai(s, 0x1C00460Cu);   // 08ee0 ai r12,r12,1
+    s.instructions++; op_ai(s, 0x1C010387u);   // 08ee4 ai r7,r7,4
+    s.instructions++; op_clgt(s, 0x58030702u);   // 08ee8 clgt r2,r14,r12
+    s.instructions++; if (s.pref(2) != 0) goto L_08e90;   // 08eec brnz r2,0x8e90
+L_08ef0:
+    s.instructions++; op_ai(s, 0x1C00868Du);   // 08ef0 ai r13,r13,2
+    s.instructions++; op_ai(s, 0x1C01050Au);   // 08ef4 ai r10,r10,4
+    s.instructions++; op_ceqi(s, 0x7C040682u);   // 08ef8 ceqi r2,r13,16
+    s.instructions++; if (s.pref(2) == 0) goto L_08e08;   // 08efc brz r2,0x8e08
+L_08f00:
+    s.instructions++; op_lqd(s, 0x34122902u);   // 08f00 lqd r2,1152(r82)
+    s.instructions++; op_rotqby(s, 0x3B948102u);   // 08f04 rotqby r2,r2,r82
+    s.instructions++; if (s.pref(2) != 0) goto L_09c90;   // 08f0c brnz r2,0x9c90
+L_08f10:
+    s.instructions++; op_ori(s, 0x04002804u);   // 08f10 ori r4,r80,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00583u);   // 08f14 shlqbyi r3,r11,0
+    s.instructions++; op_il(s, 0x40800057u);   // 08f18 il r87,0x0
+    s.instructions++; s.set_pref(0, 0x08F20);   // 08f1c brsl r0,0x8660
+    if (!geomfn_08660(s)) s.run_until(0x08F20);
+    if (s.halted || s.pc != 0x08F20) return false;
+L_08f20:
+    s.instructions++; op_il(s, 0x40800054u);   // 08f20 il r84,0x0
+    s.instructions++; op_lqd(s, 0x3403C082u);   // 08f24 lqd r2,240(r1)
+    s.instructions++; op_il(s, 0x40800006u);   // 08f28 il r6,0x0
+    s.instructions++; op_cwd(s, 0x3EC00085u);   // 08f2c cwd r5,r1,0
+    s.instructions++; op_ori(s, 0x04002903u);   // 08f30 ori r3,r82,0
+    s.instructions++; op_cwd(s, 0x3EC10087u);   // 08f34 cwd r7,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20088u);   // 08f38 cwd r8,r1,8
+    s.instructions++; op_lqd(s, 0x34002984u);   // 08f3c lqd r4,0(r83)
+    s.instructions++; op_cwd(s, 0x3EC30089u);   // 08f40 cwd r9,r1,12
+    s.instructions++; op_shufb(s, 0xB0408305u);   // 08f44 shufb r2,r6,r2,r5
+    s.instructions++; op_shufb(s, 0xB0408307u);   // 08f4c shufb r2,r6,r2,r7
+    s.instructions++; op_rotqby(s, 0x3B94C204u);   // 08f50 rotqby r4,r4,r83
+    s.instructions++; op_shufb(s, 0xB0408308u);   // 08f54 shufb r2,r6,r2,r8
+    s.instructions++; op_lqd(s, 0x34008205u);   // 08f58 lqd r5,32(r4)
+    s.instructions++; op_shufb(s, 0xB0408309u);   // 08f5c shufb r2,r6,r2,r9
+    s.instructions++; op_rotqby(s, 0x3B810284u);   // 08f60 rotqby r4,r5,r4
+    s.instructions++; op_stqd(s, 0x2403C082u);   // 08f64 stqd r2,240(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 08f68 rotqbyi r6,r2,8
+    s.instructions++; op_lqd(s, 0x3403C082u);   // 08f6c lqd r2,240(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0306u);   // 08f70 rotqmbyi r6,r6,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 08f74 rotqmbyi r2,r2,-8
+    s.instructions++; op_shlqbyi(s, 0x3FE20105u);   // 08f7c shlqbyi r5,r2,8
+    s.instructions++; op_or_(s, 0x08214305u);   // 08f80 or r5,r6,r5
+    s.instructions++; s.set_pref(0, 0x08F88);   // 08f84 brsl r0,0x4368
+    if (!geomfn_04368(s)) s.run_until(0x08F88);
+    if (s.halted || s.pc != 0x08F88) return false;
+L_08f88:
+    s.instructions++; op_lqd(s, 0x34002985u);   // 08f88 lqd r5,0(r83)
+    s.instructions++; op_il(s, 0x40823A02u);   // 08f8c il r2,0x474
+    s.instructions++; op_a(s, 0x1800A904u);   // 08f90 a r4,r82,r2
+    s.instructions++; op_lqx(s, 0x3880A903u);   // 08f94 lqx r3,r82,r2
+    s.instructions++; op_ai(s, 0x1CF30102u);   // 08f98 ai r2,r2,-52
+    s.instructions++; op_ori(s, 0x04000256u);   // 08f9c ori r86,r4,0
+    s.instructions++; op_a(s, 0x1800A951u);   // 08fa0 a r81,r82,r2
+    s.instructions++; op_rotqby(s, 0x3B94C285u);   // 08fa4 rotqby r5,r5,r83
+    s.instructions++; op_ila(s, 0x42907002u);   // 08fa8 ila r2,0x120e0
+    s.instructions++; op_rotqby(s, 0x3B810183u);   // 08fac rotqby r3,r3,r4
+    s.instructions++; op_ai(s, 0x1C0B0284u);   // 08fb0 ai r4,r5,44
+    s.instructions++; op_ai(s, 0x1C034186u);   // 08fb8 ai r6,r3,13
+    s.instructions++; op_lqx(s, 0x38808182u);   // 08fbc lqx r2,r3,r2
+    s.instructions++; op_lqd(s, 0x34000203u);   // 08fc0 lqd r3,0(r4)
+    s.instructions++; op_rotqby(s, 0x3B818102u);   // 08fc4 rotqby r2,r2,r6
+    s.instructions++; op_rotqby(s, 0x3B8101D8u);   // 08fc8 rotqby r88,r3,r4
+    s.instructions++; op_andi(s, 0x143FC15Au);   // 08fcc andi r90,r2,255
+    s.instructions++; if (s.pref(88) != 0) goto L_094d0;   // 08fd0 brnz r88,0x94d0
+L_08fd4:
+    s.instructions++; if (s.pref(89) == 0) goto L_09900;   // 08fd4 brz r89,0x9900
+    s.instructions++; op_lqd(s, 0x34002983u);   // 08fd8 lqd r3,0(r83)
+    s.instructions++; op_lqa(s, 0x30A58002u);   // 08fdc lqa r2,0x12c00
+    s.instructions++; op_rotqby(s, 0x3B94C185u);   // 08fe0 rotqby r5,r3,r83
+    s.instructions++; op_lqd(s, 0x34000151u);   // 08fe4 lqd r81,0(r2)
+    s.instructions++; op_lqd(s, 0x34004103u);   // 08fe8 lqd r3,16(r2)
+    s.instructions++; op_ila(s, 0x427FFF82u);   // 08fec ila r2,0xffff
+    s.instructions++; op_ai(s, 0x1C0A0284u);   // 08ff0 ai r4,r5,40
+    s.instructions++; op_lqd(s, 0x34000206u);   // 08ff4 lqd r6,0(r4)
+    s.instructions++; op_shli(s, 0x0F6128D6u);   // 08ff8 shli r86,r81,4
+    s.instructions++; op_and_(s, 0x182081D0u);   // 08ffc and r80,r3,r2
+    s.instructions++; op_rotqby(s, 0x3B810355u);   // 09000 rotqby r85,r6,r4
+    s.instructions++; if (s.pref(85) != 0) goto L_09b08;   // 09004 brnz r85,0x9b08
+L_09008:
+    s.instructions++; op_ai(s, 0x1C060282u);   // 09008 ai r2,r5,24
+    s.instructions++; op_il(s, 0x40805004u);   // 09010 il r4,0xa0
+    s.instructions++; op_shlqbyi(s, 0x3FE02903u);   // 09014 shlqbyi r3,r82,0
+    s.instructions++; op_il(s, 0x40804005u);   // 09018 il r5,0x80
+    s.instructions++; op_lqd(s, 0x34000108u);   // 0901c lqd r8,0(r2)
+    s.instructions++; op_il(s, 0x40800006u);   // 09020 il r6,0x0
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 09024 fsmbi r7,0x0
+    s.instructions++; op_rotqby(s, 0x3B808451u);   // 09030 rotqby r81,r8,r2
+    s.instructions++; s.set_pref(0, 0x09038);   // 09034 brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x09038);
+    if (s.halted || s.pc != 0x09038) return false;
+L_09038:
+    s.instructions++; op_ai(s, 0x1C202884u);   // 09038 ai r4,r81,128
+    s.instructions++; op_il(s, 0x40800002u);   // 09040 il r2,0x0
+    s.instructions++; op_shlqbyi(s, 0x3FE02914u);   // 09044 shlqbyi r20,r82,0
+    s.instructions++; op_ai(s, 0x1C20290Cu);   // 09048 ai r12,r82,128
+    s.instructions++; op_shlqbyi(s, 0x3FE02891u);   // 0904c shlqbyi r17,r81,0
+    s.instructions++; op_ori(s, 0x04000112u);   // 09050 ori r18,r2,0
+    s.instructions++; op_shlqbyi(s, 0x3FE0018Eu);   // 09054 shlqbyi r14,r3,0
+    s.instructions++; op_il(s, 0x40805A02u);   // 09058 il r2,0xb4
+    s.instructions++; op_shlqbyi(s, 0x3FE0061Du);   // 0905c shlqbyi r29,r12,0
+    s.instructions++; op_il(s, 0x40806803u);   // 09060 il r3,0xd0
+    s.instructions++; op_shlqbyi(s, 0x3FE0021Cu);   // 09064 shlqbyi r28,r4,0
+    s.instructions++; op_ori(s, 0x04000119u);   // 09068 ori r25,r2,0
+    s.instructions++; op_fsmbi(s, 0x32800016u);   // 0906c fsmbi r22,0x0
+    s.instructions++; op_il(s, 0x40803002u);   // 09070 il r2,0x60
+    s.instructions++; op_shlqbyi(s, 0x3FE00195u);   // 09074 shlqbyi r21,r3,0
+    s.instructions++; op_ai(s, 0x1C24071Fu);   // 09078 ai r31,r14,144
+    s.instructions++; op_fsmbi(s, 0x32FFFFA2u);   // 0907c fsmbi r34,0xffff
+    s.instructions++; op_ori(s, 0x0400011Bu);   // 09080 ori r27,r2,0
+    s.instructions++; op_fsmbi(s, 0x3280001Eu);   // 09084 fsmbi r30,0x0
+    s.instructions++; op_il(s, 0x40802002u);   // 09088 il r2,0x40
+    s.instructions++; op_ai(s, 0x1C180097u);   // 0908c ai r23,r1,96
+    s.instructions++; op_ori(s, 0x0400011Au);   // 09090 ori r26,r2,0
+    s.instructions++; op_ai(s, 0x1C422913u);   // 09094 ai r19,r82,264
+    s.instructions++; op_ai(s, 0x1C242918u);   // 09098 ai r24,r82,144
+    s.instructions++; op_ai(s, 0x1C04290Fu);   // 0909c ai r15,r82,16
+    s.instructions++; op_ai(s, 0x1C0C2910u);   // 090a0 ai r16,r82,48
+    s.instructions++; op_il(s, 0x408000A0u);   // 090a4 il r32,0x1
+    s.instructions++; op_il(s, 0x40807FA3u);   // 090a8 il r35,0xff
+    s.instructions++; op_il(s, 0x40800221u);   // 090ac il r33,0x4
+L_090b0:
+    s.instructions++; op_lqd(s, 0x34000982u);   // 090b4 lqd r2,0(r19)
+    s.instructions++; op_rotqby(s, 0x3B84C102u);   // 090b8 rotqby r2,r2,r19
+    s.instructions++; op_shl(s, 0x0B609004u);   // 090bc shl r4,r32,r2
+    s.instructions++; op_ori(s, 0x04000203u);   // 090c0 ori r3,r4,0
+L_090c8:
+    s.instructions++; op_ila(s, 0x42486802u);   // 090c8 ila r2,0x90d0
+    s.instructions++;   // 090cc bi r0,r2,r32
+    s.pc = 0x090CC; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_090d0:
+    s.pc = 0x090D0; s.instructions++; op_wrch(s, 0x21A00B03u);   // 090d0 wrch ch22,r3
+    if (s.halted) { s.pc = 0x090D4; return false; }
+    s.pc = 0x090D4; s.instructions++; op_wrch(s, 0x21A00B92u);   // 090d4 wrch ch23,r18
+    if (s.halted) { s.pc = 0x090D8; return false; }
+    s.pc = 0x090D8; s.instructions++; op_rdch(s, 0x01A00C02u);   // 090d8 rdch r2,ch24
+    if (s.halted) { s.pc = 0x090DC; return false; }
+    s.instructions++; op_ila(s, 0x42487405u);   // 090e0 ila r5,0x90e8
+    s.instructions++;   // 090e4 bi r0,r5,r16
+    s.pc = 0x090E4; op_bi(s, 0x35040280u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_090e8:
+    s.instructions++; op_ceq(s, 0x78008202u);   // 090e8 ceq r2,r4,r2
+    s.instructions++; if (s.pref(2) == 0) goto L_090c8;   // 090ec brz r2,0x90c8
+    s.instructions++; op_ori(s, 0x04000C05u);   // 090f0 ori r5,r24,0
+    s.instructions++; op_il(s, 0x40800086u);   // 090f8 il r6,0x1
+    s.instructions++; op_lqd(s, 0x34000602u);   // 090fc lqd r2,0(r12)
+    s.instructions++; op_rotqby(s, 0x3B830107u);   // 09104 rotqby r7,r2,r12
+L_09108:
+    s.instructions++; op_ai(s, 0x1C004306u);   // 09108 ai r6,r6,1
+    s.instructions++; op_lqd(s, 0x34000282u);   // 0910c lqd r2,0(r5)
+    s.instructions++; op_ceqi(s, 0x7C018304u);   // 09110 ceqi r4,r6,6
+    s.instructions++; op_rotqby(s, 0x3B814103u);   // 09114 rotqby r3,r2,r5
+    s.instructions++; op_ai(s, 0x1C040285u);   // 09118 ai r5,r5,16
+    s.instructions++; op_clgt(s, 0x5801C182u);   // 0911c clgt r2,r3,r7
+    s.instructions++; op_selb(s, 0x80E0C382u);   // 09120 selb r7,r7,r3,r2
+    s.instructions++; if (s.pref(4) == 0) goto L_09108;   // 09124 brz r4,0x9108
+    s.instructions++; op_il(s, 0x40800008u);   // 09128 il r8,0x0
+    s.instructions++; op_ori(s, 0x04000F09u);   // 09130 ori r9,r30,0
+    s.instructions++; op_stqd(s, 0x2401C09Eu);   // 09134 stqd r30,112(r1)
+L_09138:
+    s.instructions++; op_a(s, 0x18030403u);   // 09138 a r3,r8,r12
+    s.instructions++; op_lqx(s, 0x38830402u);   // 0913c lqx r2,r8,r12
+    s.instructions++; op_lqx(s, 0x38830405u);   // 09140 lqx r5,r8,r12
+    s.instructions++; op_ai(s, 0x1C040408u);   // 09144 ai r8,r8,16
+    s.instructions++; op_ceqi(s, 0x7C180406u);   // 09148 ceqi r6,r8,96
+    s.instructions++; op_rotqby(s, 0x3B80C102u);   // 0914c rotqby r2,r2,r3
+    s.instructions++; op_il(s, 0x40804003u);   // 09150 il r3,0x80
+    s.instructions++; op_sf(s, 0x0801C102u);   // 09154 sf r2,r2,r7
+    s.instructions++; op_clgti(s, 0x5C200104u);   // 09158 clgti r4,r2,128
+    s.instructions++; op_selb(s, 0x8040C104u);   // 0915c selb r2,r2,r3,r4
+    s.instructions++; op_shlqbybi(s, 0x39E08285u);   // 09160 shlqbybi r5,r5,r2
+    s.instructions++; op_or_(s, 0x08214482u);   // 09164 or r2,r9,r5
+    s.instructions++; op_ori(s, 0x04000109u);   // 09168 ori r9,r2,0
+    s.instructions++; if (s.pref(6) == 0) goto L_09138;   // 0916c brz r6,0x9138
+    s.instructions++; op_ori(s, 0x04000103u);   // 09170 ori r3,r2,0
+    s.instructions++; op_stqd(s, 0x2401C082u);   // 09174 stqd r2,112(r1)
+    s.instructions++; goto L_09188;   // 0917c br r0,0x9188
+L_09180:
+    s.instructions++; op_ai(s, 0x1C020387u);   // 09180 ai r7,r7,8
+    s.instructions++; op_shlqbyi(s, 0x3FE04183u);   // 09184 shlqbyi r3,r3,1
+L_09188:
+    s.instructions++; op_rotqbyi(s, 0x3F804182u);   // 09188 rotqbyi r2,r3,1
+    s.instructions++; op_ceqbi(s, 0x7EFFC102u);   // 0918c ceqbi r2,r2,-1
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 09190 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_09180;   // 09194 brhnz r2,0x9180
+    s.instructions++; op_stqd(s, 0x2401C083u);   // 09198 stqd r3,112(r1)
+    s.instructions++; op_lqd(s, 0x3401C082u);   // 0919c lqd r2,112(r1)
+    s.instructions++; op_cwd(s, 0x3EC00083u);   // 091a0 cwd r3,r1,0
+    s.instructions++; op_shufb(s, 0xB0408383u);   // 091a4 shufb r2,r7,r2,r3
+    s.instructions++; op_stqd(s, 0x2401C082u);   // 091a8 stqd r2,112(r1)
+    s.instructions++; op_lqd(s, 0x3401C082u);   // 091ac lqd r2,112(r1)
+    s.instructions++; op_stqd(s, 0x24018082u);   // 091b0 stqd r2,96(r1)
+    s.instructions++; op_lqd(s, 0x34018082u);   // 091b4 lqd r2,96(r1)
+    s.instructions++; op_sf(s, 0x08140105u);   // 091b8 sf r5,r2,r80
+    s.instructions++; op_clgti(s, 0x5C17C283u);   // 091bc clgti r3,r5,95
+    s.instructions++; if (s.pref(3) != 0) goto L_096c0;   // 091c4 brnz r3,0x96c0
+    s.instructions++; op_sfi(s, 0x0C020282u);   // 091c8 sfi r2,r5,8
+    s.instructions++; op_lqx(s, 0x38884B87u);   // 091cc lqx r7,r23,r33
+    s.instructions++; op_a(s, 0x18084B83u);   // 091d0 a r3,r23,r33
+    s.instructions++; op_shl(s, 0x0B609182u);   // 091d4 shl r2,r35,r2
+    s.instructions++; op_ai(s, 0x1C034183u);   // 091d8 ai r3,r3,13
+    s.instructions++; op_clgti(s, 0x5C01C286u);   // 091dc clgti r6,r5,7
+    s.instructions++; op_il(s, 0x40800084u);   // 091e0 il r4,0x1
+    s.instructions++; op_andi(s, 0x143FC102u);   // 091e8 andi r2,r2,255
+    s.instructions++; op_rotqby(s, 0x3B80C383u);   // 091ec rotqby r3,r7,r3
+    s.instructions++; op_and_(s, 0x1820C103u);   // 091f0 and r3,r2,r3
+    s.instructions++; op_ceq(s, 0x78008182u);   // 091f8 ceq r2,r3,r2
+    s.instructions++; op_fsmbi(s, 0x32800003u);   // 091fc fsmbi r3,0x0
+    s.instructions++; op_andc(s, 0x58218102u);   // 09200 andc r2,r2,r6
+    s.instructions++; op_ceqi(s, 0x7C000102u);   // 09204 ceqi r2,r2,0
+    s.instructions++; op_selb(s, 0x8080C202u);   // 09208 selb r4,r4,r3,r2
+    s.instructions++; op_ceqbi(s, 0x7E00020Du);   // 0920c ceqbi r13,r4,0
+L_09210:
+    s.instructions++; op_ila(s, 0x42490C02u);   // 09210 ila r2,0x9218
+    s.instructions++;   // 09214 bi r0,r2,r32
+    s.pc = 0x09214; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_09218:
+    s.pc = 0x09218; s.instructions++; op_wrch(s, 0x21A00814u);   // 09218 wrch ch16,r20
+    if (s.halted) { s.pc = 0x0921C; return false; }
+    s.pc = 0x0921C; s.instructions++; op_wrch(s, 0x21A00911u);   // 0921c wrch ch18,r17
+    if (s.halted) { s.pc = 0x09220; return false; }
+    s.pc = 0x09220; s.instructions++; op_wrch(s, 0x21A00A95u);   // 09220 wrch ch21,r21
+    if (s.halted) { s.pc = 0x09224; return false; }
+    s.pc = 0x09224; s.instructions++; op_rdch(s, 0x01A00D82u);   // 09224 rdch r2,ch27
+    if (s.halted) { s.pc = 0x09228; return false; }
+    s.instructions++; op_ila(s, 0x42491802u);   // 09228 ila r2,0x9230
+    s.instructions++;   // 0922c bi r0,r2,r16
+    s.pc = 0x0922C; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_09230:
+    s.instructions++; op_xsbh(s, 0x56C00682u);   // 09230 xsbh r2,r13,r0
+    s.instructions++; op_lqd(s, 0x34002906u);   // 09234 lqd r6,0(r82)
+    s.instructions++; op_lqd(s, 0x3401C083u);   // 0923c lqd r3,112(r1)
+    s.instructions++; op_ori(s, 0x0400010Au);   // 09240 ori r10,r2,0
+    s.instructions++; op_cwd(s, 0x3EC00084u);   // 09244 cwd r4,r1,0
+    s.instructions++; op_ceqhi(s, 0x7D000102u);   // 09248 ceqhi r2,r2,0
+    s.instructions++; op_cwd(s, 0x3EC0290Bu);   // 0924c cwd r11,r82,0
+    s.instructions++; op_nor(s, 0x09208102u);   // 09250 nor r2,r2,r2
+    s.instructions++; op_xshw(s, 0x55C00109u);   // 09258 xshw r9,r2,r0
+    s.instructions++; op_rotqby(s, 0x3B948302u);   // 0925c rotqby r2,r6,r82
+    s.instructions++; op_shufb(s, 0xB060C104u);   // 09260 shufb r3,r2,r3,r4
+    s.instructions++; op_stqd(s, 0x2401C083u);   // 09264 stqd r3,112(r1)
+    s.instructions++; op_lqd(s, 0x34000783u);   // 09268 lqd r3,0(r15)
+    s.instructions++; op_lqd(s, 0x3400C082u);   // 0926c lqd r2,48(r1)
+    s.instructions++; op_rotqby(s, 0x3B83C183u);   // 09270 rotqby r3,r3,r15
+    s.instructions++; op_shufb(s, 0xB0408184u);   // 09274 shufb r2,r3,r2,r4
+    s.instructions++; op_stqd(s, 0x2400C082u);   // 09278 stqd r2,48(r1)
+    s.instructions++; op_lqd(s, 0x34000803u);   // 0927c lqd r3,0(r16)
+    s.instructions++; op_lqd(s, 0x34008082u);   // 09280 lqd r2,32(r1)
+    s.instructions++; op_rotqby(s, 0x3B840183u);   // 09284 rotqby r3,r3,r16
+    s.instructions++; op_shufb(s, 0xB0408184u);   // 09288 shufb r2,r3,r2,r4
+    s.instructions++; op_stqd(s, 0x24008082u);   // 0928c stqd r2,32(r1)
+    s.instructions++; op_lqd(s, 0x34008083u);   // 09290 lqd r3,32(r1)
+    s.instructions++; op_lqd(s, 0x3401C082u);   // 09294 lqd r2,112(r1)
+    s.instructions++; op_lqd(s, 0x3400C084u);   // 09298 lqd r4,48(r1)
+    s.instructions++; op_lqd(s, 0x34008083u);   // 0929c lqd r3,32(r1)
+    s.instructions++; op_lqd(s, 0x3401C086u);   // 092a0 lqd r6,112(r1)
+    s.instructions++; op_ceqi(s, 0x7C000102u);   // 092a4 ceqi r2,r2,0
+    s.instructions++; op_ai(s, 0x1C100204u);   // 092a8 ai r4,r4,64
+    s.instructions++; op_nor(s, 0x09208102u);   // 092ac nor r2,r2,r2
+    s.instructions++; op_ceqi(s, 0x7C000306u);   // 092b0 ceqi r6,r6,0
+    s.instructions++; op_ai(s, 0x1CFFC183u);   // 092b4 ai r3,r3,-1
+    s.instructions++; op_nor(s, 0x09218306u);   // 092b8 nor r6,r6,r6
+    s.instructions++; op_ceq(s, 0x7800E803u);   // 092bc ceq r3,r80,r3
+    s.instructions++; op_sfi(s, 0x0C000107u);   // 092c0 sfi r7,r2,0
+    s.instructions++; op_or_(s, 0x08224302u);   // 092c4 or r2,r6,r9
+    s.instructions++; op_sfi(s, 0x0C000189u);   // 092c8 sfi r9,r3,0
+    s.instructions++; if (s.pref(2) == 0) goto L_096fc;   // 092cc brz r2,0x96fc
+    s.instructions++; if ((s.pref(10) & 0xFFFF) != 0) goto L_09740;   // 092d4 brhnz r10,0x9740
+L_092d8:
+    s.instructions++; op_ceqbi(s, 0x7E000B08u);   // 092d8 ceqbi r8,r22,0
+    s.instructions++; op_ceqbi(s, 0x7E000483u);   // 092e0 ceqbi r3,r9,0
+    s.instructions++; op_xsbh(s, 0x56C00402u);   // 092e4 xsbh r2,r8,r0
+    s.instructions++; op_ceqbi(s, 0x7E000386u);   // 092e8 ceqbi r6,r7,0
+    s.instructions++; op_xsbh(s, 0x56C00183u);   // 092ec xsbh r3,r3,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_09680;   // 092f0 brhz r2,0x9680
+    s.instructions++; op_xsbh(s, 0x56C00302u);   // 092f4 xsbh r2,r6,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_09680;   // 092f8 brhz r2,0x9680
+    s.instructions++; op_il(s, 0x40800016u);   // 092fc il r22,0x0
+    s.instructions++; goto L_09210;   // 09304 br r0,0x9210
+L_09308:
+    s.instructions++; op_andi(s, 0x143FC183u);   // 09308 andi r3,r3,255
+    s.instructions++; op_lqx(s, 0x3884C382u);   // 0930c lqx r2,r7,r19
+    s.instructions++; op_a(s, 0x1804C384u);   // 09310 a r4,r7,r19
+    s.instructions++; op_lqd(s, 0x34000586u);   // 09314 lqd r6,0(r11)
+    s.instructions++; op_shli(s, 0x0F608183u);   // 09318 shli r3,r3,2
+    s.instructions++; op_cwd(s, 0x3EC00588u);   // 0931c cwd r8,r11,0
+    s.instructions++; op_ai(s, 0x1C034204u);   // 09320 ai r4,r4,13
+    s.instructions++; op_ai(s, 0x1C010585u);   // 09328 ai r5,r11,4
+    s.instructions++; op_ai(s, 0x1C00460Cu);   // 0932c ai r12,r12,1
+    s.instructions++; op_a(s, 0x18054183u);   // 09330 a r3,r3,r21
+    s.instructions++; op_rotqby(s, 0x3B810102u);   // 09334 rotqby r2,r2,r4
+    s.instructions++; op_ai(s, 0x1C010387u);   // 09338 ai r7,r7,4
+    s.instructions++; op_cwd(s, 0x3EC00289u);   // 0933c cwd r9,r5,0
+    s.instructions++; op_or_(s, 0x08250183u);   // 09340 or r3,r3,r20
+    s.instructions++; op_andi(s, 0x143FC102u);   // 09348 andi r2,r2,255
+    s.instructions++; op_shufb(s, 0xB0C18188u);   // 0934c shufb r6,r3,r6,r8
+    s.instructions++; op_a(s, 0x18008783u);   // 09350 a r3,r15,r2
+    s.instructions++; op_stqd(s, 0x24000586u);   // 09354 stqd r6,0(r11)
+    s.instructions++; op_ai(s, 0x1C02058Bu);   // 09358 ai r11,r11,8
+    s.instructions++; op_lqd(s, 0x34000282u);   // 0935c lqd r2,0(r5)
+    s.instructions++; op_shufb(s, 0xB0408189u);   // 09360 shufb r2,r3,r2,r9
+    s.instructions++; op_stqd(s, 0x24000282u);   // 09364 stqd r2,0(r5)
+    s.instructions++; op_clgt(s, 0x58030702u);   // 09368 clgt r2,r14,r12
+    s.instructions++; if (s.pref(2) != 0) goto L_08e90;   // 0936c brnz r2,0x8e90
+    s.instructions++; goto L_08ef0;   // 09374 br r0,0x8ef0
+L_09378:
+    s.instructions++; op_il(s, 0x40800008u);   // 09378 il r8,0x0
+    s.instructions++; op_ilhu(s, 0x417F8009u);   // 09380 ilhu r9,0xff00
+L_09388:
+    s.instructions++; op_or_(s, 0x08224386u);   // 09388 or r6,r7,r9
+    s.instructions++; op_lqd(s, 0x34000283u);   // 0938c lqd r3,0(r5)
+    s.instructions++; op_ai(s, 0x1C004408u);   // 09390 ai r8,r8,1
+    s.instructions++; op_cwd(s, 0x3EC00284u);   // 09394 cwd r4,r5,0
+    s.instructions++; op_ai(s, 0x1C400387u);   // 09398 ai r7,r7,256
+    s.instructions++; op_ceq(s, 0x78020602u);   // 0939c ceq r2,r12,r8
+    s.instructions++; op_shufb(s, 0xB060C304u);   // 093a0 shufb r3,r6,r3,r4
+    s.instructions++; op_stqd(s, 0x24000283u);   // 093a4 stqd r3,0(r5)
+    s.instructions++; op_ai(s, 0x1C010285u);   // 093a8 ai r5,r5,4
+    s.instructions++; if (s.pref(2) == 0) goto L_09388;   // 093ac brz r2,0x9388
+    s.instructions++; op_ceqbi(s, 0x7E000882u);   // 093b0 ceqbi r2,r17,0
+    s.instructions++; op_shli(s, 0x0F620607u);   // 093b4 shli r7,r12,8
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 093b8 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_093e8;   // 093bc brhnz r2,0x93e8
+L_093c0:
+    s.instructions++; op_andi(s, 0x143FC982u);   // 093c0 andi r2,r19,255
+    s.instructions++; op_lqd(s, 0x34000283u);   // 093c4 lqd r3,0(r5)
+    s.instructions++; op_cwd(s, 0x3EC00284u);   // 093c8 cwd r4,r5,0
+    s.instructions++; op_ai(s, 0x1CFFC102u);   // 093cc ai r2,r2,-1
+    s.instructions++; op_shli(s, 0x0F660102u);   // 093d0 shli r2,r2,24
+    s.instructions++; op_or_(s, 0x08208382u);   // 093d4 or r2,r7,r2
+    s.instructions++; op_shufb(s, 0xB060C104u);   // 093d8 shufb r3,r2,r3,r4
+    s.instructions++; op_stqd(s, 0x24000283u);   // 093dc stqd r3,0(r5)
+    s.instructions++; op_ai(s, 0x1C010285u);   // 093e0 ai r5,r5,4
+L_093e8:
+    s.instructions++; op_ilhu(s, 0x41000202u);   // 093e8 ilhu r2,0x4
+    s.instructions++; op_lqd(s, 0x34000283u);   // 093ec lqd r3,0(r5)
+    s.instructions++; op_ai(s, 0x1C010284u);   // 093f0 ai r4,r5,4
+    s.instructions++; op_cwd(s, 0x3EC00286u);   // 093f4 cwd r6,r5,0
+    s.instructions++; op_iohl(s, 0x608C0402u);   // 093f8 iohl r2,0x1808
+    s.instructions++; op_ai(s, 0x1C020289u);   // 09400 ai r9,r5,8
+    s.instructions++; op_cwd(s, 0x3EC00207u);   // 09404 cwd r7,r4,0
+    s.instructions++; op_shufb(s, 0xB060C106u);   // 09408 shufb r3,r2,r3,r6
+    s.instructions++; op_stqd(s, 0x24000283u);   // 0940c stqd r3,0(r5)
+    s.instructions++; op_il(s, 0x40800003u);   // 09410 il r3,0x0
+    s.instructions++; op_lqd(s, 0x34000202u);   // 09414 lqd r2,0(r4)
+    s.instructions++; op_shufb(s, 0xB0408187u);   // 09418 shufb r2,r3,r2,r7
+    s.instructions++; op_stqd(s, 0x24000202u);   // 0941c stqd r2,0(r4)
+L_09420:
+    s.instructions++; op_ori(s, 0x04000A04u);   // 09420 ori r4,r20,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00483u);   // 09424 shlqbyi r3,r9,0
+    s.instructions++; s.set_pref(0, 0x0942C);   // 09428 brsl r0,0x8660
+    if (!geomfn_08660(s)) s.run_until(0x0942C);
+    if (s.halted || s.pc != 0x0942C) return false;
+L_0942c:
+    s.instructions++; op_lqd(s, 0x34002982u);   // 0942c lqd r2,0(r83)
+    s.instructions++; op_il(s, 0x40800007u);   // 09430 il r7,0x0
+    s.instructions++; op_lqd(s, 0x34038084u);   // 09434 lqd r4,224(r1)
+    s.instructions++; op_ori(s, 0x04002903u);   // 09438 ori r3,r82,0
+    s.instructions++; op_cwd(s, 0x3EC00085u);   // 0943c cwd r5,r1,0
+    s.instructions++; op_cwd(s, 0x3EC10088u);   // 09440 cwd r8,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20089u);   // 09444 cwd r9,r1,8
+    s.instructions++; op_cwd(s, 0x3EC3008Au);   // 09448 cwd r10,r1,12
+    s.instructions++; op_rotqby(s, 0x3B94C102u);   // 0944c rotqby r2,r2,r83
+    s.instructions++; op_shufb(s, 0xB0810385u);   // 09450 shufb r4,r7,r4,r5
+    s.instructions++; op_a(s, 0x18150102u);   // 09458 a r2,r2,r84
+    s.instructions++; op_ori(s, 0x04000205u);   // 0945c ori r5,r4,0
+    s.instructions++; op_lqd(s, 0x3400C106u);   // 09460 lqd r6,48(r2)
+    s.instructions++; op_shufb(s, 0xB0A14388u);   // 09464 shufb r5,r7,r5,r8
+    s.instructions++; op_rotqby(s, 0x3B808304u);   // 09468 rotqby r4,r6,r2
+    s.instructions++; op_shufb(s, 0xB0414389u);   // 0946c shufb r2,r7,r5,r9
+    s.instructions++; op_shufb(s, 0xB040838Au);   // 09470 shufb r2,r7,r2,r10
+    s.instructions++; op_stqd(s, 0x24038082u);   // 09474 stqd r2,224(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 09478 rotqbyi r6,r2,8
+    s.instructions++; op_lqd(s, 0x34038082u);   // 0947c lqd r2,224(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0306u);   // 09480 rotqmbyi r6,r6,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 09484 rotqmbyi r2,r2,-8
+    s.instructions++; op_shlqbyi(s, 0x3FE20105u);   // 0948c shlqbyi r5,r2,8
+    s.instructions++; op_or_(s, 0x08214305u);   // 09490 or r5,r6,r5
+    s.instructions++; s.set_pref(0, 0x09498);   // 09494 brsl r0,0x4368
+    if (!geomfn_04368(s)) s.run_until(0x09498);
+    if (s.halted || s.pc != 0x09498) return false;
+L_09498:
+    s.instructions++; op_lqd(s, 0x34002982u);   // 09498 lqd r2,0(r83)
+    s.instructions++; op_rotqby(s, 0x3B94C105u);   // 0949c rotqby r5,r2,r83
+    s.instructions++; op_a(s, 0x18150282u);   // 094a0 a r2,r5,r84
+    s.instructions++; op_ai(s, 0x1C0F0102u);   // 094a4 ai r2,r2,60
+    s.instructions++; op_lqd(s, 0x34000104u);   // 094a8 lqd r4,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B808250u);   // 094ac rotqby r80,r4,r2
+    s.instructions++; if (s.pref(80) != 0) goto L_09940;   // 094b0 brnz r80,0x9940
+L_094b4:
+    s.instructions++; op_ai(s, 0x1C006BD7u);   // 094b4 ai r87,r87,1
+    s.instructions++; op_ai(s, 0x1C062A54u);   // 094b8 ai r84,r84,24
+    s.instructions++; op_ceq(s, 0x7815EC02u);   // 094bc ceq r2,r88,r87
+    s.instructions++; op_ai(s, 0x1C0128D1u);   // 094c0 ai r81,r81,4
+    s.instructions++; if (s.pref(2) != 0) goto L_08fd4;   // 094c4 brnz r2,0x8fd4
+    s.instructions++; op_lqd(s, 0x34002982u);   // 094c8 lqd r2,0(r83)
+    s.instructions++; op_rotqby(s, 0x3B94C105u);   // 094cc rotqby r5,r2,r83
+L_094d0:
+    s.instructions++; op_a(s, 0x18150282u);   // 094d0 a r2,r5,r84
+    s.instructions++; op_il(s, 0x40800006u);   // 094d8 il r6,0x0
+    s.instructions++; op_shlqbyi(s, 0x3FE02903u);   // 094dc shlqbyi r3,r82,0
+    s.instructions++; op_ai(s, 0x1C0D0102u);   // 094e0 ai r2,r2,52
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 094e4 fsmbi r7,0x0
+    s.instructions++; op_il(s, 0x40800805u);   // 094e8 il r5,0x10
+    s.instructions++; op_lqd(s, 0x34000104u);   // 094ec lqd r4,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B808250u);   // 094f0 rotqby r80,r4,r2
+    s.instructions++; op_ori(s, 0x04002804u);   // 094f4 ori r4,r80,0
+    s.instructions++; op_andi(s, 0x14FF2850u);   // 094f8 andi r80,r80,-4
+    s.instructions++; s.set_pref(0, 0x09500);   // 094fc brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x09500);
+    if (s.halted || s.pc != 0x09500) return false;
+L_09500:
+    s.instructions++; op_lqd(s, 0x34002882u);   // 09504 lqd r2,0(r81)
+    s.instructions++; op_ori(s, 0x04000188u);   // 09508 ori r8,r3,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00189u);   // 0950c shlqbyi r9,r3,0
+    s.instructions++; op_a(s, 0x18140194u);   // 09510 a r20,r3,r80
+    s.instructions++; op_rotqby(s, 0x3B944103u);   // 09514 rotqby r3,r2,r81
+    s.instructions++; op_ila(s, 0x427FFF82u);   // 09518 ila r2,0xffff
+    s.instructions++; op_and_(s, 0x18208186u);   // 09520 and r6,r3,r2
+    s.instructions++; op_rotqmbyi(s, 0x3FBF8183u);   // 09524 rotqmbyi r3,r3,-2
+    s.instructions++; if (s.pref(6) == 0) goto L_09420;   // 0952c brz r6,0x9420
+    s.instructions++; op_ilhu(s, 0x41000202u);   // 09530 ilhu r2,0x4
+    s.instructions++; op_lqd(s, 0x34000404u);   // 09534 lqd r4,0(r8)
+    s.instructions++; op_ai(s, 0x1C010407u);   // 09538 ai r7,r8,4
+    s.instructions++; op_cwd(s, 0x3EC00405u);   // 0953c cwd r5,r8,0
+    s.instructions++; op_iohl(s, 0x608B4002u);   // 09540 iohl r2,0x1680
+    s.instructions++; op_lqd(s, 0x34FFE889u);   // 09544 lqd r9,-16(r81)
+    s.instructions++; op_ceqbi(s, 0x7E000183u);   // 09548 ceqbi r3,r3,0
+    s.instructions++; op_cwd(s, 0x3EC0038Cu);   // 0954c cwd r12,r7,0
+    s.instructions++; op_ai(s, 0x1C02040Bu);   // 09550 ai r11,r8,8
+    s.instructions++; op_shlqbyi(s, 0x3FE00313u);   // 09554 shlqbyi r19,r6,0
+    s.instructions++; op_xsbh(s, 0x56C00183u);   // 09558 xsbh r3,r3,r0
+    s.instructions++; op_cwd(s, 0x3EC40412u);   // 0955c cwd r18,r8,16
+    s.instructions++; op_ai(s, 0x1C03040Du);   // 09560 ai r13,r8,12
+    s.instructions++; op_shufb(s, 0xB0810105u);   // 09564 shufb r4,r2,r4,r5
+    s.instructions++; op_ceqbi(s, 0x7E000302u);   // 09568 ceqbi r2,r6,0
+    s.instructions++; op_cwd(s, 0x3EC0058Eu);   // 0956c cwd r14,r11,0
+    s.instructions++; op_ceqhi(s, 0x7D000183u);   // 09570 ceqhi r3,r3,0
+    s.instructions++; op_rotqby(s, 0x3B944489u);   // 09574 rotqby r9,r9,r81
+    s.instructions++; op_nor(s, 0x09208102u);   // 09578 nor r2,r2,r2
+    s.instructions++; op_cwd(s, 0x3EC00690u);   // 0957c cwd r16,r13,0
+    s.instructions++; op_fsm(s, 0x36800183u);   // 09580 fsm r3,r3,r0
+    s.instructions++; op_stqd(s, 0x24000404u);   // 09584 stqd r4,0(r8)
+    s.instructions++; op_fsm(s, 0x36800102u);   // 09588 fsm r2,r2,r0
+    s.instructions++; op_lqd(s, 0x34000385u);   // 0958c lqd r5,0(r7)
+    s.instructions++; op_il(s, 0x40800284u);   // 09590 il r4,0x5
+    s.instructions++; op_sfi(s, 0x0C000111u);   // 09598 sfi r17,r2,0
+    s.instructions++; op_il(s, 0x40800402u);   // 0959c il r2,0x8
+    s.instructions++; op_ai(s, 0x1C05040Au);   // 095a0 ai r10,r8,20
+    s.instructions++; op_selb(s, 0x80808203u);   // 095a4 selb r4,r4,r2,r3
+    s.instructions++; op_andi(s, 0x143FC882u);   // 095a8 andi r2,r17,255
+    s.instructions++; op_shufb(s, 0xB0A1448Cu);   // 095ac shufb r5,r9,r5,r12
+    s.instructions++; op_rotmi(s, 0x0F3E030Cu);   // 095b0 rotmi r12,r6,-8
+    s.instructions++; op_cwd(s, 0x3EC0050Fu);   // 095b4 cwd r15,r10,0
+    s.instructions++; op_stqd(s, 0x24000385u);   // 095bc stqd r5,0(r7)
+    s.instructions++; op_a(s, 0x18008603u);   // 095c0 a r3,r12,r2
+    s.instructions++; op_lqd(s, 0x34002B07u);   // 095c4 lqd r7,0(r86)
+    s.instructions++; op_ilhu(s, 0x41000202u);   // 095c8 ilhu r2,0x4
+    s.instructions++; op_lqd(s, 0x34000586u);   // 095cc lqd r6,0(r11)
+    s.instructions++; op_ai(s, 0x1C060405u);   // 095d0 ai r5,r8,24
+    s.instructions++; op_iohl(s, 0x608BA002u);   // 095d4 iohl r2,0x1740
+    s.instructions++; op_rotqby(s, 0x3B958387u);   // 095d8 rotqby r7,r7,r86
+    s.instructions++; op_shufb(s, 0xB0C1810Eu);   // 095dc shufb r6,r2,r6,r14
+    s.instructions++; op_ila(s, 0x42907802u);   // 095e0 ila r2,0x120f0
+    s.instructions++; op_ai(s, 0x1C034389u);   // 095e8 ai r9,r7,13
+    s.instructions++; op_lqx(s, 0x38808382u);   // 095ec lqx r2,r7,r2
+    s.instructions++; op_stqd(s, 0x24000586u);   // 095f0 stqd r6,0(r11)
+    s.instructions++; op_lqd(s, 0x34000686u);   // 095f4 lqd r6,0(r13)
+    s.instructions++; op_rotqby(s, 0x3B824102u);   // 095f8 rotqby r2,r2,r9
+    s.instructions++; op_andi(s, 0x143FC102u);   // 095fc andi r2,r2,255
+    s.instructions++; op_shli(s, 0x0F628102u);   // 09600 shli r2,r2,10
+    s.instructions++; op_ori(s, 0x04100102u);   // 09604 ori r2,r2,64
+    s.instructions++; op_or_(s, 0x0820AD02u);   // 09608 or r2,r90,r2
+    s.instructions++; op_shufb(s, 0xB0C18110u);   // 0960c shufb r6,r2,r6,r16
+    s.instructions++; op_stqd(s, 0x24000686u);   // 09614 stqd r6,0(r13)
+    s.instructions++; op_ilhu(s, 0x41000206u);   // 09618 ilhu r6,0x4
+    s.instructions++; op_lqd(s, 0x34004402u);   // 0961c lqd r2,16(r8)
+    s.instructions++; op_iohl(s, 0x608C0406u);   // 09620 iohl r6,0x1808
+    s.instructions++; op_shufb(s, 0xB0408312u);   // 09624 shufb r2,r6,r2,r18
+    s.instructions++; op_stqd(s, 0x24004402u);   // 09628 stqd r2,16(r8)
+    s.instructions++; op_lqd(s, 0x34000502u);   // 0962c lqd r2,0(r10)
+    s.instructions++; op_shufb(s, 0xB040820Fu);   // 09630 shufb r2,r4,r2,r15
+    s.instructions++; op_stqd(s, 0x24000502u);   // 09634 stqd r2,0(r10)
+    s.instructions++; if (s.pref(3) == 0) goto L_093e8;   // 0963c brz r3,0x93e8
+    s.instructions++; op_shli(s, 0x0F648183u);   // 09640 shli r3,r3,18
+    s.instructions++; op_lqd(s, 0x34000284u);   // 09644 lqd r4,0(r5)
+    s.instructions++; op_ilhu(s, 0x41200002u);   // 09648 ilhu r2,0x4000
+    s.instructions++; op_cwd(s, 0x3EC00286u);   // 0964c cwd r6,r5,0
+    s.instructions++; op_il(s, 0x40800007u);   // 09650 il r7,0x0
+    s.instructions++; op_iohl(s, 0x608C0A02u);   // 09654 iohl r2,0x1814
+    s.instructions++; op_or_(s, 0x08208183u);   // 09658 or r3,r3,r2
+    s.instructions++; op_shufb(s, 0xB0810186u);   // 0965c shufb r4,r3,r4,r6
+    s.instructions++; op_stqd(s, 0x24000284u);   // 09664 stqd r4,0(r5)
+    s.instructions++; op_ai(s, 0x1C070405u);   // 09668 ai r5,r8,28
+    s.instructions++; if (s.pref(12) != 0) goto L_09378;   // 0966c brnz r12,0x9378
+    s.instructions++; op_ceqbi(s, 0x7E000882u);   // 09670 ceqbi r2,r17,0
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 09674 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_093e8;   // 09678 brhnz r2,0x93e8
+    s.instructions++; goto L_093c0;   // 0967c br r0,0x93c0
+L_09680:
+    s.instructions++; op_xsbh(s, 0x56C00302u);   // 09680 xsbh r2,r6,r0
+    s.instructions++; if ((s.pref(3) & 0xFFFF) != 0) goto L_09a28;   // 09684 brhnz r3,0x9a28
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_09210;   // 09688 brhz r2,0x9210
+    s.instructions++; op_il(s, 0x40800083u);   // 0968c il r3,0x1
+    s.instructions++; op_il(s, 0x40800089u);   // 09690 il r9,0x1
+L_09694:
+    s.instructions++; op_xsbh(s, 0x56C00402u);   // 09694 xsbh r2,r8,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_09760;   // 09698 brhz r2,0x9760
+    s.instructions++; op_ceqbi(s, 0x7E000182u);   // 0969c ceqbi r2,r3,0
+    s.instructions++; op_clgt(s, 0x58140204u);   // 096a0 clgt r4,r4,r80
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 096a4 xsbh r2,r2,r0
+    s.instructions++; op_nor(s, 0x09210204u);   // 096a8 nor r4,r4,r4
+    s.instructions++; op_ceqhi(s, 0x7D000102u);   // 096ac ceqhi r2,r2,0
+    s.instructions++; op_xshw(s, 0x55C00102u);   // 096b0 xshw r2,r2,r0
+    s.instructions++; op_or_(s, 0x08208202u);   // 096b4 or r2,r4,r2
+    s.instructions++; if (s.pref(2) == 0) goto L_09fcc;   // 096b8 brz r2,0x9fcc
+    s.instructions++; op_il(s, 0x40800016u);   // 096bc il r22,0x0
+L_096c0:
+    s.instructions++; op_lqd(s, 0x34000982u);   // 096c4 lqd r2,0(r19)
+    s.instructions++; op_rotqby(s, 0x3B84C102u);   // 096cc rotqby r2,r2,r19
+    s.instructions++; op_ila(s, 0x424B6C03u);   // 096d0 ila r3,0x96d8
+    s.instructions++;   // 096d4 bi r0,r3,r32
+    s.pc = 0x096D4; op_bi(s, 0x35080180u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_096d8:
+    s.pc = 0x096D8; s.instructions++; op_wrch(s, 0x21A0081Du);   // 096d8 wrch ch16,r29
+    if (s.halted) { s.pc = 0x096DC; return false; }
+    s.pc = 0x096DC; s.instructions++; op_wrch(s, 0x21A0091Cu);   // 096dc wrch ch18,r28
+    if (s.halted) { s.pc = 0x096E0; return false; }
+    s.pc = 0x096E0; s.instructions++; op_wrch(s, 0x21A0099Bu);   // 096e0 wrch ch19,r27
+    if (s.halted) { s.pc = 0x096E4; return false; }
+    s.pc = 0x096E4; s.instructions++; op_wrch(s, 0x21A00A02u);   // 096e4 wrch ch20,r2
+    if (s.halted) { s.pc = 0x096E8; return false; }
+    s.pc = 0x096E8; s.instructions++; op_wrch(s, 0x21A00A9Au);   // 096e8 wrch ch21,r26
+    if (s.halted) { s.pc = 0x096EC; return false; }
+    s.instructions++; op_ila(s, 0x424B7C02u);   // 096f0 ila r2,0x96f8
+    s.instructions++;   // 096f4 bi r0,r2,r16
+    s.pc = 0x096F4; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_096f8:
+    s.instructions++; goto L_090b0;   // 096f8 br r0,0x90b0
+L_096fc:
+    s.instructions++; op_lqd(s, 0x34002902u);   // 09700 lqd r2,0(r82)
+    s.instructions++; op_shufb(s, 0xB040910Bu);   // 09704 shufb r2,r34,r2,r11
+    s.instructions++; op_stqd(s, 0x24002902u);   // 0970c stqd r2,0(r82)
+    s.instructions++; op_ila(s, 0x424B8C02u);   // 09710 ila r2,0x9718
+    s.instructions++;   // 09714 bi r0,r2,r32
+    s.pc = 0x09714; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_09718:
+    s.pc = 0x09718; s.instructions++; op_wrch(s, 0x21A00814u);   // 09718 wrch ch16,r20
+    if (s.halted) { s.pc = 0x0971C; return false; }
+    s.pc = 0x0971C; s.instructions++; op_wrch(s, 0x21A00911u);   // 0971c wrch ch18,r17
+    if (s.halted) { s.pc = 0x09720; return false; }
+    s.pc = 0x09720; s.instructions++; op_wrch(s, 0x21A00A99u);   // 09720 wrch ch21,r25
+    if (s.halted) { s.pc = 0x09724; return false; }
+    s.pc = 0x09724; s.instructions++; op_rdch(s, 0x01A00D82u);   // 09724 rdch r2,ch27
+    if (s.halted) { s.pc = 0x09728; return false; }
+    s.instructions++; op_ila(s, 0x424B9803u);   // 09728 ila r3,0x9730
+    s.instructions++;   // 0972c bi r0,r3,r16
+    s.pc = 0x0972C; op_bi(s, 0x35040180u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_09730:
+    s.instructions++; op_xori(s, 0x44004102u);   // 09730 xori r2,r2,1
+    s.instructions++; op_andbi(s, 0x16004116u);   // 09734 andbi r22,r2,1
+    s.instructions++; goto L_092d8;   // 0973c br r0,0x92d8
+L_09740:
+    s.instructions++; op_ceqbi(s, 0x7E000386u);   // 09740 ceqbi r6,r7,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00483u);   // 09744 shlqbyi r3,r9,0
+    s.instructions++; op_xsbh(s, 0x56C00302u);   // 09748 xsbh r2,r6,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_09a38;   // 0974c brhnz r2,0x9a38
+L_09750:
+    s.instructions++; op_ceqbi(s, 0x7E000182u);   // 09750 ceqbi r2,r3,0
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 09754 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_096c0;   // 09758 brhz r2,0x96c0
+    s.instructions++; op_ceqbi(s, 0x7E000B08u);   // 0975c ceqbi r8,r22,0
+L_09760:
+    s.instructions++; op_rotmi(s, 0x0F3F4283u);   // 09760 rotmi r3,r5,-3
+    s.instructions++; op_andi(s, 0x1401C285u);   // 09764 andi r5,r5,7
+    s.instructions++; op_il(s, 0x40804002u);   // 09768 il r2,0x80
+    s.instructions++; op_sfi(s, 0x0C000286u);   // 0976c sfi r6,r5,0
+    s.instructions++; op_a(s, 0x1800CB83u);   // 09770 a r3,r23,r3
+    s.instructions++; op_rotm(s, 0x0B218106u);   // 09774 rotm r6,r2,r6
+    s.instructions++; op_ai(s, 0x1C010183u);   // 09778 ai r3,r3,4
+    s.instructions++; op_il(s, 0x40806004u);   // 0977c il r4,0xc0
+    s.instructions++; op_ai(s, 0x1C034182u);   // 09780 ai r2,r3,13
+    s.instructions++; op_lqd(s, 0x34000185u);   // 09784 lqd r5,0(r3)
+    s.instructions++; op_cbd(s, 0x3E80018Au);   // 09788 cbd r10,r3,0
+    s.instructions++; op_rotqby(s, 0x3B808282u);   // 0978c rotqby r2,r5,r2
+    s.instructions++; op_or_(s, 0x08218102u);   // 09790 or r2,r2,r6
+    s.instructions++; op_shufb(s, 0xB0E1410Au);   // 09794 shufb r7,r2,r5,r10
+    s.instructions++; op_stqd(s, 0x24000187u);   // 09798 stqd r7,0(r3)
+    s.instructions++; op_lqd(s, 0x34018082u);   // 0979c lqd r2,96(r1)
+    s.instructions++; op_stqd(s, 0x24000F82u);   // 097a0 stqd r2,0(r31)
+    s.pc = 0x097A4; s.instructions++; op_wrch(s, 0x21A00A84u);   // 097a4 wrch ch21,r4
+    if (s.halted) { s.pc = 0x097A8; return false; }
+    s.instructions++; op_lqd(s, 0x3404E902u);   // 097a8 lqd r2,304(r82)
+    s.instructions++; op_rotqby(s, 0x3B948102u);   // 097ac rotqby r2,r2,r82
+    s.instructions++; op_andi(s, 0x14FF0102u);   // 097b0 andi r2,r2,-4
+    s.instructions++; op_a(s, 0x1800A902u);   // 097b4 a r2,r82,r2
+    s.instructions++; op_ai(s, 0x1C4D0102u);   // 097b8 ai r2,r2,308
+    s.instructions++; op_lqd(s, 0x34000103u);   // 097bc lqd r3,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B808182u);   // 097c0 rotqby r2,r3,r2
+    s.instructions++; op_rotmi(s, 0x0F3A0104u);   // 097c4 rotmi r4,r2,-24
+    s.instructions++; op_ila(s, 0x424BE802u);   // 097c8 ila r2,0x97d0
+    s.instructions++;   // 097cc bi r0,r2,r32
+    s.pc = 0x097CC; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_097d0:
+    s.instructions++; op_ori(s, 0x04000F83u);   // 097d0 ori r3,r31,0
+    s.pc = 0x097D4; s.instructions++; op_wrch(s, 0x21A00803u);   // 097d4 wrch ch16,r3
+    if (s.halted) { s.pc = 0x097D8; return false; }
+    s.instructions++; op_a(s, 0x1815A882u);   // 097d8 a r2,r81,r86
+    s.instructions++; op_ai(s, 0x1C200102u);   // 097dc ai r2,r2,128
+    s.pc = 0x097E0; s.instructions++; op_wrch(s, 0x21A00902u);   // 097e0 wrch ch18,r2
+    if (s.halted) { s.pc = 0x097E4; return false; }
+    s.instructions++; op_il(s, 0x40800803u);   // 097e4 il r3,0x10
+    s.pc = 0x097E8; s.instructions++; op_wrch(s, 0x21A00983u);   // 097e8 wrch ch19,r3
+    if (s.halted) { s.pc = 0x097EC; return false; }
+    s.instructions++; op_ori(s, 0x04000207u);   // 097ec ori r7,r4,0
+    s.pc = 0x097F0; s.instructions++; op_wrch(s, 0x21A00A07u);   // 097f0 wrch ch20,r7
+    if (s.halted) { s.pc = 0x097F4; return false; }
+    s.instructions++; op_il(s, 0x40801002u);   // 097f4 il r2,0x20
+    s.pc = 0x097F8; s.instructions++; op_wrch(s, 0x21A00A82u);   // 097f8 wrch ch21,r2
+    if (s.halted) { s.pc = 0x097FC; return false; }
+    s.instructions++; op_ila(s, 0x424C0402u);   // 09800 ila r2,0x9808
+    s.instructions++;   // 09804 bi r0,r2,r16
+    s.pc = 0x09804; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_09808:
+    s.instructions++; op_xsbh(s, 0x56C00402u);   // 09808 xsbh r2,r8,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) != 0) goto L_098f8;   // 0980c brhnz r2,0x98f8
+    s.instructions++; op_ceqbi(s, 0x7E000482u);   // 09810 ceqbi r2,r9,0
+    s.instructions++; op_xsbh(s, 0x56C00102u);   // 09814 xsbh r2,r2,r0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_09fb0;   // 09818 brhz r2,0x9fb0
+    s.instructions++; op_lqd(s, 0x34002982u);   // 0981c lqd r2,0(r83)
+    s.instructions++; op_rotqby(s, 0x3B94C102u);   // 09820 rotqby r2,r2,r83
+    s.instructions++; op_ai(s, 0x1C070102u);   // 09824 ai r2,r2,28
+    s.instructions++; op_lqd(s, 0x34000103u);   // 09828 lqd r3,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B808188u);   // 0982c rotqby r8,r3,r2
+L_09830:
+    s.instructions++; op_il(s, 0x40800003u);   // 09830 il r3,0x0
+L_09838:
+    s.instructions++; op_a(s, 0x1800E906u);   // 09838 a r6,r82,r3
+    s.instructions++; op_lqx(s, 0x3880E904u);   // 0983c lqx r4,r82,r3
+    s.instructions++; op_lqx(s, 0x3880C702u);   // 09840 lqx r2,r14,r3
+    s.instructions++; op_cwx(s, 0x3AC0C705u);   // 09844 cwx r5,r14,r3
+    s.instructions++; op_rotqby(s, 0x3B818204u);   // 09848 rotqby r4,r4,r6
+    s.instructions++; op_shufb(s, 0xB0408205u);   // 0984c shufb r2,r4,r2,r5
+    s.instructions++; op_stqx(s, 0x2880C702u);   // 09850 stqx r2,r14,r3
+    s.instructions++; op_ai(s, 0x1C010183u);   // 09854 ai r3,r3,4
+    s.instructions++; op_ceqi(s, 0x7C200182u);   // 09858 ceqi r2,r3,128
+    s.instructions++; if (s.pref(2) == 0) goto L_09838;   // 0985c brz r2,0x9838
+    s.instructions++; op_il(s, 0x40800003u);   // 09860 il r3,0x0
+    s.instructions++; op_lqd(s, 0x34000702u);   // 09864 lqd r2,0(r14)
+    s.instructions++; op_cwd(s, 0x3EC00704u);   // 09868 cwd r4,r14,0
+    s.instructions++; op_cwd(s, 0x3EC40705u);   // 0986c cwd r5,r14,16
+    s.instructions++; op_cwd(s, 0x3EC00706u);   // 09870 cwd r6,r14,0
+    s.instructions++; op_shufb(s, 0xB0408184u);   // 09874 shufb r2,r3,r2,r4
+    s.instructions++; op_stqd(s, 0x24000702u);   // 09878 stqd r2,0(r14)
+    s.instructions++; op_lqd(s, 0x34004702u);   // 0987c lqd r2,16(r14)
+    s.instructions++; op_shufb(s, 0xB040A805u);   // 09880 shufb r2,r80,r2,r5
+    s.instructions++; op_stqd(s, 0x24004702u);   // 09884 stqd r2,16(r14)
+    s.instructions++; op_lqd(s, 0x34020702u);   // 09888 lqd r2,128(r14)
+    s.instructions++; op_shufb(s, 0xB0408406u);   // 0988c shufb r2,r8,r2,r6
+    s.instructions++; op_stqd(s, 0x24020702u);   // 09890 stqd r2,128(r14)
+    s.instructions++; op_lqd(s, 0x3400A902u);   // 09894 lqd r2,32(r82)
+    s.instructions++; op_rotqby(s, 0x3B948103u);   // 0989c rotqby r3,r2,r82
+    s.instructions++; op_ila(s, 0x424C5402u);   // 098a0 ila r2,0x98a8
+    s.instructions++;   // 098a4 bi r0,r2,r32
+    s.pc = 0x098A4; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_098a8:
+    s.instructions++; op_ai(s, 0x1C200702u);   // 098a8 ai r2,r14,128
+    s.pc = 0x098AC; s.instructions++; op_wrch(s, 0x21A00802u);   // 098ac wrch ch16,r2
+    if (s.halted) { s.pc = 0x098B0; return false; }
+    s.pc = 0x098B0; s.instructions++; op_wrch(s, 0x21A00903u);   // 098b0 wrch ch18,r3
+    if (s.halted) { s.pc = 0x098B4; return false; }
+    s.instructions++; op_il(s, 0x40800202u);   // 098b4 il r2,0x4
+    s.pc = 0x098B8; s.instructions++; op_wrch(s, 0x21A00982u);   // 098b8 wrch ch19,r2
+    if (s.halted) { s.pc = 0x098BC; return false; }
+    s.pc = 0x098BC; s.instructions++; op_wrch(s, 0x21A00A07u);   // 098bc wrch ch20,r7
+    if (s.halted) { s.pc = 0x098C0; return false; }
+    s.instructions++; op_il(s, 0x40801002u);   // 098c0 il r2,0x20
+    s.pc = 0x098C4; s.instructions++; op_wrch(s, 0x21A00A82u);   // 098c4 wrch ch21,r2
+    if (s.halted) { s.pc = 0x098C8; return false; }
+    s.instructions++; op_ila(s, 0x424C6802u);   // 098c8 ila r2,0x98d0
+    s.instructions++;   // 098cc bi r0,r2,r16
+    s.pc = 0x098CC; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_098d0:
+    s.instructions++; op_ila(s, 0x424C6C02u);   // 098d0 ila r2,0x98d8
+    s.instructions++;   // 098d4 bi r0,r2,r32
+    s.pc = 0x098D4; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_098d8:
+    s.instructions++; op_ori(s, 0x04000702u);   // 098d8 ori r2,r14,0
+    s.pc = 0x098DC; s.instructions++; op_wrch(s, 0x21A00802u);   // 098dc wrch ch16,r2
+    if (s.halted) { s.pc = 0x098E0; return false; }
+    s.pc = 0x098E0; s.instructions++; op_wrch(s, 0x21A00911u);   // 098e0 wrch ch18,r17
+    if (s.halted) { s.pc = 0x098E4; return false; }
+    s.pc = 0x098E4; s.instructions++; op_wrch(s, 0x21A00A07u);   // 098e4 wrch ch20,r7
+    if (s.halted) { s.pc = 0x098E8; return false; }
+    s.instructions++; op_il(s, 0x40805C02u);   // 098e8 il r2,0xb8
+    s.pc = 0x098EC; s.instructions++; op_wrch(s, 0x21A00A82u);   // 098ec wrch ch21,r2
+    if (s.halted) { s.pc = 0x098F0; return false; }
+    s.instructions++; op_ila(s, 0x424C7C02u);   // 098f0 ila r2,0x98f8
+    s.instructions++;   // 098f4 bi r0,r2,r16
+    s.pc = 0x098F4; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_098f8:
+    s.instructions++; op_il(s, 0x40806002u);   // 098f8 il r2,0xc0
+    s.pc = 0x098FC; s.instructions++; op_wrch(s, 0x21A00A82u);   // 098fc wrch ch21,r2
+    if (s.halted) { s.pc = 0x09900; return false; }
+L_09900:
+    s.instructions++; op_ai(s, 0x1C7C0081u);   // 09900 ai r1,r1,496
+    s.instructions++; op_lqd(s, 0x34FFC0D0u);   // 09904 lqd r80,-16(r1)
+    s.instructions++; op_lqd(s, 0x34FF80D1u);   // 09908 lqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x34FF40D2u);   // 0990c lqd r82,-48(r1)
+    s.instructions++; op_lqd(s, 0x34FF00D3u);   // 09910 lqd r83,-64(r1)
+    s.instructions++; op_lqd(s, 0x34FEC0D4u);   // 09914 lqd r84,-80(r1)
+    s.instructions++; op_lqd(s, 0x34FE80D5u);   // 09918 lqd r85,-96(r1)
+    s.instructions++; op_lqd(s, 0x34FE40D6u);   // 0991c lqd r86,-112(r1)
+    s.instructions++; op_lqd(s, 0x34FE00D7u);   // 09920 lqd r87,-128(r1)
+    s.instructions++; op_lqd(s, 0x34FDC0D8u);   // 09924 lqd r88,-144(r1)
+    s.instructions++; op_lqd(s, 0x34FD80D9u);   // 09928 lqd r89,-160(r1)
+    s.instructions++; op_lqd(s, 0x34FD40DAu);   // 0992c lqd r90,-176(r1)
+    s.instructions++; op_lqd(s, 0x34FD00DBu);   // 09930 lqd r91,-192(r1)
+    s.instructions++; op_lqd(s, 0x34004080u);   // 09934 lqd r0,16(r1)
+    s.instructions++;   // 0993c bi r0,r0,r0
+    s.pc = 0x0993C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+L_09940:
+    s.instructions++; op_ila(s, 0x42907808u);   // 09940 ila r8,0x120f0
+    s.instructions++; op_lqd(s, 0x34002B02u);   // 09944 lqd r2,0(r86)
+    s.instructions++; op_il(s, 0x40800805u);   // 09948 il r5,0x10
+    s.instructions++; op_ori(s, 0x04002804u);   // 09950 ori r4,r80,0
+    s.instructions++; op_shlqbyi(s, 0x3FE02903u);   // 09954 shlqbyi r3,r82,0
+    s.instructions++; op_il(s, 0x40800006u);   // 09958 il r6,0x0
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 0995c fsmbi r7,0x0
+    s.instructions++; op_rotqby(s, 0x3B958102u);   // 09964 rotqby r2,r2,r86
+    s.instructions++; op_ai(s, 0x1C034109u);   // 09968 ai r9,r2,13
+    s.instructions++; op_lqx(s, 0x38820102u);   // 0996c lqx r2,r2,r8
+    s.instructions++; op_rotqby(s, 0x3B824102u);   // 09970 rotqby r2,r2,r9
+    s.instructions++; op_andi(s, 0x143FC102u);   // 09974 andi r2,r2,255
+    s.instructions++; op_a(s, 0x18008108u);   // 09978 a r8,r2,r2
+    s.instructions++; op_a(s, 0x18008455u);   // 09980 a r85,r8,r2
+    s.instructions++; s.set_pref(0, 0x09988);   // 09984 brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x09988);
+    if (s.halted || s.pc != 0x09988) return false;
+L_09988:
+    s.instructions++; op_lqd(s, 0x3400A885u);   // 09988 lqd r5,32(r81)
+    s.instructions++; op_andi(s, 0x14FF2802u);   // 0998c andi r2,r80,-4
+    s.instructions++; op_ori(s, 0x04000184u);   // 09990 ori r4,r3,0
+    s.instructions++; op_a(s, 0x18008250u);   // 09994 a r80,r4,r2
+    s.instructions++; op_rotqby(s, 0x3B944285u);   // 09998 rotqby r5,r5,r81
+    s.instructions++; if (s.pref(5) != 0) goto L_09f20;   // 0999c brnz r5,0x9f20
+L_099a0:
+    s.instructions++; op_ori(s, 0x04002804u);   // 099a0 ori r4,r80,0
+    s.instructions++; s.set_pref(0, 0x099A8);   // 099a4 brsl r0,0x8660
+    if (!geomfn_08660(s)) s.run_until(0x099A8);
+    if (s.halted || s.pc != 0x099A8) return false;
+L_099a8:
+    s.instructions++; op_lqd(s, 0x34002982u);   // 099a8 lqd r2,0(r83)
+    s.instructions++; op_rotqby(s, 0x3B94C102u);   // 099ac rotqby r2,r2,r83
+    s.instructions++; op_a(s, 0x18150102u);   // 099b0 a r2,r2,r84
+    s.instructions++; op_ai(s, 0x1C110103u);   // 099b4 ai r3,r2,68
+    s.instructions++; op_ai(s, 0x1C0E0102u);   // 099b8 ai r2,r2,56
+    s.instructions++; op_lqd(s, 0x34000185u);   // 099bc lqd r5,0(r3)
+    s.instructions++; op_lqd(s, 0x34000104u);   // 099c0 lqd r4,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B80C286u);   // 099c4 rotqby r6,r5,r3
+    s.instructions++; op_rotqby(s, 0x3B808204u);   // 099c8 rotqby r4,r4,r2
+    s.instructions++; if (s.pref(6) != 0) goto L_09a48;   // 099cc brnz r6,0x9a48
+    s.instructions++; op_ori(s, 0x04002903u);   // 099d0 ori r3,r82,0
+    s.instructions++; op_lqd(s, 0x3402C085u);   // 099d4 lqd r5,176(r1)
+    s.instructions++; op_cwd(s, 0x3EC00082u);   // 099d8 cwd r2,r1,0
+    s.instructions++; op_cwd(s, 0x3EC10087u);   // 099dc cwd r7,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20088u);   // 099e0 cwd r8,r1,8
+    s.instructions++; op_cwd(s, 0x3EC30089u);   // 099e4 cwd r9,r1,12
+    s.instructions++; op_shufb(s, 0xB0A14302u);   // 099ec shufb r5,r6,r5,r2
+    s.instructions++; op_shufb(s, 0xB0A14307u);   // 099f0 shufb r5,r6,r5,r7
+    s.instructions++; op_shufb(s, 0xB0A14308u);   // 099f4 shufb r5,r6,r5,r8
+    s.instructions++; op_shufb(s, 0xB0A14309u);   // 099f8 shufb r5,r6,r5,r9
+    s.instructions++; op_stqd(s, 0x2402C085u);   // 099fc stqd r5,176(r1)
+    s.instructions++; op_lqd(s, 0x3402C082u);   // 09a00 lqd r2,176(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820285u);   // 09a04 rotqbyi r5,r5,8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0285u);   // 09a08 rotqmbyi r5,r5,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 09a0c rotqmbyi r2,r2,-8
+    s.instructions++; op_shlqbyi(s, 0x3FE20106u);   // 09a14 shlqbyi r6,r2,8
+    s.instructions++; op_or_(s, 0x08218285u);   // 09a18 or r5,r5,r6
+    s.instructions++; s.set_pref(0, 0x09A20);   // 09a1c brsl r0,0x4368
+    if (!geomfn_04368(s)) s.run_until(0x09A20);
+    if (s.halted || s.pc != 0x09A20) return false;
+L_09a20:
+    s.instructions++; goto L_094b4;   // 09a24 br r0,0x94b4
+L_09a28:
+    s.instructions++; op_xsbh(s, 0x56C00302u);   // 09a28 xsbh r2,r6,r0
+    s.instructions++; op_fsmbi(s, 0x32800003u);   // 09a2c fsmbi r3,0x0
+    s.instructions++; if ((s.pref(2) & 0xFFFF) == 0) goto L_09750;   // 09a34 brhz r2,0x9750
+L_09a38:
+    s.instructions++; op_ceqbi(s, 0x7E000B08u);   // 09a38 ceqbi r8,r22,0
+    s.instructions++; op_shlqbyi(s, 0x3FE00483u);   // 09a3c shlqbyi r3,r9,0
+    s.instructions++; goto L_09694;   // 09a44 br r0,0x9694
+L_09a48:
+    s.instructions++; op_il(s, 0x40FFFF86u);   // 09a48 il r6,0xffff
+    s.instructions++; op_lqd(s, 0x34034085u);   // 09a4c lqd r5,208(r1)
+    s.instructions++; op_ori(s, 0x04002903u);   // 09a50 ori r3,r82,0
+    s.instructions++; op_cwd(s, 0x3EC00082u);   // 09a54 cwd r2,r1,0
+    s.instructions++; op_cwd(s, 0x3EC10087u);   // 09a58 cwd r7,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20088u);   // 09a5c cwd r8,r1,8
+    s.instructions++; op_cwd(s, 0x3EC30089u);   // 09a60 cwd r9,r1,12
+    s.instructions++; op_shufb(s, 0xB0A14302u);   // 09a68 shufb r5,r6,r5,r2
+    s.instructions++; op_shufb(s, 0xB0414307u);   // 09a6c shufb r2,r6,r5,r7
+    s.instructions++; op_shufb(s, 0xB0408308u);   // 09a70 shufb r2,r6,r2,r8
+    s.instructions++; op_shufb(s, 0xB0408309u);   // 09a74 shufb r2,r6,r2,r9
+    s.instructions++; op_stqd(s, 0x24034082u);   // 09a78 stqd r2,208(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 09a7c rotqbyi r6,r2,8
+    s.instructions++; op_lqd(s, 0x34034082u);   // 09a80 lqd r2,208(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0306u);   // 09a84 rotqmbyi r6,r6,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 09a88 rotqmbyi r2,r2,-8
+    s.instructions++; op_shlqbyi(s, 0x3FE20105u);   // 09a8c shlqbyi r5,r2,8
+    s.instructions++; op_or_(s, 0x08214305u);   // 09a90 or r5,r6,r5
+    s.instructions++; s.set_pref(0, 0x09A98);   // 09a94 brsl r0,0x4368
+    if (!geomfn_04368(s)) s.run_until(0x09A98);
+    if (s.halted || s.pc != 0x09A98) return false;
+L_09a98:
+    s.instructions++; op_ori(s, 0x04002903u);   // 09a98 ori r3,r82,0
+    s.instructions++; op_lqd(s, 0x34002982u);   // 09a9c lqd r2,0(r83)
+    s.instructions++; op_il(s, 0x40800007u);   // 09aa0 il r7,0x0
+    s.instructions++; op_lqd(s, 0x34030084u);   // 09aa4 lqd r4,192(r1)
+    s.instructions++; op_cwd(s, 0x3EC00085u);   // 09aa8 cwd r5,r1,0
+    s.instructions++; op_cwd(s, 0x3EC10088u);   // 09aac cwd r8,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20089u);   // 09ab0 cwd r9,r1,8
+    s.instructions++; op_cwd(s, 0x3EC3008Au);   // 09ab4 cwd r10,r1,12
+    s.instructions++; op_rotqby(s, 0x3B94C102u);   // 09ab8 rotqby r2,r2,r83
+    s.instructions++; op_shufb(s, 0xB0810385u);   // 09abc shufb r4,r7,r4,r5
+    s.instructions++; op_a(s, 0x18150102u);   // 09ac4 a r2,r2,r84
+    s.instructions++; op_ori(s, 0x04000205u);   // 09ac8 ori r5,r4,0
+    s.instructions++; op_lqd(s, 0x34010106u);   // 09acc lqd r6,64(r2)
+    s.instructions++; op_shufb(s, 0xB0A14388u);   // 09ad0 shufb r5,r7,r5,r8
+    s.instructions++; op_rotqby(s, 0x3B808304u);   // 09ad4 rotqby r4,r6,r2
+    s.instructions++; op_shufb(s, 0xB0414389u);   // 09ad8 shufb r2,r7,r5,r9
+    s.instructions++; op_shufb(s, 0xB040838Au);   // 09adc shufb r2,r7,r2,r10
+    s.instructions++; op_stqd(s, 0x24030082u);   // 09ae0 stqd r2,192(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 09ae4 rotqbyi r6,r2,8
+    s.instructions++; op_lqd(s, 0x34030082u);   // 09ae8 lqd r2,192(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0306u);   // 09aec rotqmbyi r6,r6,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 09af0 rotqmbyi r2,r2,-8
+    s.instructions++; op_shlqbyi(s, 0x3FE20105u);   // 09af4 shlqbyi r5,r2,8
+    s.instructions++; op_or_(s, 0x08214305u);   // 09af8 or r5,r6,r5
+    s.instructions++; s.set_pref(0, 0x09B00);   // 09afc brsl r0,0x4368
+    if (!geomfn_04368(s)) s.run_until(0x09B00);
+    if (s.halted || s.pc != 0x09B00) return false;
+L_09b00:
+    s.instructions++; goto L_094b4;   // 09b04 br r0,0x94b4
+L_09b08:
+    s.instructions++; op_il(s, 0x40800006u);   // 09b08 il r6,0x0
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 09b0c fsmbi r7,0x0
+    s.instructions++; op_il(s, 0x40800804u);   // 09b10 il r4,0x10
+    s.instructions++; op_shlqbyi(s, 0x3FE02903u);   // 09b14 shlqbyi r3,r82,0
+    s.instructions++; op_il(s, 0x40800805u);   // 09b18 il r5,0x10
+    s.instructions++; s.set_pref(0, 0x09B20);   // 09b1c brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x09B20);
+    if (s.halted || s.pc != 0x09B20) return false;
+L_09b20:
+    s.instructions++; op_il(s, 0x40800054u);   // 09b20 il r84,0x0
+    s.instructions++; op_lqd(s, 0x3403E902u);   // 09b24 lqd r2,240(r82)
+    s.instructions++; op_cwd(s, 0x3EC00085u);   // 09b28 cwd r5,r1,0
+    s.instructions++; op_cwd(s, 0x3EC10086u);   // 09b2c cwd r6,r1,4
+    s.instructions++; op_cwd(s, 0x3EC20087u);   // 09b30 cwd r7,r1,8
+    s.instructions++; op_cwd(s, 0x3EC30088u);   // 09b34 cwd r8,r1,12
+    s.instructions++; op_stqd(s, 0x24000182u);   // 09b3c stqd r2,0(r3)
+    s.instructions++; op_ori(s, 0x04002903u);   // 09b40 ori r3,r82,0
+    s.instructions++; op_lqd(s, 0x34028082u);   // 09b44 lqd r2,160(r1)
+    s.instructions++; op_lqd(s, 0x34002984u);   // 09b48 lqd r4,0(r83)
+    s.instructions++; op_shufb(s, 0xB040AA05u);   // 09b4c shufb r2,r84,r2,r5
+    s.instructions++; op_rotqby(s, 0x3B94C204u);   // 09b50 rotqby r4,r4,r83
+    s.instructions++; op_shufb(s, 0xB040AA06u);   // 09b54 shufb r2,r84,r2,r6
+    s.instructions++; op_lqd(s, 0x34004205u);   // 09b58 lqd r5,16(r4)
+    s.instructions++; op_shufb(s, 0xB040AA07u);   // 09b5c shufb r2,r84,r2,r7
+    s.instructions++; op_rotqby(s, 0x3B810284u);   // 09b60 rotqby r4,r5,r4
+    s.instructions++; op_shufb(s, 0xB040AA08u);   // 09b64 shufb r2,r84,r2,r8
+    s.instructions++; op_a(s, 0x18158204u);   // 09b68 a r4,r4,r86
+    s.instructions++; op_stqd(s, 0x24028082u);   // 09b6c stqd r2,160(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 09b70 rotqbyi r6,r2,8
+    s.instructions++; op_lqd(s, 0x34028082u);   // 09b74 lqd r2,160(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0306u);   // 09b78 rotqmbyi r6,r6,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 09b7c rotqmbyi r2,r2,-8
+    s.instructions++; op_shlqbyi(s, 0x3FE20105u);   // 09b84 shlqbyi r5,r2,8
+    s.instructions++; op_or_(s, 0x08214305u);   // 09b88 or r5,r6,r5
+    s.instructions++; s.set_pref(0, 0x09B90);   // 09b8c brsl r0,0x4368
+    if (!geomfn_04368(s)) s.run_until(0x09B90);
+    if (s.halted || s.pc != 0x09B90) return false;
+L_09b90:
+    s.instructions++; op_il(s, 0x40800804u);   // 09b90 il r4,0x10
+    s.instructions++; op_shlqbyi(s, 0x3FE02903u);   // 09b94 shlqbyi r3,r82,0
+    s.instructions++; op_il(s, 0x40800805u);   // 09b98 il r5,0x10
+    s.instructions++; op_fsmbi(s, 0x32800006u);   // 09b9c fsmbi r6,0x0
+    s.instructions++; op_il(s, 0x40800007u);   // 09ba0 il r7,0x0
+    s.instructions++; s.set_pref(0, 0x09BA8);   // 09ba4 brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x09BA8);
+    if (s.halted || s.pc != 0x09BA8) return false;
+L_09ba8:
+    s.instructions++; op_cwd(s, 0x3EC0008Fu);   // 09bac cwd r15,r1,0
+    s.instructions++; op_ai(s, 0x1C3F290Bu);   // 09bb0 ai r11,r82,252
+    s.instructions++; op_cwd(s, 0x3EC10090u);   // 09bb4 cwd r16,r1,4
+    s.instructions++; op_ai(s, 0x1C3E290Au);   // 09bb8 ai r10,r82,248
+    s.instructions++; op_cwd(s, 0x3EC20091u);   // 09bbc cwd r17,r1,8
+    s.instructions++; op_ai(s, 0x1C010189u);   // 09bc0 ai r9,r3,4
+    s.instructions++; op_lqd(s, 0x34000185u);   // 09bc4 lqd r5,0(r3)
+    s.instructions++; op_ai(s, 0x1C020188u);   // 09bc8 ai r8,r3,8
+    s.instructions++; op_cwd(s, 0x3EC00184u);   // 09bcc cwd r4,r3,0
+    s.instructions++; op_ai(s, 0x1C030187u);   // 09bd0 ai r7,r3,12
+    s.instructions++; op_shlqbyi(s, 0x3FE00182u);   // 09bd4 shlqbyi r2,r3,0
+    s.instructions++; op_ilhu(s, 0x41000203u);   // 09bd8 ilhu r3,0x4
+    s.instructions++; op_cwd(s, 0x3EC0048Cu);   // 09bdc cwd r12,r9,0
+    s.instructions++; op_cwd(s, 0x3EC0040Du);   // 09be4 cwd r13,r8,0
+    s.instructions++; op_iohl(s, 0x608EB603u);   // 09be8 iohl r3,0x1d6c
+    s.instructions++; op_cwd(s, 0x3EC0038Eu);   // 09bec cwd r14,r7,0
+    s.instructions++; op_cwd(s, 0x3EC30092u);   // 09bf0 cwd r18,r1,12
+    s.instructions++; op_shufb(s, 0xB0A14184u);   // 09bf4 shufb r5,r3,r5,r4
+    s.instructions++; op_ori(s, 0x04002A84u);   // 09bf8 ori r4,r85,0
+    s.instructions++; op_ori(s, 0x04002903u);   // 09c00 ori r3,r82,0
+    s.instructions++; op_stqd(s, 0x24000105u);   // 09c04 stqd r5,0(r2)
+    s.instructions++; op_lqd(s, 0x34000582u);   // 09c08 lqd r2,0(r11)
+    s.instructions++; op_lqd(s, 0x34000486u);   // 09c0c lqd r6,0(r9)
+    s.instructions++; op_rotqby(s, 0x3B82C105u);   // 09c10 rotqby r5,r2,r11
+    s.instructions++; op_il(s, 0x4087F802u);   // 09c14 il r2,0xff0
+    s.instructions++; op_and_(s, 0x18208285u);   // 09c18 and r5,r5,r2
+    s.instructions++; op_shufb(s, 0xB0C1828Cu);   // 09c1c shufb r6,r5,r6,r12
+    s.instructions++; op_ilhu(s, 0x41000205u);   // 09c20 ilhu r5,0x4
+    s.instructions++; op_iohl(s, 0x608EBA05u);   // 09c24 iohl r5,0x1d74
+    s.instructions++; op_stqd(s, 0x24000486u);   // 09c28 stqd r6,0(r9)
+    s.instructions++; op_lqd(s, 0x34000402u);   // 09c2c lqd r2,0(r8)
+    s.instructions++; op_shufb(s, 0xB040828Du);   // 09c30 shufb r2,r5,r2,r13
+    s.instructions++; op_stqd(s, 0x24000402u);   // 09c34 stqd r2,0(r8)
+    s.instructions++; op_lqd(s, 0x34000505u);   // 09c38 lqd r5,0(r10)
+    s.instructions++; op_lqd(s, 0x34000382u);   // 09c3c lqd r2,0(r7)
+    s.instructions++; op_rotqby(s, 0x3B828285u);   // 09c40 rotqby r5,r5,r10
+    s.instructions++; op_shufb(s, 0xB040828Eu);   // 09c44 shufb r2,r5,r2,r14
+    s.instructions++; op_stqd(s, 0x24000382u);   // 09c48 stqd r2,0(r7)
+    s.instructions++; op_lqd(s, 0x34024082u);   // 09c4c lqd r2,144(r1)
+    s.instructions++; op_shufb(s, 0xB040AA0Fu);   // 09c50 shufb r2,r84,r2,r15
+    s.instructions++; op_shufb(s, 0xB040AA10u);   // 09c54 shufb r2,r84,r2,r16
+    s.instructions++; op_shufb(s, 0xB040AA11u);   // 09c58 shufb r2,r84,r2,r17
+    s.instructions++; op_shufb(s, 0xB040AA12u);   // 09c5c shufb r2,r84,r2,r18
+    s.instructions++; op_stqd(s, 0x24024082u);   // 09c60 stqd r2,144(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820106u);   // 09c64 rotqbyi r6,r2,8
+    s.instructions++; op_lqd(s, 0x34024082u);   // 09c68 lqd r2,144(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0306u);   // 09c6c rotqmbyi r6,r6,-8
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0102u);   // 09c70 rotqmbyi r2,r2,-8
+    s.instructions++; op_shlqbyi(s, 0x3FE20105u);   // 09c74 shlqbyi r5,r2,8
+    s.instructions++; op_or_(s, 0x08214305u);   // 09c78 or r5,r6,r5
+    s.instructions++; s.set_pref(0, 0x09C80);   // 09c7c brsl r0,0x4368
+    if (!geomfn_04368(s)) s.run_until(0x09C80);
+    if (s.halted || s.pc != 0x09C80) return false;
+L_09c80:
+    s.instructions++; op_lqd(s, 0x34002982u);   // 09c80 lqd r2,0(r83)
+    s.instructions++; op_rotqby(s, 0x3B94C105u);   // 09c84 rotqby r5,r2,r83
+    s.instructions++; goto L_09008;   // 09c8c br r0,0x9008
+L_09c90:
+    s.instructions++; op_ai(s, 0x1C652902u);   // 09c90 ai r2,r82,404
+    s.instructions++; op_ori(s, 0x04000583u);   // 09c98 ori r3,r11,0
+    s.instructions++; op_shlqbyi(s, 0x3FE02A05u);   // 09c9c shlqbyi r5,r84,0
+    s.instructions++; op_il(s, 0x40800286u);   // 09ca0 il r6,0x5
+    s.instructions++; op_lqd(s, 0x34000104u);   // 09ca4 lqd r4,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B808204u);   // 09cb8 rotqby r4,r4,r2
+    s.instructions++; s.set_pref(0, 0x09CC0);   // 09cbc brsl r0,0x8690
+    if (!geomfn_08690(s)) s.run_until(0x09CC0);
+    if (s.halted || s.pc != 0x09CC0) return false;
+L_09cc0:
+    s.instructions++; op_ori(s, 0x0400018Bu);   // 09cc0 ori r11,r3,0
+    s.instructions++; goto L_08f10;   // 09cc4 br r0,0x8f10
+L_09cc8:
+    s.instructions++; op_ai(s, 0x1C422902u);   // 09cc8 ai r2,r82,264
+    s.instructions++; op_lqd(s, 0x34000103u);   // 09cd0 lqd r3,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B808184u);   // 09cd4 rotqby r4,r3,r2
+    s.instructions++; op_ila(s, 0x424E7002u);   // 09cd8 ila r2,0x9ce0
+    s.instructions++;   // 09cdc bi r0,r2,r32
+    s.pc = 0x09CDC; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_09ce0:
+    s.instructions++; op_ai(s, 0x1C202902u);   // 09ce0 ai r2,r82,128
+    s.pc = 0x09CE4; s.instructions++; op_wrch(s, 0x21A00802u);   // 09ce4 wrch ch16,r2
+    if (s.halted) { s.pc = 0x09CE8; return false; }
+    s.instructions++; op_ai(s, 0x1C202C83u);   // 09ce8 ai r3,r89,128
+    s.pc = 0x09CEC; s.instructions++; op_wrch(s, 0x21A00903u);   // 09cec wrch ch18,r3
+    if (s.halted) { s.pc = 0x09CF0; return false; }
+    s.instructions++; op_il(s, 0x40803002u);   // 09cf0 il r2,0x60
+    s.pc = 0x09CF4; s.instructions++; op_wrch(s, 0x21A00982u);   // 09cf4 wrch ch19,r2
+    if (s.halted) { s.pc = 0x09CF8; return false; }
+    s.pc = 0x09CF8; s.instructions++; op_wrch(s, 0x21A00A04u);   // 09cf8 wrch ch20,r4
+    if (s.halted) { s.pc = 0x09CFC; return false; }
+    s.instructions++; op_il(s, 0x40802002u);   // 09cfc il r2,0x40
+    s.pc = 0x09D00; s.instructions++; op_wrch(s, 0x21A00A82u);   // 09d00 wrch ch21,r2
+    if (s.halted) { s.pc = 0x09D04; return false; }
+    s.instructions++; op_ila(s, 0x424E8802u);   // 09d08 ila r2,0x9d10
+    s.instructions++;   // 09d0c bi r0,r2,r16
+    s.pc = 0x09D0C; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_09d10:
+    s.instructions++; op_lqd(s, 0x34092902u);   // 09d10 lqd r2,576(r82)
+    s.instructions++; op_rotqby(s, 0x3B948151u);   // 09d14 rotqby r81,r2,r82
+    s.instructions++; goto L_08d38;   // 09d1c br r0,0x8d38
+L_09d20:
+    s.instructions++; op_ai(s, 0x1C010102u);   // 09d20 ai r2,r2,4
+    s.instructions++; op_ai(s, 0x1C5E290Bu);   // 09d28 ai r11,r82,376
+    s.instructions++; op_shlqbyi(s, 0x3FE02903u);   // 09d2c shlqbyi r3,r82,0
+    s.instructions++; op_a(s, 0x1800A904u);   // 09d30 a r4,r82,r2
+    s.instructions++; op_lqx(s, 0x3880A902u);   // 09d34 lqx r2,r82,r2
+    s.instructions++; op_il(s, 0x40800805u);   // 09d38 il r5,0x10
+    s.instructions++; op_lqd(s, 0x34000588u);   // 09d3c lqd r8,0(r11)
+    s.instructions++; op_ori(s, 0x04002D86u);   // 09d40 ori r6,r91,0
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 09d44 fsmbi r7,0x0
+    s.instructions++; op_rotqby(s, 0x3B810154u);   // 09d4c rotqby r84,r2,r4
+    s.instructions++; op_ila(s, 0x42907804u);   // 09d50 ila r4,0x120f0
+    s.instructions++; op_rotqby(s, 0x3B82C451u);   // 09d54 rotqby r81,r8,r11
+    s.instructions++; op_andi(s, 0x143FEA02u);   // 09d58 andi r2,r84,255
+    s.instructions++; op_ai(s, 0x1C012888u);   // 09d5c ai r8,r81,4
+    s.instructions++; op_ai(s, 0x1C034109u);   // 09d60 ai r9,r2,13
+    s.instructions++; op_lqx(s, 0x38810102u);   // 09d64 lqx r2,r2,r4
+    s.instructions++; op_rotqby(s, 0x3B824102u);   // 09d68 rotqby r2,r2,r9
+    s.instructions++; op_ah(s, 0x19008104u);   // 09d6c ah r4,r2,r2
+    s.instructions++; op_ah(s, 0x19008204u);   // 09d70 ah r4,r4,r2
+    s.instructions++; op_andi(s, 0x143FC250u);   // 09d74 andi r80,r4,255
+    s.instructions++; op_mpyh(s, 0x78B40409u);   // 09d78 mpyh r9,r8,r80
+    s.instructions++; op_mpyh(s, 0x78A22804u);   // 09d7c mpyh r4,r80,r8
+    s.instructions++; op_mpyu(s, 0x79940402u);   // 09d80 mpyu r2,r8,r80
+    s.instructions++; op_a(s, 0x18010484u);   // 09d84 a r4,r9,r4
+    s.instructions++; op_a(s, 0x18008204u);   // 09d88 a r4,r4,r2
+    s.instructions++; op_ai(s, 0x1C03C204u);   // 09d8c ai r4,r4,15
+    s.instructions++; op_andi(s, 0x14FC0204u);   // 09d90 andi r4,r4,-16
+    s.instructions++; s.set_pref(0, 0x09D98);   // 09d94 brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x09D98);
+    if (s.halted || s.pc != 0x09D98) return false;
+L_09d98:
+    s.instructions++; op_il(s, 0x4081D402u);   // 09d98 il r2,0x3a8
+    s.instructions++; op_a(s, 0x1800A904u);   // 09da0 a r4,r82,r2
+    s.instructions++; op_lqx(s, 0x3880A902u);   // 09da4 lqx r2,r82,r2
+    s.instructions++; op_ori(s, 0x040001D5u);   // 09da8 ori r85,r3,0
+    s.instructions++; op_lqd(s, 0x340CA903u);   // 09dac lqd r3,800(r82)
+    s.instructions++; op_rotqby(s, 0x3B810102u);   // 09db0 rotqby r2,r2,r4
+    s.instructions++; op_rotqby(s, 0x3B9481D3u);   // 09db4 rotqby r83,r3,r82
+    s.instructions++; if (s.pref(2) == 0) goto L_09fc0;   // 09dbc brz r2,0x9fc0
+L_09dc0:
+    s.instructions++; op_ilhu(s, 0x411FC00Du);   // 09dc0 ilhu r13,0x3f80
+    s.instructions++; op_lqd(s, 0x34010082u);   // 09dc4 lqd r2,64(r1)
+    s.instructions++; op_il(s, 0x4081D20Au);   // 09dc8 il r10,0x3a4
+    s.instructions++; op_cwd(s, 0x3EC00086u);   // 09dcc cwd r6,r1,0
+    s.instructions++; op_il(s, 0x40800010u);   // 09dd0 il r16,0x0
+    s.instructions++; op_cwd(s, 0x3EC1008Eu);   // 09dd4 cwd r14,r1,4
+    s.instructions++; op_ai(s, 0x1C00E88Bu);   // 09dd8 ai r11,r81,3
+    s.instructions++; op_cwd(s, 0x3EC2008Fu);   // 09ddc cwd r15,r1,8
+    s.instructions++; op_ori(s, 0x04002983u);   // 09de0 ori r3,r83,0
+    s.instructions++; op_cwx(s, 0x3AC2A909u);   // 09de4 cwx r9,r82,r10
+    s.instructions++; op_ori(s, 0x04000312u);   // 09de8 ori r18,r6,0
+    s.instructions++; op_cwd(s, 0x3EC30091u);   // 09dec cwd r17,r1,12
+    s.instructions++; op_ori(s, 0x04002A84u);   // 09df0 ori r4,r85,0
+    s.instructions++; op_shufb(s, 0xB0408686u);   // 09df4 shufb r2,r13,r2,r6
+    s.instructions++; op_ori(s, 0x04002805u);   // 09df8 ori r5,r80,0
+    s.instructions++; op_cdd(s, 0x3EE00096u);   // 09dfc cdd r22,r1,0
+    s.instructions++; op_ori(s, 0x04002A07u);   // 09e00 ori r7,r84,0
+    s.instructions++; op_cdd(s, 0x3EE20097u);   // 09e04 cdd r23,r1,8
+    s.instructions++; op_andi(s, 0x14FF058Bu);   // 09e08 andi r11,r11,-4
+    s.instructions++; op_il(s, 0x40800186u);   // 09e10 il r6,0x3
+    s.instructions++; op_stqd(s, 0x24010082u);   // 09e14 stqd r2,64(r1)
+    s.instructions++; op_il(s, 0x4080000Cu);   // 09e18 il r12,0x0
+    s.instructions++; op_shufb(s, 0xB040868Eu);   // 09e1c shufb r2,r13,r2,r14
+    s.instructions++; op_lqx(s, 0x3882A908u);   // 09e20 lqx r8,r82,r10
+    s.instructions++; op_stqd(s, 0x24010082u);   // 09e24 stqd r2,64(r1)
+    s.instructions++; op_shufb(s, 0xB040868Fu);   // 09e28 shufb r2,r13,r2,r15
+    s.instructions++; op_shufb(s, 0xB1022889u);   // 09e2c shufb r8,r81,r8,r9
+    s.instructions++; op_shufb(s, 0xB0408691u);   // 09e30 shufb r2,r13,r2,r17
+    s.instructions++; op_stqx(s, 0x2882A908u);   // 09e34 stqx r8,r82,r10
+    s.instructions++; op_lqd(s, 0x340EA908u);   // 09e38 lqd r8,928(r82)
+    s.instructions++; op_stqd(s, 0x24010082u);   // 09e3c stqd r2,64(r1)
+    s.instructions++; op_lqd(s, 0x34014082u);   // 09e40 lqd r2,80(r1)
+    s.instructions++; op_rotqby(s, 0x3B94840Au);   // 09e44 rotqby r10,r8,r82
+    s.instructions++; op_shufb(s, 0xB0408812u);   // 09e48 shufb r2,r16,r2,r18
+    s.instructions++; op_shufb(s, 0xB040880Eu);   // 09e4c shufb r2,r16,r2,r14
+    s.instructions++; op_shufb(s, 0xB040880Fu);   // 09e50 shufb r2,r16,r2,r15
+    s.instructions++; op_shufb(s, 0xB0408811u);   // 09e54 shufb r2,r16,r2,r17
+    s.instructions++; op_stqd(s, 0x24014082u);   // 09e58 stqd r2,80(r1)
+    s.instructions++; op_lqd(s, 0x34010082u);   // 09e5c lqd r2,64(r1)
+    s.instructions++; op_lqd(s, 0x3402008Du);   // 09e60 lqd r13,128(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0108u);   // 09e64 rotqmbyi r8,r2,-8
+    s.instructions++; op_shufb(s, 0xB1A34116u);   // 09e68 shufb r13,r2,r13,r22
+    s.instructions++; op_shlqbyi(s, 0x3FE20409u);   // 09e6c shlqbyi r9,r8,8
+    s.instructions++; op_stqd(s, 0x2402008Du);   // 09e70 stqd r13,128(r1)
+    s.instructions++; op_lqd(s, 0x34010088u);   // 09e74 lqd r8,64(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820408u);   // 09e78 rotqbyi r8,r8,8
+    s.instructions++; op_shufb(s, 0xB0434417u);   // 09e7c shufb r2,r8,r13,r23
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0408u);   // 09e80 rotqmbyi r8,r8,-8
+    s.instructions++; op_stqd(s, 0x24020082u);   // 09e84 stqd r2,128(r1)
+    s.instructions++; op_or_(s, 0x08224408u);   // 09e88 or r8,r8,r9
+    s.instructions++; op_lqd(s, 0x34014082u);   // 09e8c lqd r2,80(r1)
+    s.instructions++; op_lqd(s, 0x3404008Eu);   // 09e90 lqd r14,256(r1)
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0109u);   // 09e94 rotqmbyi r9,r2,-8
+    s.instructions++; op_shufb(s, 0xB1C38116u);   // 09e98 shufb r14,r2,r14,r22
+    s.instructions++; op_shlqbyi(s, 0x3FE2048Du);   // 09e9c shlqbyi r13,r9,8
+    s.instructions++; op_stqd(s, 0x2404008Eu);   // 09ea0 stqd r14,256(r1)
+    s.instructions++; op_lqd(s, 0x34014089u);   // 09ea4 lqd r9,80(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F820489u);   // 09ea8 rotqbyi r9,r9,8
+    s.instructions++; op_shufb(s, 0xB0438497u);   // 09eac shufb r2,r9,r14,r23
+    s.instructions++; op_rotqmbyi(s, 0x3FBE0489u);   // 09eb0 rotqmbyi r9,r9,-8
+    s.instructions++; op_stqd(s, 0x24040082u);   // 09eb4 stqd r2,256(r1)
+    s.instructions++; op_or_(s, 0x08234489u);   // 09eb8 or r9,r9,r13
+    s.instructions++; s.set_pref(0, 0x09EC0);   // 09ebc brsl r0,0x61c8
+    if (!geomfn_061c8(s)) s.run_until(0x09EC0);
+    if (s.halted || s.pc != 0x09EC0) return false;
+L_09ec0:
+    s.instructions++; goto L_08d08;   // 09ec4 br r0,0x8d08
+L_09ec8:
+    s.instructions++; op_ori(s, 0x04002903u);   // 09ec8 ori r3,r82,0
+    s.instructions++; s.set_pref(0, 0x09ED0);   // 09ecc brsl r0,0x8ab0
+    if (!geomfn_08ab0(s)) s.run_until(0x09ED0);
+    if (s.halted || s.pc != 0x09ED0) return false;
+L_09ed0:
+    s.instructions++; op_il(s, 0x40810A50u);   // 09ed0 il r80,0x214
+    s.instructions++; op_il(s, 0x40811006u);   // 09ed8 il r6,0x220
+    s.instructions++; op_shlqbyi(s, 0x3FE02903u);   // 09edc shlqbyi r3,r82,0
+    s.instructions++; op_a(s, 0x18142902u);   // 09ee0 a r2,r82,r80
+    s.instructions++; op_lqx(s, 0x38942904u);   // 09ee4 lqx r4,r82,r80
+    s.instructions++; op_a(s, 0x1801A906u);   // 09ee8 a r6,r82,r6
+    s.instructions++; op_fsmbi(s, 0x32800007u);   // 09eec fsmbi r7,0x0
+    s.instructions++; op_il(s, 0x40800805u);   // 09ef0 il r5,0x10
+    s.instructions++; op_rotqby(s, 0x3B808204u);   // 09ef4 rotqby r4,r4,r2
+    s.instructions++; s.set_pref(0, 0x09F00);   // 09efc brsl r0,0x4c18
+    if (!geomfn_04c18(s)) s.run_until(0x09F00);
+    if (s.halted || s.pc != 0x09F00) return false;
+L_09f00:
+    s.instructions++; op_a(s, 0x18142904u);   // 09f00 a r4,r82,r80
+    s.instructions++; op_lqx(s, 0x38942902u);   // 09f04 lqx r2,r82,r80
+    s.instructions++; op_lqd(s, 0x34086906u);   // 09f08 lqd r6,528(r82)
+    s.instructions++; op_rotqby(s, 0x3B810105u);   // 09f0c rotqby r5,r2,r4
+    s.instructions++; op_rotqby(s, 0x3B948304u);   // 09f10 rotqby r4,r6,r82
+    s.instructions++; s.set_pref(0, 0x09F18);   // 09f14 brsl r0,0xbc80
+    if (!geomfn_0bc80(s)) s.run_until(0x09F18);
+    if (s.halted || s.pc != 0x09F18) return false;
+L_09f18:
+    s.instructions++; goto L_08cf0;   // 09f1c br r0,0x8cf0
+L_09f20:
+    s.instructions++; op_ilhu(s, 0x41000206u);   // 09f20 ilhu r6,0x4
+    s.instructions++; op_lqd(s, 0x34000207u);   // 09f24 lqd r7,0(r4)
+    s.instructions++; op_ai(s, 0x1C01020Au);   // 09f28 ai r10,r4,4
+    s.instructions++; op_cwd(s, 0x3EC00208u);   // 09f2c cwd r8,r4,0
+    s.instructions++; op_iohl(s, 0x608B4006u);   // 09f30 iohl r6,0x1680
+    s.instructions++; op_lqd(s, 0x34002D8Cu);   // 09f34 lqd r12,0(r91)
+    s.instructions++; op_ai(s, 0x1C02020Bu);   // 09f38 ai r11,r4,8
+    s.instructions++; op_cwd(s, 0x3EC0050Du);   // 09f3c cwd r13,r10,0
+    s.instructions++; op_ai(s, 0x1C030209u);   // 09f40 ai r9,r4,12
+    s.instructions++; op_ai(s, 0x1C040203u);   // 09f48 ai r3,r4,16
+    s.instructions++; op_cwd(s, 0x3EC0058Eu);   // 09f4c cwd r14,r11,0
+    s.instructions++; op_shli(s, 0x0F622A82u);   // 09f50 shli r2,r85,8
+    s.instructions++; op_shufb(s, 0xB0E1C308u);   // 09f54 shufb r7,r6,r7,r8
+    s.instructions++; op_il(s, 0x40800286u);   // 09f58 il r6,0x5
+    s.instructions++; op_cwd(s, 0x3EC00488u);   // 09f5c cwd r8,r9,0
+    s.instructions++; op_rotqby(s, 0x3B96C60Cu);   // 09f64 rotqby r12,r12,r91
+    s.instructions++; op_ori(s, 0x040C0102u);   // 09f68 ori r2,r2,48
+    s.instructions++; op_stqd(s, 0x24000207u);   // 09f6c stqd r7,0(r4)
+    s.instructions++; op_ilhu(s, 0x41000207u);   // 09f70 ilhu r7,0x4
+    s.instructions++; op_lqd(s, 0x34000504u);   // 09f74 lqd r4,0(r10)
+    s.instructions++; op_or_(s, 0x0820AD02u);   // 09f78 or r2,r90,r2
+    s.instructions++; op_iohl(s, 0x608BA007u);   // 09f7c iohl r7,0x1740
+    s.instructions++; op_shufb(s, 0xB081060Du);   // 09f80 shufb r4,r12,r4,r13
+    s.instructions++; op_stqd(s, 0x24000504u);   // 09f84 stqd r4,0(r10)
+    s.instructions++; op_lqd(s, 0x34000584u);   // 09f88 lqd r4,0(r11)
+    s.instructions++; op_shufb(s, 0xB081038Eu);   // 09f8c shufb r4,r7,r4,r14
+    s.instructions++; op_stqd(s, 0x24000584u);   // 09f90 stqd r4,0(r11)
+    s.instructions++; op_lqd(s, 0x34000484u);   // 09f94 lqd r4,0(r9)
+    s.instructions++; op_shufb(s, 0xB0810108u);   // 09f98 shufb r4,r2,r4,r8
+    s.instructions++; op_stqd(s, 0x24000484u);   // 09f9c stqd r4,0(r9)
+    s.instructions++; op_lqd(s, 0x34006882u);   // 09fa0 lqd r2,16(r81)
+    s.instructions++; op_rotqby(s, 0x3B944104u);   // 09fa4 rotqby r4,r2,r81
+    s.instructions++; s.set_pref(0, 0x09FAC);   // 09fa8 brsl r0,0x8690
+    if (!geomfn_08690(s)) s.run_until(0x09FAC);
+    if (s.halted || s.pc != 0x09FAC) return false;
+L_09fac:
+    s.instructions++; goto L_099a0;   // 09fac br r0,0x99a0
+L_09fb0:
+    s.instructions++; op_ai(s, 0x1C0D2902u);   // 09fb0 ai r2,r82,52
+    s.instructions++; op_lqd(s, 0x34000103u);   // 09fb4 lqd r3,0(r2)
+    s.instructions++; op_rotqby(s, 0x3B808188u);   // 09fb8 rotqby r8,r3,r2
+    s.instructions++; goto L_09830;   // 09fbc br r0,0x9830
+L_09fc0:
+    s.instructions++; op_ori(s, 0x04002903u);   // 09fc0 ori r3,r82,0
+    s.instructions++; s.set_pref(0, 0x09FC8);   // 09fc4 brsl r0,0x88e0
+    if (!geomfn_088e0(s)) s.run_until(0x09FC8);
+    if (s.halted || s.pc != 0x09FC8) return false;
+L_09fc8:
+    s.instructions++; goto L_09dc0;   // 09fc8 br r0,0x9dc0
+L_09fcc:
+    s.instructions++; op_il(s, 0x40FFFF88u);   // 09fcc il r8,0xffff
+    s.instructions++; goto L_09760;   // 09fd0 br r0,0x9760
+}
+bool geomfn_09fd8(SPUThread& s) {
+    u32 to;
+    goto L_09fd8;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x09FD8: goto L_09fd8;
+    case 0x0A028: goto L_0a028;
+    case 0x0A058: goto L_0a058;
+    case 0x0A068: goto L_0a068;
+    case 0x0A088: goto L_0a088;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_09fd8:
+    s.instructions++; op_ori(s, 0x04000186u);   // 09fd8 ori r6,r3,0
+    s.instructions++; op_stqd(s, 0x24004080u);   // 09fdc stqd r0,16(r1)
+    s.instructions++; op_stqd(s, 0x24FF0081u);   // 09fe4 stqd r1,-64(r1)
+    s.instructions++; op_ai(s, 0x1CF00081u);   // 09fe8 ai r1,r1,-64
+    s.instructions++; op_cwd(s, 0x3EC40187u);   // 09fec cwd r7,r3,16
+    s.instructions++; op_stqd(s, 0x2400C085u);   // 09ff0 stqd r5,48(r1)
+    s.instructions++; op_stqd(s, 0x24008084u);   // 09ff4 stqd r4,32(r1)
+    s.instructions++; op_lqd(s, 0x34108182u);   // 09ff8 lqd r2,1056(r3)
+    s.instructions++; op_lqd(s, 0x34044184u);   // 09ffc lqd r4,272(r3)
+    s.instructions++; op_rotqby(s, 0x3B80C103u);   // 0a004 rotqby r3,r2,r3
+    s.instructions++; op_ori(s, 0x04000205u);   // 0a008 ori r5,r4,0
+    s.instructions++; op_rotqby(s, 0x3B818204u);   // 0a00c rotqby r4,r4,r6
+    s.instructions++; op_ceqi(s, 0x7C000182u);   // 0a010 ceqi r2,r3,0
+    s.instructions++; op_selb(s, 0x80610182u);   // 0a014 selb r3,r3,r4,r2
+    s.instructions++; op_shufb(s, 0xB0A14187u);   // 0a018 shufb r5,r3,r5,r7
+    s.instructions++; op_stqd(s, 0x24044305u);   // 0a01c stqd r5,272(r6)
+    s.instructions++; op_ila(s, 0x42501402u);   // 0a020 ila r2,0xa028
+    s.instructions++;   // 0a024 bi r0,r2,r32
+    s.pc = 0x0A024; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_0a028:
+    s.instructions++; op_lqa(s, 0x30A58007u);   // 0a028 lqa r7,0x12c00
+    s.instructions++; op_il(s, 0x40802402u);   // 0a02c il r2,0x48
+    s.instructions++; op_fsmbi(s, 0x32800003u);   // 0a030 fsmbi r3,0x0
+    s.instructions++; op_il(s, 0x40800084u);   // 0a034 il r4,0x1
+    s.instructions++; op_fsmbi(s, 0x32800005u);   // 0a038 fsmbi r5,0x0
+    s.instructions++; op_a(s, 0x18008386u);   // 0a03c a r6,r7,r2
+    s.instructions++; op_lqx(s, 0x38808382u);   // 0a040 lqx r2,r7,r2
+    s.instructions++; op_rotqby(s, 0x3B818102u);   // 0a044 rotqby r2,r2,r6
+    s.instructions++;   // 0a04c bisl r0,r2,r0
+    s.pc = 0x0A04C; op_bisl(s, 0x35200100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x0A050)) return false;   // indirect call
+    s.instructions++; op_ila(s, 0x42502C02u);   // 0a050 ila r2,0xa058
+    s.instructions++;   // 0a054 bi r0,r2,r16
+    s.pc = 0x0A054; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_0a058:
+    s.instructions++; op_il(s, 0x40800082u);   // 0a058 il r2,0x1
+    s.instructions++; op_stqa(s, 0x20A58202u);   // 0a05c stqa r2,0x12c10
+    s.instructions++; op_ila(s, 0x42503402u);   // 0a060 ila r2,0xa068
+    s.instructions++;   // 0a064 bi r0,r2,r32
+    s.pc = 0x0A064; op_bi(s, 0x35080100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_0a068:
+    s.instructions++; op_lqa(s, 0x30A58004u);   // 0a068 lqa r4,0x12c00
+    s.instructions++; op_il(s, 0x40802202u);   // 0a06c il r2,0x44
+    s.instructions++; op_a(s, 0x18008203u);   // 0a070 a r3,r4,r2
+    s.instructions++; op_lqx(s, 0x38808202u);   // 0a074 lqx r2,r4,r2
+    s.instructions++; op_rotqby(s, 0x3B80C102u);   // 0a078 rotqby r2,r2,r3
+    s.instructions++;   // 0a07c bisl r0,r2,r0
+    s.pc = 0x0A07C; op_bisl(s, 0x35200100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x0A080)) return false;   // indirect call
+    s.instructions++; op_ila(s, 0x42504402u);   // 0a080 ila r2,0xa088
+    s.instructions++;   // 0a084 bi r0,r2,r16
+    s.pc = 0x0A084; op_bi(s, 0x35040100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_0a088:
+    s.instructions++; op_ai(s, 0x1C100081u);   // 0a088 ai r1,r1,64
+    s.instructions++; op_lqd(s, 0x34004080u);   // 0a08c lqd r0,16(r1)
+    s.instructions++;   // 0a090 bi r0,r0,r0
+    s.pc = 0x0A090; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
 }
 bool geomfn_0afd0(SPUThread& s) {
     u32 to;
@@ -206,7 +5529,8 @@ L_0ae88:
     s.instructions++; op_andi(s, 0x14FF0204u);   // 0ae94 andi r4,r4,-4
     s.instructions++; op_shli(s, 0x0F610204u);   // 0ae98 shli r4,r4,4
     s.instructions++; s.set_pref(0, 0x0AEA0);   // 0ae9c brsl r0,0x41c0
-    if (!geomfn_041c0(s) || s.pc != 0x0AEA0) return false;
+    if (!geomfn_041c0(s)) s.run_until(0x0AEA0);
+    if (s.halted || s.pc != 0x0AEA0) return false;
 L_0aea0:
     s.instructions++; op_ai(s, 0x1C080084u);   // 0aea0 ai r4,r1,32
     s.instructions++; op_il(s, 0x40800002u);   // 0aea8 il r2,0x0
@@ -235,7 +5559,8 @@ L_0aea0:
     s.instructions++; op_rotqby(s, 0x3B94068Au);   // 0af04 rotqby r10,r13,r80
     s.instructions++; op_stqd(s, 0x24008082u);   // 0af08 stqd r2,32(r1)
     s.instructions++; s.set_pref(0, 0x0AF10);   // 0af0c brsl r0,0xd400
-    if (!geomfn_0d400(s) || s.pc != 0x0AF10) return false;
+    if (!geomfn_0d400(s)) s.run_until(0x0AF10);
+    if (s.halted || s.pc != 0x0AF10) return false;
 L_0af10:
     s.instructions++; op_lqd(s, 0x34008082u);   // 0af10 lqd r2,32(r1)
     s.instructions++; op_lqd(s, 0x34062804u);   // 0af14 lqd r4,384(r80)
@@ -288,7 +5613,8 @@ L_0af98:
 L_0afc0:
     s.instructions++; op_il(s, 0x40800004u);   // 0afc0 il r4,0x0
     s.instructions++; s.set_pref(0, 0x0AFC8);   // 0afc4 brsl r0,0x8970
-    if (!geomfn_08970(s) || s.pc != 0x0AFC8) return false;
+    if (!geomfn_08970(s)) s.run_until(0x0AFC8);
+    if (s.halted || s.pc != 0x0AFC8) return false;
 L_0afc8:
     s.instructions++; goto L_0ae88;   // 0afc8 br r0,0xae88
     s.pc = 0x0AFCC; return false;   // (falls out of the scanned code)
@@ -300,6 +5626,865 @@ L_0afd0:
     s.instructions++; op_stqd(s, 0x2400C085u);   // 0afe4 stqd r5,48(r1)
     s.instructions++; op_ai(s, 0x1C100081u);   // 0afe8 ai r1,r1,64
     s.instructions++; goto L_0add8;   // 0aff4 br r0,0xadd8
+}
+bool geomfn_0b280(SPUThread& s) {
+    u32 to;
+    goto L_0b280;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0B280: goto L_0b280;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0b280:
+    s.instructions++; op_ori(s, 0x04000082u);   // 0b280 ori r2,r1,0
+    s.instructions++; op_rotqbyi(s, 0x3F808205u);   // 0b284 rotqbyi r5,r4,2
+    s.instructions++; op_ori(s, 0x04000186u);   // 0b288 ori r6,r3,0
+    s.instructions++; op_lqd(s, 0x34044183u);   // 0b28c lqd r3,272(r3)
+    s.instructions++; op_ai(s, 0x1CF80081u);   // 0b290 ai r1,r1,-32
+    s.instructions++; op_stqd(s, 0x24FF8102u);   // 0b294 stqd r2,-32(r2)
+    s.instructions++; op_ila(s, 0x427FFF87u);   // 0b298 ila r7,0xffff
+    s.instructions++; op_stqd(s, 0x24004100u);   // 0b29c stqd r0,16(r2)
+    s.instructions++; op_ahi(s, 0x1D004280u);   // 0b2a0 ahi r0,r5,1
+    s.instructions++; op_rotqmbyi(s, 0x3FBF8202u);   // 0b2a4 rotqmbyi r2,r4,-2
+    s.instructions++; op_and_(s, 0x18214385u);   // 0b2a8 and r5,r7,r5
+    s.instructions++; op_lqd(s, 0x34040308u);   // 0b2ac lqd r8,256(r6)
+    s.instructions++; op_andhi(s, 0x15FF8000u);   // 0b2b0 andhi r0,r0,-2
+    s.instructions++; op_and_(s, 0x1821C204u);   // 0b2b4 and r4,r4,r7
+    s.instructions++; op_mpyi(s, 0x740C0000u);   // 0b2b8 mpyi r0,r0,48
+    s.instructions++; op_stqd(s, 0x24074303u);   // 0b2bc stqd r3,464(r6)
+    s.instructions++; op_andi(s, 0x1403C102u);   // 0b2c0 andi r2,r2,15
+    s.instructions++; op_ila(s, 0x4262C007u);   // 0b2c4 ila r7,0xc580
+    s.instructions++; op_ceqi(s, 0x7C000102u);   // 0b2cc ceqi r2,r2,0
+    s.instructions++; op_ila(s, 0x425E4009u);   // 0b2d0 ila r9,0xbc80
+    s.instructions++; op_a(s, 0x18010404u);   // 0b2d4 a r4,r8,r4
+    s.instructions++; op_a(s, 0x18000188u);   // 0b2d8 a r8,r3,r0
+    s.instructions++; op_selb(s, 0x80E1C482u);   // 0b2dc selb r7,r9,r7,r2
+    s.instructions++; op_selb(s, 0x80A14002u);   // 0b2e0 selb r5,r0,r5,r2
+    s.instructions++; op_stqd(s, 0x24044308u);   // 0b2e4 stqd r8,272(r6)
+    s.instructions++;   // 0b2e8 bisl r0,r7,r0
+    s.pc = 0x0B2E8; op_bisl(s, 0x35200380u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x0B2EC)) return false;   // indirect call
+    s.instructions++; op_lqd(s, 0x3400C080u);   // 0b2ec lqd r0,48(r1)
+    s.instructions++; op_lqd(s, 0x34000081u);   // 0b2f0 lqd r1,0(r1)
+    s.instructions++;   // 0b2f4 bi r0,r0,r0
+    s.pc = 0x0B2F4; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_0b300(SPUThread& s) {
+    u32 to;
+    goto L_0b300;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0B300: goto L_0b300;
+    case 0x0B3F8: goto L_0b3f8;
+    case 0x0B400: goto L_0b400;
+    case 0x0B5B0: goto L_0b5b0;
+    case 0x0B68C: goto L_0b68c;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0b300:
+    s.instructions++; op_rotmi(s, 0x0F3B4202u);   // 0b300 rotmi r2,r4,-19
+    s.instructions++; op_stqd(s, 0x24FFC0D0u);   // 0b304 stqd r80,-16(r1)
+    s.instructions++; op_il(s, 0x40FEA005u);   // 0b308 il r5,0xfd40
+    s.instructions++; op_stqd(s, 0x24FF80D1u);   // 0b30c stqd r81,-32(r1)
+    s.instructions++; op_lqd(s, 0x340CC1B6u);   // 0b310 lqd r54,816(r3)
+    s.instructions++; op_stqd(s, 0x24FF40D2u);   // 0b314 stqd r82,-48(r1)
+    s.instructions++; op_andi(s, 0x14038102u);   // 0b318 andi r2,r2,14
+    s.instructions++; op_ila(s, 0x427FFFB7u);   // 0b31c ila r55,0xffff
+    s.instructions++; op_ai(s, 0x1C008138u);   // 0b320 ai r56,r2,2
+    s.instructions++; op_stqd(s, 0x24FF00D3u);   // 0b324 stqd r83,-64(r1)
+    s.instructions++; op_and_(s, 0x18211BB9u);   // 0b328 and r57,r55,r4
+    s.instructions++; op_stqd(s, 0x24FEC0D4u);   // 0b32c stqd r84,-80(r1)
+    s.instructions++; op_rotmi(s, 0x0F3C023Au);   // 0b330 rotmi r58,r4,-16
+    s.instructions++; op_lqx(s, 0x388E1B3Bu);   // 0b334 lqx r59,r54,r56
+    s.instructions++; op_stqd(s, 0x24FE80D5u);   // 0b338 stqd r85,-96(r1)
+    s.instructions++; op_rotqbyi(s, 0x3F81823Cu);   // 0b33c rotqbyi r60,r4,6
+    s.instructions++; op_stqd(s, 0x24FE40D6u);   // 0b340 stqd r86,-112(r1)
+    s.instructions++; op_stqd(s, 0x24FE00D7u);   // 0b344 stqd r87,-128(r1)
+    s.instructions++; op_andi(s, 0x14005D3Au);   // 0b348 andi r58,r58,1
+    s.instructions++; op_stqd(s, 0x24FDC0D8u);   // 0b34c stqd r88,-144(r1)
+    s.instructions++; op_cgthi(s, 0x4D001E3Cu);   // 0b350 cgthi r60,r60,0
+    s.instructions++; op_rotqby(s, 0x3B8E1DB8u);   // 0b354 rotqby r56,r59,r56
+    s.instructions++; op_rotqbyi(s, 0x3F808204u);   // 0b358 rotqbyi r4,r4,2
+    s.instructions++; op_lqd(s, 0x340401BBu);   // 0b35c lqd r59,256(r3)
+    s.instructions++; op_rotmai(s, 0x0F5C1E50u);   // 0b360 rotmai r80,r60,-16
+    s.instructions++; op_lqd(s, 0x3405C1BCu);   // 0b364 lqd r60,368(r3)
+    s.instructions++; op_rotmi(s, 0x0F3C1C38u);   // 0b368 rotmi r56,r56,-16
+    s.instructions++; op_stqd(s, 0x24FD80D9u);   // 0b36c stqd r89,-160(r1)
+    s.instructions++; op_and_(s, 0x182DC259u);   // 0b370 and r89,r4,r55
+    s.instructions++; op_stqd(s, 0x24004080u);   // 0b374 stqd r0,16(r1)
+    s.instructions++; op_ori(s, 0x040001D1u);   // 0b378 ori r81,r3,0
+    s.instructions++; op_stqd(s, 0x24F50081u);   // 0b37c stqd r1,-704(r1)
+    s.instructions++; op_a(s, 0x18004281u);   // 0b380 a r1,r5,r1
+    s.instructions++; op_a(s, 0x180D9C00u);   // 0b384 a r0,r56,r54
+    s.instructions++; op_ila(s, 0x42810183u);   // 0b388 ila r3,0x10203
+    s.instructions++; op_ai(s, 0x1C00DE04u);   // 0b390 ai r4,r60,3
+    s.instructions++; op_lqd(s, 0x34000005u);   // 0b394 lqd r5,0(r0)
+    s.instructions++; op_a(s, 0x18008102u);   // 0b398 a r2,r2,r2
+    s.instructions++; op_shufb(s, 0xB06EDD83u);   // 0b39c shufb r3,r59,r59,r3
+    s.instructions++; op_andi(s, 0x14FF0252u);   // 0b3a0 andi r82,r4,-4
+    s.instructions++; op_a(s, 0x18144136u);   // 0b3a4 a r54,r2,r81
+    s.instructions++; op_ai(s, 0x1C0800D3u);   // 0b3a8 ai r83,r1,32
+    s.instructions++; op_lqd(s, 0x340D1B38u);   // 0b3ac lqd r56,832(r54)
+    s.instructions++; op_a(s, 0x1800DCD4u);   // 0b3b0 a r84,r57,r3
+    s.instructions++; op_rotqby(s, 0x3B800285u);   // 0b3b4 rotqby r5,r5,r0
+    s.instructions++; op_il(s, 0x40800055u);   // 0b3b8 il r85,0x0
+    s.instructions++; op_lqd(s, 0x34046883u);   // 0b3bc lqd r3,272(r81)
+    s.instructions++; op_rotmi(s, 0x0F3C02B9u);   // 0b3c0 rotmi r57,r5,-16
+    s.instructions++; op_rotqbyi(s, 0x3F802A04u);   // 0b3c4 rotqbyi r4,r84,0
+    s.instructions++; op_and_(s, 0x18215BD6u);   // 0b3c8 and r86,r55,r5
+    s.instructions++; op_cwd(s, 0x3EC00102u);   // 0b3cc cwd r2,r2,0
+    s.instructions++; op_mpy(s, 0x7894AB05u);   // 0b3d0 mpy r5,r86,r82
+    s.instructions++; op_shli(s, 0x0F609CB7u);   // 0b3d4 shli r55,r57,2
+    s.instructions++; op_shufb(s, 0xB04E0182u);   // 0b3d8 shufb r2,r3,r56,r2
+    s.instructions++; op_ai(s, 0x1C010057u);   // 0b3dc ai r87,r0,4
+    s.instructions++; op_a(s, 0x1815DBD8u);   // 0b3e0 a r88,r55,r87
+    s.instructions++; if (s.pref(58) == 0) goto L_0b3f8;   // 0b3e4 brz r58,0xb3f8
+    s.instructions++; op_a(s, 0x1800C280u);   // 0b3e8 a r0,r5,r3
+    s.instructions++; op_stqd(s, 0x240D1B02u);   // 0b3ec stqd r2,832(r54)
+    s.instructions++; op_stqd(s, 0x24046880u);   // 0b3f0 stqd r0,272(r81)
+    s.instructions++; s.set_pref(0, 0x0B3F8);   // 0b3f4 brsl r0,0xbc80
+    if (!geomfn_0bc80(s)) s.run_until(0x0B3F8);
+    if (s.halted || s.pc != 0x0B3F8) return false;
+L_0b3f8:
+    s.instructions++; if (s.pref(89) == 0) goto L_0b68c;   // 0b3fc brz r89,0xb68c
+L_0b400:
+    s.instructions++; op_clz(s, 0x54A02C80u);   // 0b400 clz r0,r89,r0
+    s.instructions++; op_lqd(s, 0x340B2882u);   // 0b404 lqd r2,704(r81)
+    s.instructions++; op_ai(s, 0x1C012936u);   // 0b408 ai r54,r82,4
+    s.instructions++; op_sfi(s, 0x0C07C000u);   // 0b410 sfi r0,r0,31
+    s.instructions++; op_lqd(s, 0x34046885u);   // 0b414 lqd r5,272(r81)
+    s.instructions++; op_shli(s, 0x0F611B36u);   // 0b418 shli r54,r54,4
+    s.instructions++; op_shli(s, 0x0F608037u);   // 0b41c shli r55,r0,2
+    s.instructions++; op_ila(s, 0x428101B8u);   // 0b420 ila r56,0x10203
+    s.instructions++; op_ai(s, 0x1C004139u);   // 0b424 ai r57,r2,1
+    s.instructions++; op_shli(s, 0x0F60813Au);   // 0b428 shli r58,r2,2
+    s.instructions++; op_a(s, 0x180DEBB7u);   // 0b42c a r55,r87,r55
+    s.instructions++; op_a(s, 0x18015B3Bu);   // 0b430 a r59,r54,r5
+    s.instructions++; op_stqd(s, 0x24002988u);   // 0b434 stqd r8,0(r83)
+    s.instructions++; op_ilh(s, 0x418181BCu);   // 0b438 ilh r60,0x303
+    s.instructions++; op_lqd(s, 0x34001BBDu);   // 0b43c lqd r61,0(r55)
+    s.instructions++; op_a(s, 0x180EA8BEu);   // 0b440 a r62,r81,r58
+    s.instructions++; op_ceqi(s, 0x7C002ABFu);   // 0b444 ceqi r63,r85,0
+    s.instructions++; op_lqd(s, 0x340B5F40u);   // 0b448 lqd r64,720(r62)
+    s.instructions++; op_stqd(s, 0x24006989u);   // 0b44c stqd r9,16(r83)
+    s.instructions++; op_selb(s, 0x8AA16ABFu);   // 0b450 selb r85,r85,r5,r63
+    s.instructions++; op_cwd(s, 0x3EC01D3Au);   // 0b454 cwd r58,r58,0
+    s.instructions++; op_ai(s, 0x1C0829C1u);   // 0b458 ai r65,r83,32
+    s.instructions++; op_rotqby(s, 0x3B8DDEB7u);   // 0b45c rotqby r55,r61,r55
+    s.instructions++; op_il(s, 0x408000BDu);   // 0b460 il r61,0x1
+    s.instructions++; if (s.pref(89) == 0) goto L_0b5b0;   // 0b464 brz r89,0xb5b0
+    s.instructions++; op_selb(s, 0x8A74E0BFu);   // 0b468 selb r83,r65,r83,r63
+    s.instructions++; op_stqd(s, 0x240B28B9u);   // 0b46c stqd r57,704(r81)
+    s.instructions++; op_shl(s, 0x0B601E80u);   // 0b470 shl r0,r61,r0
+    s.instructions++; op_shufb(s, 0xB07002BAu);   // 0b474 shufb r3,r5,r64,r58
+    s.instructions++; op_rotmi(s, 0x0F3E1B84u);   // 0b478 rotmi r4,r55,-8
+    s.instructions++; op_lqd(s, 0x340C6887u);   // 0b47c lqd r7,784(r81)
+    s.instructions++; op_rotmi(s, 0x0F3B9B88u);   // 0b480 rotmi r8,r55,-18
+    s.instructions++; op_stqd(s, 0x240468BBu);   // 0b484 stqd r59,272(r81)
+    s.instructions++; op_rotmi(s, 0x0F3A1B89u);   // 0b488 rotmi r9,r55,-24
+    s.instructions++; op_cbd(s, 0x3E800102u);   // 0b48c cbd r2,r2,0
+    s.instructions++; op_rotmi(s, 0x0F3C1B86u);   // 0b490 rotmi r6,r55,-16
+    s.instructions++; op_lqd(s, 0x340CE8B6u);   // 0b494 lqd r54,816(r81)
+    s.instructions++; op_andi(s, 0x1403C239u);   // 0b498 andi r57,r4,15
+    s.pc = 0x0B49C; s.instructions++; op_lqr(s, 0x338DB8BAu);   // 0b49c lqr r58,0x12260
+    s.instructions++; op_andi(s, 0x140F0408u);   // 0b4a0 andi r8,r8,60
+    s.pc = 0x0B4A4; s.instructions++; op_lqr(s, 0x338DB9BBu);   // 0b4a4 lqr r59,0x12270
+    s.instructions++; op_a(s, 0x180E5CB9u);   // 0b4a8 a r57,r57,r57
+    s.instructions++; op_shufb(s, 0xB041C482u);   // 0b4ac shufb r2,r9,r7,r2
+    s.instructions++; op_ai(s, 0x1CFFC487u);   // 0b4b0 ai r7,r9,-1
+    s.instructions++; op_shufb(s, 0xB102043Cu);   // 0b4b4 shufb r8,r8,r8,r60
+    s.instructions++; op_a(s, 0x18161CB9u);   // 0b4b8 a r57,r57,r88
+    s.instructions++; op_stqd(s, 0x240B5F03u);   // 0b4bc stqd r3,720(r62)
+    s.instructions++; op_shli(s, 0x0F608383u);   // 0b4c0 shli r3,r7,2
+    s.instructions++; op_rotqbyi(s, 0x3F811B07u);   // 0b4c4 rotqbyi r7,r54,4
+    s.instructions++; op_andi(s, 0x1403C306u);   // 0b4c8 andi r6,r6,15
+    s.instructions++; op_lqd(s, 0x34001CBDu);   // 0b4cc lqd r61,0(r57)
+    s.instructions++; op_a(s, 0x18021C3Eu);   // 0b4d0 a r62,r56,r8
+    s.instructions++; op_stqd(s, 0x240C6882u);   // 0b4d4 stqd r2,784(r81)
+    s.instructions++; op_andi(s, 0x14200202u);   // 0b4d8 andi r2,r4,128
+    s.instructions++; op_lqd(s, 0x340CA888u);   // 0b4dc lqd r8,800(r81)
+    s.instructions++; op_andi(s, 0x14100204u);   // 0b4e0 andi r4,r4,64
+    s.instructions++; op_shufb(s, 0xB74EDD3Eu);   // 0b4e4 shufb r58,r58,r59,r62
+    s.instructions++; op_cgti(s, 0x4C000102u);   // 0b4e8 cgti r2,r2,0
+    s.instructions++; op_cwd(s, 0x3EC00183u);   // 0b4ec cwd r3,r3,0
+    s.instructions++; op_ila(s, 0x425A003Bu);   // 0b4f0 ila r59,0xb400
+    s.instructions++; op_shufb(s, 0xB12244B8u);   // 0b4f4 shufb r9,r9,r9,r56
+    s.instructions++; op_cgti(s, 0x4C000204u);   // 0b4f8 cgti r4,r4,0
+    s.instructions++; op_rotqby(s, 0x3B8E5EB9u);   // 0b4fc rotqby r57,r61,r57
+    s.instructions++; op_selb(s, 0x874EDD50u);   // 0b500 selb r58,r58,r59,r80
+    s.pc = 0x0B504; s.instructions++; op_lqr(s, 0x338E3BBBu);   // 0b504 lqr r59,0x126e0
+    s.instructions++; op_selb(s, 0x8081DB04u);   // 0b508 selb r4,r54,r7,r4
+    s.instructions++; op_shufb(s, 0xB0620283u);   // 0b50c shufb r3,r5,r8,r3
+    s.instructions++; op_cgti(s, 0x4C010487u);   // 0b510 cgti r7,r9,4
+    s.instructions++; op_rotmi(s, 0x0F3C1C89u);   // 0b518 rotmi r9,r57,-16
+    s.pc = 0x0B51C; s.instructions++; op_lqr(s, 0x338DACB6u);   // 0b51c lqr r54,0x12280
+    s.instructions++; op_shli(s, 0x0F608339u);   // 0b520 shli r57,r6,2
+    s.pc = 0x0B524; s.instructions++; op_lqr(s, 0x338DADBDu);   // 0b524 lqr r61,0x12290
+    s.instructions++; op_selb(s, 0x80620187u);   // 0b528 selb r3,r3,r8,r7
+    s.instructions++; op_xor_(s, 0x48202CD9u);   // 0b52c xor r89,r89,r0
+    s.instructions++; op_a(s, 0x18010480u);   // 0b530 a r0,r9,r4
+    s.instructions++; op_stqd(s, 0x240CA883u);   // 0b534 stqd r3,800(r81)
+    s.instructions++; op_andi(s, 0x143FDB83u);   // 0b538 andi r3,r55,255
+    s.instructions++; op_shufb(s, 0xB0408138u);   // 0b53c shufb r2,r2,r2,r56
+    s.instructions++; op_a(s, 0x18001C84u);   // 0b540 a r4,r57,r0
+    s.instructions++; op_lqd(s, 0x34000007u);   // 0b544 lqd r7,0(r0)
+    s.instructions++; op_andi(s, 0x1403C008u);   // 0b548 andi r8,r0,15
+    s.instructions++; op_lqd(s, 0x34004000u);   // 0b54c lqd r0,16(r0)
+    s.instructions++; op_andi(s, 0x1403C209u);   // 0b550 andi r9,r4,15
+    s.instructions++; op_lqd(s, 0x34000237u);   // 0b554 lqd r55,0(r4)
+    s.instructions++; op_ilhu(s, 0x411FC038u);   // 0b558 ilhu r56,0x3f80
+    s.instructions++; op_lqd(s, 0x34004239u);   // 0b55c lqd r57,16(r4)
+    s.instructions++; op_shufb(s, 0xB082043Cu);   // 0b560 shufb r4,r8,r8,r60
+    s.instructions++; op_shufb(s, 0xB10244BCu);   // 0b564 shufb r8,r9,r9,r60
+    s.pc = 0x0B568; s.instructions++; op_lqr(s, 0x338DA709u);   // 0b568 lqr r9,0x122a0
+    s.pc = 0x0B56C; s.instructions++; op_lqr(s, 0x338DA8BCu);   // 0b56c lqr r60,0x122b0
+    s.instructions++; op_a(s, 0x18011D84u);   // 0b570 a r4,r59,r4
+    s.instructions++; op_a(s, 0x180EC408u);   // 0b574 a r8,r8,r59
+    s.instructions++; op_a(s, 0x1800EA03u);   // 0b578 a r3,r84,r3
+    s.instructions++; op_shufb(s, 0xB0000384u);   // 0b57c shufb r0,r7,r0,r4
+    s.instructions++; op_ori(s, 0x04002B04u);   // 0b580 ori r4,r86,0
+    s.instructions++; op_shufb(s, 0xB6EE5B88u);   // 0b584 shufb r55,r55,r57,r8
+    s.instructions++; op_ori(s, 0x04002907u);   // 0b588 ori r7,r82,0
+    s.instructions++; op_shufb(s, 0xB10F5B3Eu);   // 0b58c shufb r8,r54,r61,r62
+    s.instructions++; op_shufb(s, 0xB12F04BEu);   // 0b590 shufb r9,r9,r60,r62
+    s.instructions++; op_selb(s, 0x80001C02u);   // 0b594 selb r0,r56,r0,r2
+    s.instructions++; op_and_(s, 0x18209B82u);   // 0b598 and r2,r55,r2
+    s.instructions++; op_fm(s, 0x58C00408u);   // 0b59c fm r8,r8,r0
+    s.instructions++; op_fma(s, 0xE1200482u);   // 0b5a0 fma r9,r9,r0,r2
+    s.instructions++;   // 0b5a4 bisl r0,r58,r0
+    s.pc = 0x0B5A4; op_bisl(s, 0x35201D00u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x0B5A8)) return false;   // indirect call
+    s.instructions++; if (s.pref(89) != 0) goto L_0b400;   // 0b5a8 brnz r89,0xb400
+    s.instructions++; goto L_0b68c;   // 0b5ac br r0,0xb68c
+L_0b5b0:
+    s.instructions++; op_a(s, 0x180D9B00u);   // 0b5b0 a r0,r54,r54
+    s.instructions++; op_lqd(s, 0x34008087u);   // 0b5b4 lqd r7,32(r1)
+    s.instructions++; op_ori(s, 0x04002A86u);   // 0b5b8 ori r6,r85,0
+    s.instructions++; op_lqd(s, 0x3400C088u);   // 0b5bc lqd r8,48(r1)
+    s.instructions++; op_a(s, 0x180DAA89u);   // 0b5c0 a r9,r85,r54
+    s.instructions++; op_lqd(s, 0x3401008Au);   // 0b5c4 lqd r10,64(r1)
+    s.instructions++; op_a(s, 0x1800030Cu);   // 0b5c8 a r12,r6,r0
+    s.instructions++; op_lqd(s, 0x3401408Bu);   // 0b5cc lqd r11,80(r1)
+    s.instructions++; op_a(s, 0x1802400Fu);   // 0b5d0 a r15,r0,r9
+    s.instructions++; op_lqd(s, 0x3401808Du);   // 0b5d4 lqd r13,96(r1)
+    s.instructions++; op_a(s, 0x18000612u);   // 0b5d8 a r18,r12,r0
+    s.instructions++; op_lqd(s, 0x3401C08Eu);   // 0b5dc lqd r14,112(r1)
+    s.instructions++; op_a(s, 0x18000795u);   // 0b5e0 a r21,r15,r0
+    s.instructions++; op_lqd(s, 0x34020090u);   // 0b5e4 lqd r16,128(r1)
+    s.instructions++; op_a(s, 0x18000918u);   // 0b5e8 a r24,r18,r0
+    s.instructions++; op_rotqbyi(s, 0x3F812A02u);   // 0b5ec rotqbyi r2,r84,4
+    s.instructions++; op_a(s, 0x18000A9Bu);   // 0b5f0 a r27,r21,r0
+    s.instructions++; op_lqd(s, 0x34024091u);   // 0b5f4 lqd r17,144(r1)
+    s.instructions++; op_a(s, 0x18000C1Eu);   // 0b5f8 a r30,r24,r0
+    s.instructions++; op_lqd(s, 0x34028093u);   // 0b5fc lqd r19,160(r1)
+    s.instructions++; op_a(s, 0x18000DA1u);   // 0b600 a r33,r27,r0
+    s.instructions++; op_lqd(s, 0x3402C094u);   // 0b604 lqd r20,176(r1)
+    s.instructions++; op_a(s, 0x18000F24u);   // 0b608 a r36,r30,r0
+    s.instructions++; op_lqd(s, 0x34030096u);   // 0b60c lqd r22,192(r1)
+    s.instructions++; op_a(s, 0x18084027u);   // 0b610 a r39,r0,r33
+    s.instructions++; op_lqd(s, 0x34034097u);   // 0b614 lqd r23,208(r1)
+    s.instructions++; op_a(s, 0x1800122Au);   // 0b618 a r42,r36,r0
+    s.instructions++; op_lqd(s, 0x34038099u);   // 0b61c lqd r25,224(r1)
+    s.instructions++; op_a(s, 0x180013ADu);   // 0b620 a r45,r39,r0
+    s.instructions++; op_lqd(s, 0x3403C09Au);   // 0b624 lqd r26,240(r1)
+    s.instructions++; op_a(s, 0x18001530u);   // 0b628 a r48,r42,r0
+    s.instructions++; op_a(s, 0x180016B3u);   // 0b630 a r51,r45,r0
+    s.instructions++; op_lqd(s, 0x3404009Cu);   // 0b634 lqd r28,256(r1)
+    s.instructions++; op_ori(s, 0x04002903u);   // 0b638 ori r3,r82,0
+    s.instructions++; op_lqd(s, 0x3404409Du);   // 0b63c lqd r29,272(r1)
+    s.instructions++; op_ori(s, 0x04002A04u);   // 0b640 ori r4,r84,0
+    s.instructions++; op_lqd(s, 0x3404809Fu);   // 0b644 lqd r31,288(r1)
+    s.instructions++; op_ila(s, 0x42917005u);   // 0b648 ila r5,0x122e0
+    s.instructions++; op_lqd(s, 0x3404C0A0u);   // 0b64c lqd r32,304(r1)
+    s.instructions++; op_lqd(s, 0x340500A2u);   // 0b650 lqd r34,320(r1)
+    s.instructions++; op_lqd(s, 0x340540A3u);   // 0b654 lqd r35,336(r1)
+    s.instructions++; op_lqd(s, 0x340580A5u);   // 0b658 lqd r37,352(r1)
+    s.instructions++; op_lqd(s, 0x3405C0A6u);   // 0b65c lqd r38,368(r1)
+    s.instructions++; op_lqd(s, 0x340600A8u);   // 0b660 lqd r40,384(r1)
+    s.instructions++; op_lqd(s, 0x340640A9u);   // 0b664 lqd r41,400(r1)
+    s.instructions++; op_lqd(s, 0x340680ABu);   // 0b668 lqd r43,416(r1)
+    s.instructions++; op_lqd(s, 0x3406C0ACu);   // 0b66c lqd r44,432(r1)
+    s.instructions++; op_lqd(s, 0x340700AEu);   // 0b670 lqd r46,448(r1)
+    s.instructions++; op_lqd(s, 0x340740AFu);   // 0b674 lqd r47,464(r1)
+    s.instructions++; op_lqd(s, 0x340780B1u);   // 0b678 lqd r49,480(r1)
+    s.instructions++; op_lqd(s, 0x3407C0B2u);   // 0b67c lqd r50,496(r1)
+    s.instructions++; op_lqd(s, 0x340800B4u);   // 0b680 lqd r52,512(r1)
+    s.instructions++; op_lqd(s, 0x340840B5u);   // 0b684 lqd r53,528(r1)
+    s.instructions++;   // 0b688 bisl r0,r2,r0
+    s.pc = 0x0B688; op_bisl(s, 0x35200100u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x0B68C)) return false;   // indirect call
+L_0b68c:
+    s.instructions++; op_lqd(s, 0x340B4080u);   // 0b68c lqd r0,720(r1)
+    s.instructions++; op_lqd(s, 0x340AC0D0u);   // 0b690 lqd r80,688(r1)
+    s.instructions++; op_lqd(s, 0x340A80D1u);   // 0b694 lqd r81,672(r1)
+    s.instructions++; op_lqd(s, 0x340A40D2u);   // 0b698 lqd r82,656(r1)
+    s.instructions++; op_lqd(s, 0x340A00D3u);   // 0b69c lqd r83,640(r1)
+    s.instructions++; op_lqd(s, 0x3409C0D4u);   // 0b6a0 lqd r84,624(r1)
+    s.instructions++; op_lqd(s, 0x340980D5u);   // 0b6a4 lqd r85,608(r1)
+    s.instructions++; op_lqd(s, 0x340940D6u);   // 0b6a8 lqd r86,592(r1)
+    s.instructions++; op_lqd(s, 0x340900D7u);   // 0b6ac lqd r87,576(r1)
+    s.instructions++; op_lqd(s, 0x3408C0D8u);   // 0b6b0 lqd r88,560(r1)
+    s.instructions++; op_lqd(s, 0x340880D9u);   // 0b6b4 lqd r89,544(r1)
+    s.instructions++; op_lqd(s, 0x34000081u);   // 0b6b8 lqd r1,0(r1)
+    s.instructions++;   // 0b6bc bi r0,r0,r0
+    s.pc = 0x0B6BC; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_0b700(SPUThread& s) {
+    u32 to;
+    goto L_0b700;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0B700: goto L_0b700;
+    case 0x0B7F0: goto L_0b7f0;
+    case 0x0B808: goto L_0b808;
+    case 0x0B818: goto L_0b818;
+    case 0x0B840: goto L_0b840;
+    case 0x0B848: goto L_0b848;
+    case 0x0B858: goto L_0b858;
+    case 0x0B860: goto L_0b860;
+    case 0x0B88C: goto L_0b88c;
+    case 0x0B890: goto L_0b890;
+    case 0x0B8A0: goto L_0b8a0;
+    case 0x0B8E0: goto L_0b8e0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0b700:
+    s.instructions++; op_ori(s, 0x04000082u);   // 0b700 ori r2,r1,0
+    s.instructions++; op_lqd(s, 0x3404018Au);   // 0b704 lqd r10,256(r3)
+    s.instructions++; op_ai(s, 0x1CD40081u);   // 0b708 ai r1,r1,-176
+    s.instructions++; op_rotqmbyi(s, 0x3FBF820Bu);   // 0b70c rotqmbyi r11,r4,-2
+    s.instructions++; op_ila(s, 0x427FFF8Cu);   // 0b710 ila r12,0xffff
+    s.pc = 0x0B714; s.instructions++; op_lqr(s, 0x338E1D8Du);   // 0b714 lqr r13,0x12800
+    s.instructions++; op_il(s, 0x40FFFF0Eu);   // 0b718 il r14,0xfffe
+    s.instructions++; op_stqd(s, 0x24000082u);   // 0b71c stqd r2,0(r1)
+    s.instructions++; op_andc(s, 0x58230202u);   // 0b720 andc r2,r4,r12
+    s.instructions++; op_stqd(s, 0x24030080u);   // 0b724 stqd r0,192(r1)
+    s.instructions++; op_andi(s, 0x1403C580u);   // 0b728 andi r0,r11,15
+    s.instructions++; op_stqd(s, 0x240080D0u);   // 0b72c stqd r80,32(r1)
+    s.instructions++; op_and_(s, 0x1821460Bu);   // 0b730 and r11,r12,r5
+    s.instructions++; op_rotqbyi(s, 0x3F80810Fu);   // 0b734 rotqbyi r15,r2,2
+    s.instructions++; op_ceqi(s, 0x7C000050u);   // 0b738 ceqi r80,r0,0
+    s.instructions++; op_stqd(s, 0x2400C0D1u);   // 0b73c stqd r81,48(r1)
+    s.instructions++; op_ahi(s, 0x1D03C100u);   // 0b740 ahi r0,r2,15
+    s.instructions++; op_shufb(s, 0xB042850Du);   // 0b744 shufb r2,r10,r10,r13
+    s.instructions++; op_andc(s, 0x5834070Au);   // 0b748 andc r10,r14,r80
+    s.instructions++; op_stqd(s, 0x240100D2u);   // 0b74c stqd r82,64(r1)
+    s.instructions++; op_ai(s, 0x1C04078Eu);   // 0b750 ai r14,r15,16
+    s.instructions++; op_lqd(s, 0x34044190u);   // 0b754 lqd r16,272(r3)
+    s.instructions++; op_rotm(s, 0x0B22858Au);   // 0b758 rotm r10,r11,r10
+    s.instructions++; op_stqd(s, 0x240140D3u);   // 0b75c stqd r83,80(r1)
+    s.instructions++; op_and_(s, 0x18230204u);   // 0b760 and r4,r4,r12
+    s.instructions++; op_stqd(s, 0x240180D4u);   // 0b764 stqd r84,96(r1)
+    s.instructions++; op_andhi(s, 0x15FC0051u);   // 0b768 andhi r81,r0,-16
+    s.instructions++; op_stqd(s, 0x2401C0D5u);   // 0b76c stqd r85,112(r1)
+    s.instructions++; op_a(s, 0x18008252u);   // 0b770 a r82,r4,r2
+    s.instructions++; op_andi(s, 0x14FC0700u);   // 0b778 andi r0,r14,-16
+    s.instructions++; op_rotqbyi(s, 0x3F81A882u);   // 0b77c rotqbyi r2,r81,6
+    s.instructions++; op_ai(s, 0x1C03C504u);   // 0b780 ai r4,r10,15
+    s.instructions++; op_stqd(s, 0x240200D6u);   // 0b784 stqd r86,128(r1)
+    s.instructions++; op_a(s, 0x1800080Au);   // 0b788 a r10,r16,r0
+    s.instructions++; op_rotqbyi(s, 0x3F82A88Bu);   // 0b78c rotqbyi r11,r81,10
+    s.instructions++; op_andi(s, 0x14FC0253u);   // 0b790 andi r83,r4,-16
+    s.instructions++; op_stqd(s, 0x240240D7u);   // 0b794 stqd r87,144(r1)
+    s.instructions++; op_a(s, 0x18028102u);   // 0b798 a r2,r2,r10
+    s.instructions++; op_stqd(s, 0x240280D8u);   // 0b79c stqd r88,160(r1)
+    s.instructions++; op_shli(s, 0x0F60A984u);   // 0b7a0 shli r4,r83,2
+    s.instructions++; op_shufb(s, 0xB142880Du);   // 0b7a4 shufb r10,r16,r10,r13
+    s.instructions++; op_a(s, 0x1800858Bu);   // 0b7a8 a r11,r11,r2
+    s.instructions++; op_fsmbi(s, 0x32807F8Cu);   // 0b7ac fsmbi r12,0xff
+    s.instructions++; op_il(s, 0x4080040Eu);   // 0b7b0 il r14,0x8
+    s.instructions++; op_lqx(s, 0x3883E911u);   // 0b7b4 lqx r17,r82,r15
+    s.instructions++; op_shufb(s, 0xB042C10Du);   // 0b7b8 shufb r2,r2,r11,r13
+    s.instructions++; op_cbx(s, 0x3A83E90Du);   // 0b7bc cbx r13,r82,r15
+    s.instructions++; op_a(s, 0x180105D4u);   // 0b7c0 a r84,r11,r4
+    s.instructions++; op_rotqmbyi(s, 0x3FBF82D5u);   // 0b7c4 rotqmbyi r85,r5,-2
+    s.instructions++; op_ori(s, 0x040001D6u);   // 0b7c8 ori r86,r3,0
+    s.instructions++; op_selb(s, 0x8AE0850Cu);   // 0b7d0 selb r87,r10,r2,r12
+    s.instructions++; op_stqd(s, 0x240441D4u);   // 0b7d4 stqd r84,272(r3)
+    s.instructions++; op_ori(s, 0x04002904u);   // 0b7d8 ori r4,r82,0
+    s.instructions++; op_shufb(s, 0xBB04470Du);   // 0b7dc shufb r88,r14,r17,r13
+    s.instructions++; op_ori(s, 0x04000803u);   // 0b7e0 ori r3,r16,0
+    s.instructions++; op_stqd(s, 0x24072B57u);   // 0b7e4 stqd r87,448(r86)
+    s.instructions++; op_ai(s, 0x1CFC0005u);   // 0b7e8 ai r5,r0,-16
+    s.instructions++; s.set_pref(0, 0x0B7F0);   // 0b7ec brsl r0,0xbc80
+    if (!geomfn_0bc80(s)) s.run_until(0x0B7F0);
+    if (s.halted || s.pc != 0x0B7F0) return false;
+L_0b7f0:
+    s.instructions++; op_rotqbyi(s, 0x3F812B83u);   // 0b7f0 rotqbyi r3,r87,4
+    s.instructions++; op_rotqbyi(s, 0x3F812904u);   // 0b7f4 rotqbyi r4,r82,4
+    s.instructions++; op_rotqbyi(s, 0x3F81A885u);   // 0b7f8 rotqbyi r5,r81,6
+    s.instructions++; op_stqd(s, 0x24FFC1D8u);   // 0b800 stqd r88,-16(r3)
+    s.instructions++; s.set_pref(0, 0x0B808);   // 0b804 brsl r0,0xbc80
+    if (!geomfn_0bc80(s)) s.run_until(0x0B808);
+    if (s.halted || s.pc != 0x0B808) return false;
+L_0b808:
+    s.instructions++; op_rotqbyi(s, 0x3F822B83u);   // 0b808 rotqbyi r3,r87,8
+    s.instructions++; op_rotqbyi(s, 0x3F822904u);   // 0b80c rotqbyi r4,r82,8
+    s.instructions++; op_rotqbyi(s, 0x3F82A885u);   // 0b810 rotqbyi r5,r81,10
+    s.instructions++; s.set_pref(0, 0x0B818);   // 0b814 brsl r0,0xbc80
+    if (!geomfn_0bc80(s)) s.run_until(0x0B818);
+    if (s.halted || s.pc != 0x0B818) return false;
+L_0b818:
+    s.instructions++; op_il(s, 0x40800009u);   // 0b818 il r9,0x0
+    s.instructions++; if (s.pref(80) == 0) goto L_0b848;   // 0b81c brz r80,0xb848
+    s.instructions++; op_il(s, 0x40800204u);   // 0b820 il r4,0x4
+    s.instructions++; op_rotqbyi(s, 0x3F832903u);   // 0b824 rotqbyi r3,r82,12
+    s.instructions++; op_ilhu(s, 0x411DC008u);   // 0b828 ilhu r8,0x3b80
+    s.instructions++; op_rotqbyi(s, 0x3F832B85u);   // 0b82c rotqbyi r5,r87,12
+    s.instructions++; op_il(s, 0x40800206u);   // 0b830 il r6,0x4
+    s.instructions++; op_rotqmbii(s, 0x3F3FA987u);   // 0b834 rotqmbii r7,r83,-2
+    s.instructions++; op_iohl(s, 0x60C04088u);   // 0b838 iohl r8,0x8081
+    s.instructions++; s.set_pref(0, 0x0B840);   // 0b83c brsl r0,0xc180
+    if (!geomfn_0c180(s)) s.run_until(0x0B840);
+    if (s.halted || s.pc != 0x0B840) return false;
+L_0b840:
+    s.instructions++; if (s.pref(85) != 0) goto L_0b860;   // 0b840 brnz r85,0xb860
+    s.instructions++; goto L_0b8e0;   // 0b844 br r0,0xb8e0
+L_0b848:
+    s.instructions++; op_shli(s, 0x0F60A985u);   // 0b848 shli r5,r83,2
+    s.instructions++; op_rotqbyi(s, 0x3F832B83u);   // 0b84c rotqbyi r3,r87,12
+    s.instructions++; op_rotqbyi(s, 0x3F832904u);   // 0b850 rotqbyi r4,r82,12
+    s.instructions++; s.set_pref(0, 0x0B858);   // 0b854 brsl r0,0xbc80
+    if (!geomfn_0bc80(s)) s.run_until(0x0B858);
+    if (s.halted || s.pc != 0x0B858) return false;
+L_0b858:
+    s.instructions++; if (s.pref(85) == 0) goto L_0b8e0;   // 0b85c brz r85,0xb8e0
+L_0b860:
+    s.instructions++; op_il(s, 0x40800204u);   // 0b860 il r4,0x4
+    s.instructions++; op_lqd(s, 0x34042B00u);   // 0b864 lqd r0,256(r86)
+    s.instructions++; op_il(s, 0x40800206u);   // 0b868 il r6,0x4
+    s.instructions++; op_rotqbyi(s, 0x3F802A05u);   // 0b86c rotqbyi r5,r84,0
+    s.instructions++; op_ilhu(s, 0x411DC008u);   // 0b870 ilhu r8,0x3b80
+    s.instructions++; op_rotmi(s, 0x0F3FA987u);   // 0b874 rotmi r7,r83,-2
+    s.instructions++; op_iohl(s, 0x60C04088u);   // 0b878 iohl r8,0x8081
+    s.instructions++; op_il(s, 0x40800009u);   // 0b87c il r9,0x0
+    s.instructions++; op_a(s, 0x18002A83u);   // 0b880 a r3,r85,r0
+    s.instructions++; if (s.pref(80) == 0) goto L_0b890;   // 0b884 brz r80,0xb890
+    s.instructions++; s.set_pref(0, 0x0B88C);   // 0b888 brsl r0,0xc180
+    if (!geomfn_0c180(s)) s.run_until(0x0B88C);
+    if (s.halted || s.pc != 0x0B88C) return false;
+L_0b88c:
+    s.instructions++; goto L_0b8a0;   // 0b88c br r0,0xb8a0
+L_0b890:
+    s.instructions++; op_a(s, 0x18154004u);   // 0b890 a r4,r0,r85
+    s.instructions++; op_rotqbyi(s, 0x3F802A03u);   // 0b894 rotqbyi r3,r84,0
+    s.instructions++; op_shli(s, 0x0F60A985u);   // 0b898 shli r5,r83,2
+    s.instructions++; s.set_pref(0, 0x0B8A0);   // 0b89c brsl r0,0xbc80
+    if (!geomfn_0bc80(s)) s.run_until(0x0B8A0);
+    if (s.halted || s.pc != 0x0B8A0) return false;
+L_0b8a0:
+    s.instructions++; op_lqd(s, 0x340A2B00u);   // 0b8a0 lqd r0,640(r86)
+    s.instructions++; op_lqd(s, 0x340AAB02u);   // 0b8a4 lqd r2,672(r86)
+    s.instructions++; op_lqd(s, 0x34000004u);   // 0b8ac lqd r4,0(r0)
+    s.instructions++; op_lqd(s, 0x34000106u);   // 0b8b0 lqd r6,0(r2)
+    s.instructions++; op_rotqbyi(s, 0x3F832B83u);   // 0b8b4 rotqbyi r3,r87,12
+    s.instructions++; op_ilhu(s, 0x411FC007u);   // 0b8b8 ilhu r7,0x3f80
+    s.instructions++; op_rotqbyi(s, 0x3F832B85u);   // 0b8bc rotqbyi r5,r87,12
+    s.instructions++; op_ceqi(s, 0x7C000000u);   // 0b8c0 ceqi r0,r0,0
+    s.instructions++; op_ceqi(s, 0x7C000102u);   // 0b8c4 ceqi r2,r2,0
+    s.instructions++; op_andc(s, 0x58200200u);   // 0b8c8 andc r0,r4,r0
+    s.instructions++; op_rotmi(s, 0x0F3FA988u);   // 0b8cc rotmi r8,r83,-2
+    s.instructions++; op_selb(s, 0x80C00302u);   // 0b8d0 selb r6,r6,r0,r2
+    s.instructions++; op_ori(s, 0x04002A04u);   // 0b8d4 ori r4,r84,0
+    s.instructions++; op_fs(s, 0x58A18387u);   // 0b8d8 fs r7,r7,r6
+    s.instructions++; s.set_pref(0, 0x0B8E0);   // 0b8dc brsl r0,0xcd80
+    if (!geomfn_0cd80(s)) s.run_until(0x0B8E0);
+    if (s.halted || s.pc != 0x0B8E0) return false;
+L_0b8e0:
+    s.instructions++; op_lqd(s, 0x34030080u);   // 0b8e0 lqd r0,192(r1)
+    s.instructions++; op_lqd(s, 0x340080D0u);   // 0b8e4 lqd r80,32(r1)
+    s.instructions++; op_lqd(s, 0x3400C0D1u);   // 0b8e8 lqd r81,48(r1)
+    s.instructions++; op_lqd(s, 0x340100D2u);   // 0b8ec lqd r82,64(r1)
+    s.instructions++; op_lqd(s, 0x340140D3u);   // 0b8f0 lqd r83,80(r1)
+    s.instructions++; op_lqd(s, 0x340180D4u);   // 0b8f4 lqd r84,96(r1)
+    s.instructions++; op_lqd(s, 0x3401C0D5u);   // 0b8f8 lqd r85,112(r1)
+    s.instructions++; op_lqd(s, 0x340200D6u);   // 0b8fc lqd r86,128(r1)
+    s.instructions++; op_lqd(s, 0x340240D7u);   // 0b900 lqd r87,144(r1)
+    s.instructions++; op_lqd(s, 0x340280D8u);   // 0b904 lqd r88,160(r1)
+    s.instructions++; op_lqd(s, 0x34000081u);   // 0b908 lqd r1,0(r1)
+    s.instructions++;   // 0b90c bi r0,r0,r0
+    s.pc = 0x0B90C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_0b980(SPUThread& s) {
+    u32 to;
+    goto L_0b980;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0B980: goto L_0b980;
+    case 0x0BA08: goto L_0ba08;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0b980:
+    s.instructions++; op_ori(s, 0x04000082u);   // 0b980 ori r2,r1,0
+    s.instructions++; op_rotqmbyi(s, 0x3FBF8204u);   // 0b984 rotqmbyi r4,r4,-2
+    s.instructions++; op_ai(s, 0x1CF80081u);   // 0b988 ai r1,r1,-32
+    s.instructions++; op_ila(s, 0x425D0405u);   // 0b98c ila r5,0xba08
+    s.instructions++; op_ila(s, 0x4277C006u);   // 0b990 ila r6,0xef80
+    s.instructions++; op_stqd(s, 0x24000082u);   // 0b994 stqd r2,0(r1)
+    s.instructions++; op_ila(s, 0x4277D002u);   // 0b998 ila r2,0xefa0
+    s.instructions++; op_stqd(s, 0x2400C080u);   // 0b99c stqd r0,48(r1)
+    s.instructions++; op_ila(s, 0x4277DC00u);   // 0b9a0 ila r0,0xefb8
+    s.instructions++; op_stqd(s, 0x240080D0u);   // 0b9a4 stqd r80,32(r1)
+    s.instructions++; op_andi(s, 0x1403C204u);   // 0b9a8 andi r4,r4,15
+    s.instructions++; op_lqd(s, 0x340C8188u);   // 0b9ac lqd r8,800(r3)
+    s.instructions++; op_ila(s, 0x4277E80Cu);   // 0b9b0 ila r12,0xefd0
+    s.instructions++; op_lqd(s, 0x34070187u);   // 0b9b4 lqd r7,448(r3)
+    s.instructions++; op_ceqi(s, 0x7C00C209u);   // 0b9b8 ceqi r9,r4,3
+    s.instructions++; op_rotqbyi(s, 0x3F8001D0u);   // 0b9bc rotqbyi r80,r3,0
+    s.instructions++; op_ceqi(s, 0x7C02420Du);   // 0b9c0 ceqi r13,r4,9
+    s.instructions++; op_lqd(s, 0x34074183u);   // 0b9c4 lqd r3,464(r3)
+    s.instructions++; op_ceqi(s, 0x7C00420Au);   // 0b9c8 ceqi r10,r4,1
+    s.instructions++; op_or_(s, 0x0822468Eu);   // 0b9cc or r14,r13,r9
+    s.instructions++; op_selb(s, 0x80A1828Au);   // 0b9d0 selb r5,r5,r6,r10
+    s.instructions++; op_rotqbyi(s, 0x3F890409u);   // 0b9d4 rotqbyi r9,r8,36
+    s.instructions++; op_ceqi(s, 0x7C01C206u);   // 0b9d8 ceqi r6,r4,7
+    s.instructions++; op_rotqbyi(s, 0x3F8B040Bu);   // 0b9dc rotqbyi r11,r8,44
+    s.instructions++; op_selb(s, 0x8040828Eu);   // 0b9e0 selb r2,r5,r2,r14
+    s.instructions++; op_rotqbyi(s, 0x3F8A040Au);   // 0b9e4 rotqbyi r10,r8,40
+    s.instructions++; op_ceqi(s, 0x7C03C20Eu);   // 0b9e8 ceqi r14,r4,15
+    s.instructions++; op_rotqbyi(s, 0x3F930384u);   // 0b9ec rotqbyi r4,r7,-52
+    s.instructions++; op_selb(s, 0x80000106u);   // 0b9f0 selb r0,r2,r0,r6
+    s.instructions++; op_rotqbyi(s, 0x3F910385u);   // 0b9f4 rotqbyi r5,r7,-60
+    s.instructions++; op_selb(s, 0x8122C48Du);   // 0b9f8 selb r9,r9,r11,r13
+    s.instructions++; op_rotqbyi(s, 0x3F920386u);   // 0b9fc rotqbyi r6,r7,-56
+    s.instructions++; op_selb(s, 0x8003000Eu);   // 0ba00 selb r0,r0,r12,r14
+    s.instructions++;   // 0ba04 bisl r0,r0,r0
+    s.pc = 0x0BA04; op_bisl(s, 0x35200000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    if (!geom_call(s, 0x0BA08)) return false;   // indirect call
+L_0ba08:
+    s.instructions++; op_lqd(s, 0x340AA802u);   // 0ba08 lqd r2,672(r80)
+    s.instructions++; op_lqd(s, 0x340A280Cu);   // 0ba0c lqd r12,640(r80)
+    s.instructions++; op_lqd(s, 0x34072807u);   // 0ba10 lqd r7,448(r80)
+    s.instructions++; op_lqd(s, 0x3400C080u);   // 0ba14 lqd r0,48(r1)
+    s.instructions++; op_ceqi(s, 0x7C000102u);   // 0ba18 ceqi r2,r2,0
+    s.instructions++; op_selb(s, 0x8041C602u);   // 0ba1c selb r2,r12,r7,r2
+    s.instructions++; op_stqd(s, 0x24046802u);   // 0ba20 stqd r2,272(r80)
+    s.instructions++; op_lqd(s, 0x340080D0u);   // 0ba24 lqd r80,32(r1)
+    s.instructions++; op_lqd(s, 0x34000081u);   // 0ba28 lqd r1,0(r1)
+    s.instructions++;   // 0ba2c bi r0,r0,r0
+    s.pc = 0x0BA2C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_0bc80(SPUThread& s) {
+    u32 to;
+    goto L_0bc80;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0BC80: goto L_0bc80;
+    case 0x0BCD0: goto L_0bcd0;
+    case 0x0BCF8: goto L_0bcf8;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0bc80:
+    s.instructions++; op_sfi(s, 0x0C200282u);   // 0bc80 sfi r2,r5,128
+    s.instructions++;   // 0bc84 biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BC84; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_andi(s, 0x141C0102u);   // 0bc8c andi r2,r2,112
+    s.instructions++; op_sf(s, 0x08010104u);   // 0bc90 sf r4,r2,r4
+    s.instructions++; op_ila(s, 0x425E7C06u);   // 0bc94 ila r6,0xbcf8
+    s.instructions++; op_sf(s, 0x0800C103u);   // 0bc98 sf r3,r2,r3
+    s.instructions++; op_lqd(s, 0x34000207u);   // 0bc9c lqd r7,0(r4)
+    s.instructions++; op_rotmi(s, 0x0F3F8108u);   // 0bca0 rotmi r8,r2,-2
+    s.instructions++; op_lqd(s, 0x34004209u);   // 0bca4 lqd r9,16(r4)
+    s.instructions++; op_ai(s, 0x1CE00285u);   // 0bca8 ai r5,r5,-128
+    s.instructions++; op_lqd(s, 0x3400820Au);   // 0bcac lqd r10,32(r4)
+    s.instructions++; op_lqd(s, 0x3400C20Bu);   // 0bcb0 lqd r11,48(r4)
+    s.instructions++; op_lqd(s, 0x3401020Cu);   // 0bcb4 lqd r12,64(r4)
+    s.instructions++; op_a(s, 0x18008285u);   // 0bcb8 a r5,r5,r2
+    s.instructions++; op_lqd(s, 0x34014202u);   // 0bcbc lqd r2,80(r4)
+    s.instructions++; op_a(s, 0x18020306u);   // 0bcc0 a r6,r6,r8
+    s.instructions++; op_lqd(s, 0x34018208u);   // 0bcc4 lqd r8,96(r4)
+    s.instructions++; op_lqd(s, 0x3401C20Du);   // 0bcc8 lqd r13,112(r4)
+    s.instructions++;   // 0bccc bi r0,r6,r0
+    s.pc = 0x0BCCC; op_bi(s, 0x35000300u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+L_0bcd0:
+    s.instructions++; op_ai(s, 0x1CE00285u);   // 0bcd0 ai r5,r5,-128
+    s.instructions++; op_lqd(s, 0x34000207u);   // 0bcd4 lqd r7,0(r4)
+    s.instructions++; op_lqd(s, 0x34004209u);   // 0bcdc lqd r9,16(r4)
+    s.instructions++; op_lqd(s, 0x3400820Au);   // 0bce0 lqd r10,32(r4)
+    s.instructions++; op_lqd(s, 0x3400C20Bu);   // 0bce4 lqd r11,48(r4)
+    s.instructions++; op_lqd(s, 0x3401020Cu);   // 0bce8 lqd r12,64(r4)
+    s.instructions++; op_lqd(s, 0x34014202u);   // 0bcec lqd r2,80(r4)
+    s.instructions++; op_lqd(s, 0x34018208u);   // 0bcf0 lqd r8,96(r4)
+    s.instructions++; op_lqd(s, 0x3401C20Du);   // 0bcf4 lqd r13,112(r4)
+L_0bcf8:
+    s.instructions++; op_stqd(s, 0x24000187u);   // 0bcf8 stqd r7,0(r3)
+    s.instructions++; op_stqd(s, 0x24004189u);   // 0bcfc stqd r9,16(r3)
+    s.instructions++; op_stqd(s, 0x2400818Au);   // 0bd00 stqd r10,32(r3)
+    s.instructions++; op_stqd(s, 0x2400C18Bu);   // 0bd04 stqd r11,48(r3)
+    s.instructions++; op_stqd(s, 0x2401018Cu);   // 0bd08 stqd r12,64(r3)
+    s.instructions++; op_stqd(s, 0x24014182u);   // 0bd0c stqd r2,80(r3)
+    s.instructions++; op_stqd(s, 0x24018188u);   // 0bd10 stqd r8,96(r3)
+    s.instructions++; op_stqd(s, 0x2401C18Du);   // 0bd14 stqd r13,112(r3)
+    s.instructions++; op_ai(s, 0x1C200204u);   // 0bd18 ai r4,r4,128
+    s.instructions++;   // 0bd1c biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BD1C; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_ai(s, 0x1C200183u);   // 0bd20 ai r3,r3,128
+    s.instructions++; goto L_0bcd0;   // 0bd24 br r0,0xbcd0
+}
+bool geomfn_0bd80(SPUThread& s) {
+    u32 to;
+    goto L_0bd80;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0BD80: goto L_0bd80;
+    case 0x0BD98: goto L_0bd98;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0bd80:
+    s.instructions++; op_ai(s, 0x1C03C282u);   // 0bd80 ai r2,r5,15
+    s.instructions++; op_il(s, 0x40800006u);   // 0bd88 il r6,0x0
+    s.pc = 0x0BD8C; s.instructions++; op_lqr(s, 0x338D2887u);   // 0bd8c lqr r7,0x126d0
+    s.instructions++; op_rotmi(s, 0x0F3F4102u);   // 0bd90 rotmi r2,r2,-3
+    s.instructions++;   // 0bd94 biz r5,r0,r0
+    if (s.pref(5) == 0) {
+        s.pc = 0x0BD94; op_biz(s, 0x25000005u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+L_0bd98:
+    s.instructions++; op_lqd(s, 0x3400018Bu);   // 0bd9c lqd r11,0(r3)
+    s.instructions++; op_ilh(s, 0x4182020Cu);   // 0bda0 ilh r12,0x404
+    s.instructions++; op_lqd(s, 0x3400418Du);   // 0bda4 lqd r13,16(r3)
+    s.instructions++; op_lqd(s, 0x3400818Eu);   // 0bda8 lqd r14,32(r3)
+    s.instructions++; op_stqd(s, 0x24000205u);   // 0bdac stqd r5,0(r4)
+    s.instructions++; op_a(s, 0x1801C60Fu);   // 0bdb0 a r15,r12,r7
+    s.instructions++; op_stqd(s, 0x24004208u);   // 0bdb4 stqd r8,16(r4)
+    s.instructions++; op_ai(s, 0x1CFFC102u);   // 0bdb8 ai r2,r2,-1
+    s.instructions++; op_stqd(s, 0x24008209u);   // 0bdbc stqd r9,32(r4)
+    s.instructions++; op_a(s, 0x1803C608u);   // 0bdc0 a r8,r12,r15
+    s.instructions++; op_stqd(s, 0x2400C20Au);   // 0bdc4 stqd r10,48(r4)
+    s.instructions++; op_ai(s, 0x1C0C0183u);   // 0bdc8 ai r3,r3,48
+    s.instructions++; op_shufb(s, 0xB0A2C587u);   // 0bdcc shufb r5,r11,r11,r7
+    s.instructions++; op_a(s, 0x1802060Cu);   // 0bdd0 a r12,r12,r8
+    s.instructions++; op_shufb(s, 0xB143870Fu);   // 0bdd4 shufb r10,r14,r14,r15
+    s.instructions++; op_a(s, 0x18010304u);   // 0bdd8 a r4,r6,r4
+    s.instructions++; op_shufb(s, 0xB1238688u);   // 0bddc shufb r9,r13,r14,r8
+    s.instructions++; op_il(s, 0x40802006u);   // 0bde0 il r6,0x40
+    s.instructions++; op_shufb(s, 0xB103458Cu);   // 0bde4 shufb r8,r11,r13,r12
+    s.instructions++; if (s.pref(2) != 0) goto L_0bd98;   // 0bde8 brnz r2,0xbd98
+    s.instructions++;   // 0bdec bi r0,r0,r0
+    s.pc = 0x0BDEC; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
+}
+bool geomfn_0c180(SPUThread& s) {
+    u32 to;
+    goto L_0c180;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0C180: goto L_0c180;
+    case 0x0C198: goto L_0c198;
+    case 0x0C1D8: goto L_0c1d8;
+    case 0x0C260: goto L_0c260;
+    case 0x0C280: goto L_0c280;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0c180:
+    s.instructions++; op_shli(s, 0x0F600302u);   // 0c180 shli r2,r6,0
+    s.pc = 0x0C184; s.instructions++; op_lqr(s, 0x338C9F86u);   // 0c184 lqr r6,0x12680
+    s.instructions++; goto L_0c198;   // 0c18c br r0,0xc198
+    s.pc = 0x0C190; return false;   // (falls out of the scanned code)
+L_0c198:
+    s.instructions++; op_il(s, 0x4080008Au);   // 0c198 il r10,0x1
+    s.pc = 0x0C19C; s.instructions++; op_lqr(s, 0x338C248Bu);   // 0c19c lqr r11,0x122c0
+    s.instructions++; op_ila(s, 0x4261400Cu);   // 0c1a8 ila r12,0xc280
+    s.instructions++; op_ilh(s, 0x4181818Du);   // 0c1ac ilh r13,0x303
+    s.instructions++; op_ila(s, 0x4261300Eu);   // 0c1b0 ila r14,0xc260
+    s.instructions++; op_rotqby(s, 0x3B81058Bu);   // 0c1b4 rotqby r11,r11,r4
+    s.instructions++; op_shl(s, 0x0B62C20Fu);   // 0c1b8 shl r15,r4,r11
+    s.instructions++; op_shlqbi(s, 0x3B62C50Au);   // 0c1bc shlqbi r10,r10,r11
+    s.instructions++; op_sfi(s, 0x0C00058Bu);   // 0c1c0 sfi r11,r11,0
+    s.instructions++; op_ila(s, 0x4260EC10u);   // 0c1c4 ila r16,0xc1d8
+    s.instructions++; op_ai(s, 0x1CFFC511u);   // 0c1c8 ai r17,r10,-1
+    s.instructions++; op_shlqbii(s, 0x3F610512u);   // 0c1cc shlqbii r18,r10,4
+    s.instructions++; op_shli(s, 0x0F608793u);   // 0c1d0 shli r19,r15,2
+    s.instructions++; op_shlqbii(s, 0x3F61850Au);   // 0c1d4 shlqbii r10,r10,6
+L_0c1d8:
+    s.instructions++; op_a(s, 0x1801C894u);   // 0c1d8 a r20,r17,r7
+    s.instructions++; op_andi(s, 0x1403C195u);   // 0c1dc andi r21,r3,15
+    s.instructions++; op_ceqi(s, 0x7C000896u);   // 0c1e0 ceqi r22,r17,0
+    s.instructions++; op_rotqmbi(s, 0x3B22CA14u);   // 0c1e4 rotqmbi r20,r20,r11
+    s.instructions++; op_a(s, 0x18054117u);   // 0c1e8 a r23,r2,r21
+    s.instructions++; op_shufb(s, 0xB2A54A8Du);   // 0c1ec shufb r21,r21,r21,r13
+    s.instructions++; op_a(s, 0x18014918u);   // 0c1f0 a r24,r18,r5
+    s.instructions++; op_cgti(s, 0x4C040B97u);   // 0c1f4 cgti r23,r23,16
+    s.instructions++; op_ai(s, 0x1C01CA19u);   // 0c1f8 ai r25,r20,7
+    s.instructions++;   // 0c1fc biz r20,r0,r0
+    if (s.pref(20) == 0) {
+        s.pc = 0x0C1FC; op_biz(s, 0x25000014u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_a(s, 0x18048C1Au);   // 0c200 a r26,r24,r18
+    s.instructions++; op_fsmbi(s, 0x3280001Bu);   // 0c204 fsmbi r27,0x0
+    s.instructions++; op_selb(s, 0x82E38617u);   // 0c208 selb r23,r12,r14,r23
+    s.instructions++; op_rotqmbii(s, 0x3F3F8C99u);   // 0c20c rotqmbii r25,r25,-2
+    s.instructions++; op_andi(s, 0x1400CA14u);   // 0c210 andi r20,r20,3
+    s.instructions++; op_fsmbi(s, 0x3280001Cu);   // 0c214 fsmbi r28,0x0
+    s.instructions++; op_a(s, 0x1806891Du);   // 0c218 a r29,r18,r26
+    s.instructions++; op_ai(s, 0x1CFFC891u);   // 0c220 ai r17,r17,-1
+    s.instructions++; op_fsmbi(s, 0x3280001Eu);   // 0c224 fsmbi r30,0x0
+    s.instructions++; op_mpy(s, 0x7884CC9Fu);   // 0c228 mpy r31,r25,r19
+    s.instructions++; op_cgti(s, 0x4C008C99u);   // 0c22c cgti r25,r25,2
+    s.instructions++; op_selb(s, 0x82C00816u);   // 0c230 selb r22,r16,r0,r22
+    s.instructions++; op_selb(s, 0x84060299u);   // 0c234 selb r32,r5,r24,r25
+    s.instructions++; op_selb(s, 0x84268299u);   // 0c238 selb r33,r5,r26,r25
+    s.instructions++; op_selb(s, 0x83274299u);   // 0c23c selb r25,r5,r29,r25
+    s.instructions++; op_a(s, 0x18018A95u);   // 0c240 a r21,r21,r6
+    s.instructions++; op_a(s, 0x1800CFA2u);   // 0c244 a r34,r31,r3
+    s.instructions++; op_sfi(s, 0x0C000F9Fu);   // 0c248 sfi r31,r31,0
+    s.instructions++; op_a(s, 0x180887A3u);   // 0c24c a r35,r15,r34
+    s.instructions++; op_ai(s, 0x1C041124u);   // 0c250 ai r36,r34,16
+    s.instructions++; op_a(s, 0x1803D1A5u);   // 0c254 a r37,r35,r15
+    s.instructions++; op_ai(s, 0x1C0411A6u);   // 0c258 ai r38,r35,16
+    s.instructions++; op_a(s, 0x1803D2A7u);   // 0c25c a r39,r37,r15
+L_0c260:
+    s.instructions++; op_ai(s, 0x1C0412B0u);   // 0c260 ai r48,r37,16
+    s.instructions++; op_lqx(s, 0x3887D231u);   // 0c264 lqx r49,r36,r31
+    s.instructions++; op_ai(s, 0x1C0413B2u);   // 0c268 ai r50,r39,16
+    s.instructions++; op_lqx(s, 0x3887D333u);   // 0c26c lqx r51,r38,r31
+    s.instructions++; op_ceqi(s, 0x7C004A34u);   // 0c270 ceqi r52,r20,1
+    s.instructions++; op_lqx(s, 0x3887D830u);   // 0c274 lqx r48,r48,r31
+    s.instructions++; op_ceqi(s, 0x7C008A35u);   // 0c278 ceqi r53,r20,2
+    s.instructions++; op_lqx(s, 0x3887D932u);   // 0c27c lqx r50,r50,r31
+L_0c280:
+    s.instructions++; op_csflt(s, 0x76A2D636u);   // 0c280 csflt r54,r44,-16
+    s.instructions++; op_lqx(s, 0x3887D12Cu);   // 0c284 lqx r44,r34,r31
+    s.instructions++; op_csflt(s, 0x76A2D6B7u);   // 0c288 csflt r55,r45,-16
+    s.instructions++; op_lqx(s, 0x3887D1ADu);   // 0c28c lqx r45,r35,r31
+    s.instructions++; op_csflt(s, 0x76A2D72Eu);   // 0c290 csflt r46,r46,-16
+    s.instructions++; op_lqx(s, 0x3887D2B8u);   // 0c294 lqx r56,r37,r31
+    s.instructions++; op_csflt(s, 0x76A2D7AFu);   // 0c298 csflt r47,r47,-16
+    s.instructions++; op_lqx(s, 0x3887D3B9u);   // 0c29c lqx r57,r39,r31
+    s.instructions++; op_a(s, 0x1804CF9Fu);   // 0c2a0 a r31,r31,r19
+    s.instructions++; op_stqx(s, 0x2886C2A8u);   // 0c2a4 stqx r40,r5,r27
+    s.instructions++; op_ori(s, 0x04000E3Au);   // 0c2a8 ori r58,r28,0
+    s.instructions++; op_stqx(s, 0x2886D029u);   // 0c2ac stqx r41,r32,r27
+    s.instructions++; op_ori(s, 0x0400051Cu);   // 0c2b0 ori r28,r10,0
+    s.instructions++; op_shufb(s, 0xB58C5615u);   // 0c2b4 shufb r44,r44,r49,r21
+    s.instructions++; op_fma(s, 0xE5021B09u);   // 0c2b8 fma r40,r54,r8,r9
+    s.instructions++; op_shufb(s, 0xB5ACD695u);   // 0c2bc shufb r45,r45,r51,r21
+    s.instructions++; op_fma(s, 0xE52DC409u);   // 0c2c0 fma r41,r8,r55,r9
+    s.instructions++; op_stqx(s, 0x2886D0AAu);   // 0c2c4 stqx r42,r33,r27
+    s.instructions++; op_fma(s, 0xE5421709u);   // 0c2c8 fma r42,r46,r8,r9
+    s.instructions++; op_stqx(s, 0x2886CCABu);   // 0c2cc stqx r43,r25,r27
+    s.instructions++; op_fma(s, 0xE5621789u);   // 0c2d0 fma r43,r47,r8,r9
+    s.instructions++; op_shufb(s, 0xB5CC1C15u);   // 0c2d4 shufb r46,r56,r48,r21
+    s.instructions++; op_a(s, 0x1806CF1Bu);   // 0c2d8 a r27,r30,r27
+    s.instructions++; op_shufb(s, 0xB5EC9C95u);   // 0c2dc shufb r47,r57,r50,r21
+    s.instructions++; op_ori(s, 0x04001D1Eu);   // 0c2e0 ori r30,r58,0
+    s.instructions++;   // 0c2e4 binz r31,r23,r0
+    if (s.pref(31) != 0) {
+        s.pc = 0x0C2E4; op_binz(s, 0x25200B9Fu);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        to = s.pc; goto jump;
+    }
+    s.instructions++; op_a(s, 0x1800C203u);   // 0c2e8 a r3,r4,r3
+    s.instructions++; op_stqx(s, 0x2886C2A8u);   // 0c2ec stqx r40,r5,r27
+    s.instructions++; op_ai(s, 0x1C040285u);   // 0c2f0 ai r5,r5,16
+    s.instructions++;   // 0c2f4 binz r52,r22,r0
+    if (s.pref(52) != 0) {
+        s.pc = 0x0C2F4; op_binz(s, 0x25200B34u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        to = s.pc; goto jump;
+    }
+    s.instructions++; op_ceqi(s, 0x7C00CA14u);   // 0c2f8 ceqi r20,r20,3
+    s.instructions++; op_stqx(s, 0x2886CC29u);   // 0c2fc stqx r41,r24,r27
+    s.instructions++;   // 0c304 binz r53,r22,r0
+    if (s.pref(53) != 0) {
+        s.pc = 0x0C304; op_binz(s, 0x25200B35u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        to = s.pc; goto jump;
+    }
+    s.instructions++; op_stqx(s, 0x2886CD2Au);   // 0c308 stqx r42,r26,r27
+    s.instructions++;   // 0c30c binz r20,r22,r0
+    if (s.pref(20) != 0) {
+        s.pc = 0x0C30C; op_binz(s, 0x25200B14u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        to = s.pc; goto jump;
+    }
+    s.instructions++; op_stqx(s, 0x2886CEABu);   // 0c310 stqx r43,r29,r27
+    s.instructions++;   // 0c314 bi r0,r22,r0
+    s.pc = 0x0C314; op_bi(s, 0x35000B00u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    to = s.pc; goto jump;
+}
+bool geomfn_0cd80(SPUThread& s) {
+    u32 to;
+    goto L_0cd80;
+jump:   // an indirect target or the pc a native loop left at
+    switch (to) {
+    case 0x0CD80: goto L_0cd80;
+    case 0x0CDC0: goto L_0cdc0;
+    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
+    }
+L_0cd80:
+    s.instructions++; op_ila(s, 0x42810182u);   // 0cd80 ila r2,0x10203
+    s.instructions++;   // 0cd84 biz r8,r0,r0
+    if (s.pref(8) == 0) {
+        s.pc = 0x0CD84; op_biz(s, 0x25000008u);
+        if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+        return true;
+    }
+    s.instructions++; op_ori(s, 0x04000289u);   // 0cd88 ori r9,r5,0
+    s.instructions++; op_ai(s, 0x1C01C408u);   // 0cd90 ai r8,r8,7
+    s.instructions++; op_shufb(s, 0xB0C18302u);   // 0cd94 shufb r6,r6,r6,r2
+    s.instructions++; op_ai(s, 0x1CF00204u);   // 0cd98 ai r4,r4,-64
+    s.instructions++; op_shufb(s, 0xB0E1C382u);   // 0cd9c shufb r7,r7,r7,r2
+    s.instructions++; op_rotmi(s, 0x0F3F8402u);   // 0cda0 rotmi r2,r8,-2
+L_0cdc0:
+    s.instructions++; op_ai(s, 0x1C100204u);   // 0cdc0 ai r4,r4,64
+    s.instructions++; op_lqd(s, 0x34000191u);   // 0cdc4 lqd r17,0(r3)
+    s.instructions++; op_fma(s, 0xE241C688u);   // 0cdc8 fma r18,r13,r7,r8
+    s.instructions++; op_lqd(s, 0x34004193u);   // 0cdcc lqd r19,16(r3)
+    s.instructions++; op_fma(s, 0xE283838Au);   // 0cdd0 fma r20,r7,r14,r10
+    s.instructions++; op_lqd(s, 0x34008195u);   // 0cdd4 lqd r21,32(r3)
+    s.instructions++; op_fma(s, 0xE2C1C78Bu);   // 0cdd8 fma r22,r15,r7,r11
+    s.instructions++; op_lqd(s, 0x3400C197u);   // 0cddc lqd r23,48(r3)
+    s.instructions++; op_fma(s, 0xE201C80Cu);   // 0cde0 fma r16,r16,r7,r12
+    s.instructions++; op_lqd(s, 0x3400020Du);   // 0cde4 lqd r13,0(r4)
+    s.instructions++; op_ai(s, 0x1C100183u);   // 0cde8 ai r3,r3,64
+    s.instructions++; op_lqd(s, 0x3400420Eu);   // 0cdec lqd r14,16(r4)
+    s.instructions++; op_fm(s, 0x58C44308u);   // 0cdf0 fm r8,r6,r17
+    s.instructions++; op_lqd(s, 0x3400820Fu);   // 0cdf4 lqd r15,32(r4)
+    s.instructions++; op_fm(s, 0x58C1898Au);   // 0cdf8 fm r10,r19,r6
+    s.instructions++; op_stqd(s, 0x24000292u);   // 0cdfc stqd r18,0(r5)
+    s.instructions++; op_fm(s, 0x58C18A8Bu);   // 0ce00 fm r11,r21,r6
+    s.instructions++; op_stqd(s, 0x24004294u);   // 0ce04 stqd r20,16(r5)
+    s.instructions++; op_fm(s, 0x58C18B8Cu);   // 0ce08 fm r12,r23,r6
+    s.instructions++; op_stqd(s, 0x24008296u);   // 0ce0c stqd r22,32(r5)
+    s.instructions++; op_ai(s, 0x1CFFC102u);   // 0ce10 ai r2,r2,-1
+    s.instructions++; op_stqd(s, 0x2400C290u);   // 0ce14 stqd r16,48(r5)
+    s.instructions++; op_ori(s, 0x04000485u);   // 0ce18 ori r5,r9,0
+    s.instructions++; op_lqd(s, 0x3400C210u);   // 0ce1c lqd r16,48(r4)
+    s.instructions++; op_ai(s, 0x1C100489u);   // 0ce20 ai r9,r9,64
+    s.instructions++; if (s.pref(2) != 0) goto L_0cdc0;   // 0ce24 brnz r2,0xcdc0
+    s.instructions++;   // 0ce2c bi r0,r0,r0
+    s.pc = 0x0CE2C; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
 }
 bool geomfn_0d400(SPUThread& s) {
     u32 to;
@@ -314,6 +6499,11 @@ jump:   // an indirect target or the pc a native loop left at
     case 0x0DA18: goto L_0da18;
     case 0x0DAD8: goto L_0dad8;
     case 0x0DDF0: goto L_0ddf0;
+    case 0x0DE48: goto L_0de48;
+    case 0x0DE78: goto L_0de78;
+    case 0x0DF38: goto L_0df38;
+    case 0x0E040: goto L_0e040;
+    case 0x0E128: goto L_0e128;
     default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);
     }
 L_0d400:
@@ -907,17 +7097,279 @@ L_0ddf0:
     s.pc = 0x0DE44; op_bi(s, 0x35000500u);
     if (s.interrupts && (s.event_stat & s.event_mask)) return false;
     to = s.pc; goto jump;
+L_0de48:
+    s.instructions++; op_shli(s, 0x0F61128Au);   // 0de48 shli r10,r37,4
+    s.instructions++; op_il(s, 0x4080000Bu);   // 0de50 il r11,0x0
+    s.instructions++; op_sfi(s, 0x0C000502u);   // 0de68 sfi r2,r10,0
+    s.instructions++; op_sfi(s, 0x0C00050Au);   // 0de70 sfi r10,r10,0
+L_0de78:
+    s.instructions++; op_stqx(s, 0x288A410Bu);   // 0de7c stqx r11,r2,r41
+    s.instructions++; op_stqx(s, 0x288A810Bu);   // 0de84 stqx r11,r2,r42
+    s.instructions++; op_ai(s, 0x1C100102u);   // 0de88 ai r2,r2,64
+    s.instructions++; op_stqx(s, 0x288AC50Bu);   // 0de8c stqx r11,r10,r43
+    s.instructions++; op_stqx(s, 0x288B050Bu);   // 0de94 stqx r11,r10,r44
+    s.instructions++; op_ai(s, 0x1C10050Au);   // 0de98 ai r10,r10,64
+    s.instructions++; if (s.pref(2) != 0) goto L_0de78;   // 0de9c brnz r2,0xde78
+    s.instructions++; op_shli(s, 0x0F60C28Au);   // 0dea0 shli r10,r5,3
+    s.instructions++; op_sfi(s, 0x0C010285u);   // 0dea8 sfi r5,r5,4
+    s.instructions++; op_lqd(s, 0x34000182u);   // 0deac lqd r2,0(r3)
+    s.instructions++; op_il(s, 0x40800407u);   // 0deb0 il r7,0x8
+    s.instructions++; op_andi(s, 0x1400C285u);   // 0deb8 andi r5,r5,3
+    s.instructions++; op_ai(s, 0x1C07C50Au);   // 0dec0 ai r10,r10,31
+    s.instructions++; op_a(s, 0x1801428Cu);   // 0dec8 a r12,r5,r5
+    s.instructions++; op_ceqi(s, 0x7C00C285u);   // 0ded0 ceqi r5,r5,3
+    s.instructions++; op_shlhi(s, 0x0FE10102u);   // 0ded8 shlhi r2,r2,4
+    s.instructions++; op_shl(s, 0x0B63180Cu);   // 0dee0 shl r12,r48,r12
+    s.instructions++; op_selb(s, 0x80A2C385u);   // 0dee8 selb r5,r7,r11,r5
+    s.instructions++; op_ilh(s, 0x41FFFF8Du);   // 0def0 ilh r13,0xffff
+    s.instructions++; op_andi(s, 0x14F8050Au);   // 0def8 andi r10,r10,-32
+    s.instructions++; op_shufb(s, 0xB0408133u);   // 0defc shufb r2,r2,r2,r51
+    s.instructions++; op_ai(s, 0x1CFFC60Cu);   // 0df00 ai r12,r12,-1
+    s.instructions++; op_a(s, 0x1800C50Eu);   // 0df08 a r14,r10,r3
+    s.instructions++; op_sfi(s, 0x0C00050Fu);   // 0df10 sfi r15,r10,0
+    s.instructions++; op_fsm(s, 0x3680060Cu);   // 0df14 fsm r12,r12,r0
+    s.instructions++; op_ai(s, 0x1C040710u);   // 0df18 ai r16,r14,16
+    s.instructions++; op_rotqbyi(s, 0x3F800111u);   // 0df1c rotqbyi r17,r2,0
+    s.instructions++; op_ori(s, 0x04000112u);   // 0df20 ori r18,r2,0
+    s.instructions++; op_rotqbyi(s, 0x3F800113u);   // 0df24 rotqbyi r19,r2,0
+    s.instructions++; op_ori(s, 0x04000114u);   // 0df28 ori r20,r2,0
+    s.instructions++; op_rotqbyi(s, 0x3F800115u);   // 0df2c rotqbyi r21,r2,0
+    s.instructions++; op_ori(s, 0x04000102u);   // 0df30 ori r2,r2,0
+L_0df38:
+    s.instructions++; op_rotmi(s, 0x0F3C0116u);   // 0df38 rotmi r22,r2,-16
+    s.instructions++; op_stqx(s, 0x2882088Du);   // 0df3c stqx r13,r17,r8
+    s.instructions++; op_ori(s, 0x04000797u);   // 0df40 ori r23,r15,0
+    s.instructions++; op_stqx(s, 0x2882098Du);   // 0df44 stqx r13,r19,r8
+    s.instructions++; op_ceqi(s, 0x7CF80791u);   // 0df48 ceqi r17,r15,-32
+    s.instructions++; op_stqx(s, 0x28820A8Du);   // 0df4c stqx r13,r21,r8
+    s.instructions++; op_rotmi(s, 0x0F3C0913u);   // 0df50 rotmi r19,r18,-16
+    s.instructions++; op_lqx(s, 0x38838795u);   // 0df54 lqx r21,r15,r14
+    s.instructions++; op_selb(s, 0x83014391u);   // 0df58 selb r24,r7,r5,r17
+    s.instructions++; op_lqx(s, 0x38840799u);   // 0df5c lqx r25,r15,r16
+    s.instructions++; op_selb(s, 0x83430591u);   // 0df60 selb r26,r11,r12,r17
+    s.instructions++; op_rotqbyi(s, 0x3F82011Bu);   // 0df64 rotqbyi r27,r2,8
+    s.instructions++; op_ai(s, 0x1C08078Fu);   // 0df68 ai r15,r15,32
+    s.instructions++; op_rotqbyi(s, 0x3F80811Cu);   // 0df6c rotqbyi r28,r2,2
+    s.instructions++; op_stqx(s, 0x2882098Du);   // 0df70 stqx r13,r19,r8
+    s.instructions++; op_stqx(s, 0x2882090Du);   // 0df74 stqx r13,r18,r8
+    s.instructions++; op_shlhi(s, 0x0FE10A93u);   // 0df78 shlhi r19,r21,4
+    s.instructions++; op_stqx(s, 0x28820A0Du);   // 0df7c stqx r13,r20,r8
+    s.instructions++; op_rotmi(s, 0x0F3C0D9Du);   // 0df80 rotmi r29,r27,-16
+    s.instructions++; op_stqx(s, 0x28820B0Du);   // 0df84 stqx r13,r22,r8
+    s.instructions++; op_shlhi(s, 0x0FE10C94u);   // 0df88 shlhi r20,r25,4
+    s.instructions++; op_stqx(s, 0x2882010Du);   // 0df8c stqx r13,r2,r8
+    s.instructions++; op_rotqbyi(s, 0x3F808D99u);   // 0df94 rotqbyi r25,r27,2
+    s.instructions++; op_rotmi(s, 0x0F3C0991u);   // 0df98 rotmi r17,r19,-16
+    s.instructions++; op_rotqby(s, 0x3B860992u);   // 0df9c rotqby r18,r19,r24
+    s.instructions++; op_stqx(s, 0x28820E0Du);   // 0dfa0 stqx r13,r28,r8
+    s.instructions++; op_stqx(s, 0x28820E8Du);   // 0dfa4 stqx r13,r29,r8
+    s.instructions++; op_rotqbyi(s, 0x3F808995u);   // 0dfac rotqbyi r21,r19,2
+    s.instructions++; op_selb(s, 0x80448A1Au);   // 0dfb0 selb r2,r20,r18,r26
+    s.instructions++; op_rotqbyi(s, 0x3F808914u);   // 0dfb4 rotqbyi r20,r18,2
+    s.instructions++; op_stqx(s, 0x28820D8Du);   // 0dfb8 stqx r13,r27,r8
+    s.instructions++; op_stqx(s, 0x28820C8Du);   // 0dfbc stqx r13,r25,r8
+    s.instructions++; if (s.pref(23) != 0) goto L_0df38;   // 0dfc4 brnz r23,0xdf38
+    s.instructions++; op_shli(s, 0x0F61128Du);   // 0dfc8 shli r13,r37,4
+    s.instructions++; op_il(s, 0x4080000Fu);   // 0dfd0 il r15,0x0
+    s.pc = 0x0DFD4; s.instructions++; op_lqr(s, 0x3388E191u);   // 0dfd4 lqr r17,0x126e0
+    s.instructions++; op_ilh(s, 0x41890993u);   // 0dfd8 ilh r19,0x1213
+    s.pc = 0x0DFDC; s.instructions++; op_lqr(s, 0x33888E95u);   // 0dfdc lqr r21,0x12450
+    s.instructions++; op_ilh(s, 0x418B0B97u);   // 0dfe0 ilh r23,0x1617
+    s.instructions++; op_fsmbi(s, 0x32800198u);   // 0dfe4 fsmbi r24,0x3
+    s.instructions++; op_ai(s, 0x1C00041Au);   // 0dfe8 ai r26,r8,0
+    s.instructions++; op_shufb(s, 0xB1A346A0u);   // 0dfec shufb r13,r13,r13,r32
+    s.instructions++; op_ilh(s, 0x418D0D9Eu);   // 0dff0 ilh r30,0x1a1b
+    s.instructions++; op_fsmbi(s, 0x3280001Fu);   // 0dff4 fsmbi r31,0x0
+    s.instructions++; op_ilh(s, 0x418F0F83u);   // 0dff8 ilh r3,0x1e1f
+    s.instructions++; op_fsmbi(s, 0x32800020u);   // 0dffc fsmbi r32,0x0
+    s.instructions++; op_ai(s, 0x1C040421u);   // 0e000 ai r33,r8,16
+    s.instructions++; op_rotqbyi(s, 0x3F8088A2u);   // 0e004 rotqbyi r34,r17,2
+    s.instructions++; op_a(s, 0x18034A8Du);   // 0e008 a r13,r21,r13
+    s.instructions++; op_fsmbi(s, 0x32800015u);   // 0e00c fsmbi r21,0x0
+    s.instructions++; op_ai(s, 0x1C080423u);   // 0e010 ai r35,r8,32
+    s.instructions++; op_fsmbi(s, 0x32800024u);   // 0e014 fsmbi r36,0x0
+    s.instructions++; op_ai(s, 0x1C0C0425u);   // 0e018 ai r37,r8,48
+    s.instructions++; op_rotqbyi(s, 0x3F8006A6u);   // 0e01c rotqbyi r38,r13,0
+    s.instructions++; op_selb(s, 0x8264D118u);   // 0e020 selb r19,r34,r19,r24
+    s.instructions++; op_selb(s, 0x82E5D118u);   // 0e028 selb r23,r34,r23,r24
+    s.instructions++; op_selb(s, 0x83C79118u);   // 0e030 selb r30,r34,r30,r24
+    s.instructions++; op_selb(s, 0x8300D118u);   // 0e038 selb r24,r34,r3,r24
+L_0e040:
+    s.instructions++; op_andi(s, 0x14008F9Fu);   // 0e040 andi r31,r31,2
+    s.instructions++; op_rotmi(s, 0x0F3FC7A9u);   // 0e048 rotmi r41,r15,-1
+    s.instructions++; op_shufb(s, 0xB0699403u);   // 0e04c shufb r3,r40,r38,r3
+    s.instructions++; op_a(s, 0x1803CFAAu);   // 0e050 a r42,r31,r15
+    s.instructions++; op_stqx(s, 0x288247A8u);   // 0e054 stqx r40,r15,r9
+    s.instructions++; op_andi(s, 0x1400900Fu);   // 0e058 andi r15,r32,2
+    s.instructions++; op_lqx(s, 0x3886869Fu);   // 0e05c lqx r31,r13,r26
+    s.instructions++; op_rotmi(s, 0x0F3FD528u);   // 0e060 rotmi r40,r42,-1
+    s.instructions++; op_lqx(s, 0x388846A0u);   // 0e064 lqx r32,r13,r33
+    s.instructions++; op_a(s, 0x1803D50Fu);   // 0e068 a r15,r42,r15
+    s.instructions++; op_shufb(s, 0xB44981A2u);   // 0e06c shufb r34,r3,r38,r34
+    s.instructions++; op_andi(s, 0x14008AABu);   // 0e070 andi r43,r21,2
+    s.instructions++; op_stqx(s, 0x28825503u);   // 0e074 stqx r3,r42,r9
+    s.instructions++; op_rotmi(s, 0x0F3FC783u);   // 0e078 rotmi r3,r15,-1
+    s.instructions++; op_lqx(s, 0x3888C695u);   // 0e07c lqx r21,r13,r35
+    s.instructions++; op_a(s, 0x1803D5AAu);   // 0e080 a r42,r43,r15
+    s.instructions++; op_stqx(s, 0x28869329u);   // 0e084 stqx r41,r38,r26
+    s.instructions++; op_andi(s, 0x14009224u);   // 0e088 andi r36,r36,2
+    s.instructions++; op_shufb(s, 0xB4E99127u);   // 0e08c shufb r39,r34,r38,r39
+    s.instructions++; op_rotmi(s, 0x0F3FD529u);   // 0e090 rotmi r41,r42,-1
+    s.instructions++; op_stqx(s, 0x288247A2u);   // 0e094 stqx r34,r15,r9
+    s.instructions++; op_a(s, 0x1809150Fu);   // 0e098 a r15,r42,r36
+    s.instructions++; op_lqx(s, 0x388946A4u);   // 0e09c lqx r36,r13,r37
+    s.instructions++; op_ceqi(s, 0x7CF006ABu);   // 0e0a0 ceqi r43,r13,-64
+    s.instructions++; op_stqx(s, 0x28885328u);   // 0e0a4 stqx r40,r38,r33
+    s.instructions++; op_selb(s, 0x8504C89Fu);   // 0e0a8 selb r40,r17,r19,r31
+    s.instructions++; op_stqx(s, 0x2888D303u);   // 0e0ac stqx r3,r38,r35
+    s.instructions++; op_selb(s, 0x8065C8A0u);   // 0e0b0 selb r3,r17,r23,r32
+    s.instructions++; op_stqx(s, 0x28895329u);   // 0e0b4 stqx r41,r38,r37
+    s.instructions++; op_ori(s, 0x040006A6u);   // 0e0b8 ori r38,r13,0
+    s.instructions++; op_stqx(s, 0x28825527u);   // 0e0bc stqx r39,r42,r9
+    s.instructions++; op_selb(s, 0x84478895u);   // 0e0c0 selb r34,r17,r30,r21
+    s.instructions++; op_shufb(s, 0xB50353A8u);   // 0e0c4 shufb r40,r39,r13,r40
+    s.instructions++; op_ai(s, 0x1CF0068Du);   // 0e0c8 ai r13,r13,-64
+    s.instructions++; op_selb(s, 0x84E608A4u);   // 0e0d0 selb r39,r17,r24,r36
+    s.instructions++; if (s.pref(43) == 0) goto L_0e040;   // 0e0d4 brz r43,0xe040
+    s.instructions++; op_sfi(s, 0x0C04078Du);   // 0e0d8 sfi r13,r15,16
+    s.instructions++; op_lqx(s, 0x38824791u);   // 0e0dc lqx r17,r15,r9
+    s.instructions++; op_rotmi(s, 0x0F3FC793u);   // 0e0e0 rotmi r19,r15,-1
+    s.instructions++; op_cwd(s, 0x3EC30215u);   // 0e0e4 cwd r21,r4,12
+    s.instructions++; op_sfi(s, 0x0C000517u);   // 0e0e8 sfi r23,r10,0
+    s.instructions++; op_sfi(s, 0x0C00050Au);   // 0e0f0 sfi r10,r10,0
+    s.instructions++; op_fsmbi(s, 0x3287FF98u);   // 0e0f4 fsmbi r24,0xfff
+    s.instructions++; op_fsmbi(s, 0x32801F9Au);   // 0e0fc fsmbi r26,0x3f
+    s.instructions++; op_ai(s, 0x1CF8051Eu);   // 0e100 ai r30,r10,-32
+    s.instructions++; op_shufb(s, 0xB0C18995u);   // 0e104 shufb r6,r19,r6,r21
+    s.instructions++; op_rotqby(s, 0x3B83488Du);   // 0e10c rotqby r13,r17,r13
+    s.pc = 0x0E114; s.instructions++; op_lqr(s, 0x3388FF91u);   // 0e114 lqr r17,0x12910
+    s.instructions++; op_stqd(s, 0x24000206u);   // 0e11c stqd r6,0(r4)
+    s.instructions++; op_stqx(s, 0x2882478Du);   // 0e124 stqx r13,r15,r9
+L_0e128:
+    s.instructions++; op_ceqi(s, 0x7C000B95u);   // 0e128 ceqi r21,r23,0
+    s.instructions++; op_shufb(s, 0xB0C34311u);   // 0e12c shufb r6,r6,r13,r17
+    s.instructions++; op_ai(s, 0x1C080F1Eu);   // 0e130 ai r30,r30,32
+    s.instructions++; op_lqx(s, 0x38820D9Bu);   // 0e134 lqx r27,r27,r8
+    s.instructions++; op_selb(s, 0x83E14395u);   // 0e138 selb r31,r7,r5,r21
+    s.instructions++; op_lqx(s, 0x38820102u);   // 0e13c lqx r2,r2,r8
+    s.instructions++; op_selb(s, 0x82A30595u);   // 0e140 selb r21,r11,r12,r21
+    s.instructions++; op_lqx(s, 0x38820B0Du);   // 0e144 lqx r13,r22,r8
+    s.instructions++; op_ori(s, 0x04000B83u);   // 0e148 ori r3,r23,0
+    s.instructions++; op_lqx(s, 0x38838B96u);   // 0e14c lqx r22,r23,r14
+    s.instructions++; op_lqx(s, 0x38820E1Cu);   // 0e150 lqx r28,r28,r8
+    s.instructions++; op_lqx(s, 0x38820E9Du);   // 0e154 lqx r29,r29,r8
+    s.instructions++; op_lqx(s, 0x38820A14u);   // 0e158 lqx r20,r20,r8
+    s.instructions++; op_lqx(s, 0x38840B84u);   // 0e15c lqx r4,r23,r16
+    s.instructions++; op_ai(s, 0x1C080B97u);   // 0e160 ai r23,r23,32
+    s.instructions++; op_shufb(s, 0xB0408691u);   // 0e164 shufb r2,r13,r2,r17
+    s.instructions++; op_shlhi(s, 0x0FE10B16u);   // 0e168 shlhi r22,r22,4
+    s.instructions++; op_lqx(s, 0x38820C99u);   // 0e16c lqx r25,r25,r8
+    s.instructions++; op_lqx(s, 0x38820909u);   // 0e170 lqx r9,r18,r8
+    s.instructions++; op_shufb(s, 0xB1E4C791u);   // 0e174 shufb r15,r15,r19,r17
+    s.instructions++; op_shufb(s, 0xB2674E11u);   // 0e17c shufb r19,r28,r29,r17
+    s.instructions++; op_shlhi(s, 0x0FE1021Cu);   // 0e180 shlhi r28,r4,4
+    s.instructions++; op_lqx(s, 0x38820B0Du);   // 0e184 lqx r13,r22,r8
+    s.instructions++; op_rotmi(s, 0x0F3C0B1Du);   // 0e188 rotmi r29,r22,-16
+    s.instructions++; op_rotqby(s, 0x3B87CB12u);   // 0e18c rotqby r18,r22,r31
+    s.instructions++; op_selb(s, 0x80C3C318u);   // 0e190 selb r6,r6,r15,r24
+    s.instructions++; op_rotqbyi(s, 0x3F808B0Fu);   // 0e194 rotqbyi r15,r22,2
+    s.instructions++; op_selb(s, 0x8264C118u);   // 0e198 selb r19,r2,r19,r24
+    s.instructions++; op_shufb(s, 0xB2C50491u);   // 0e19c shufb r22,r9,r20,r17
+    s.instructions++; op_shufb(s, 0xB3264D91u);   // 0e1a4 shufb r25,r27,r25,r17
+    s.instructions++; op_selb(s, 0x80448E15u);   // 0e1a8 selb r2,r28,r18,r21
+    s.instructions++; op_rotqbyi(s, 0x3F808914u);   // 0e1ac rotqbyi r20,r18,2
+    s.instructions++; op_rotmi(s, 0x0F3C0915u);   // 0e1b0 rotmi r21,r18,-16
+    s.instructions++; op_lqx(s, 0x3882078Fu);   // 0e1b4 lqx r15,r15,r8
+    s.instructions++; op_selb(s, 0x8385831Au);   // 0e1b8 selb r28,r6,r22,r26
+    s.instructions++; op_rotqbyi(s, 0x3F82011Bu);   // 0e1bc rotqbyi r27,r2,8
+    s.instructions++; op_selb(s, 0x83E6499Au);   // 0e1c0 selb r31,r19,r25,r26
+    s.instructions++; op_lqx(s, 0x38820E86u);   // 0e1c4 lqx r6,r29,r8
+    s.instructions++; op_rotmi(s, 0x0F3C0116u);   // 0e1c8 rotmi r22,r2,-16
+    s.instructions++; op_stqx(s, 0x2883851Cu);   // 0e1cc stqx r28,r10,r14
+    s.instructions++; op_lqx(s, 0x38820A93u);   // 0e1d4 lqx r19,r21,r8
+    s.instructions++; op_rotmi(s, 0x0F3C0D9Du);   // 0e1d8 rotmi r29,r27,-16
+    s.instructions++; op_rotqbyi(s, 0x3F808D99u);   // 0e1dc rotqbyi r25,r27,2
+    s.instructions++; op_stqx(s, 0x2884051Fu);   // 0e1e4 stqx r31,r10,r16
+    s.instructions++; op_ori(s, 0x04000F0Au);   // 0e1e8 ori r10,r30,0
+    s.instructions++; op_rotqbyi(s, 0x3F80811Cu);   // 0e1ec rotqbyi r28,r2,2
+    s.instructions++; if (s.pref(3) != 0) goto L_0e128;   // 0e1f4 brnz r3,0xe128
+    s.instructions++;   // 0e1fc bi r0,r0,r0
+    s.pc = 0x0E1FC; op_bi(s, 0x35000000u);
+    if (s.interrupts && (s.event_stat & s.event_mask)) return false;
+    return true;
 }
+bool run_05d30(SPUThread& s) { geomfn_05d30(s); return true; }   // (for the check)
+bool run_06a30(SPUThread& s) { geomfn_06a30(s); return true; }   // (for the check)
+bool run_07790(SPUThread& s) { geomfn_07790(s); return true; }   // (for the check)
+bool run_07888(SPUThread& s) { geomfn_07888(s); return true; }   // (for the check)
+bool run_079b0(SPUThread& s) { geomfn_079b0(s); return true; }   // (for the check)
+bool run_07c50(SPUThread& s) { geomfn_07c50(s); return true; }   // (for the check)
+bool run_07e40(SPUThread& s) { geomfn_07e40(s); return true; }   // (for the check)
+bool run_07e70(SPUThread& s) { geomfn_07e70(s); return true; }   // (for the check)
+bool run_08c80(SPUThread& s) { geomfn_08c80(s); return true; }   // (for the check)
+bool run_09fd8(SPUThread& s) { geomfn_09fd8(s); return true; }   // (for the check)
 bool run_0afd0(SPUThread& s) { geomfn_0afd0(s); return true; }   // (for the check)
+bool run_0b280(SPUThread& s) { geomfn_0b280(s); return true; }   // (for the check)
+bool run_0b300(SPUThread& s) { geomfn_0b300(s); return true; }   // (for the check)
+bool run_0b700(SPUThread& s) { geomfn_0b700(s); return true; }   // (for the check)
+bool run_0b980(SPUThread& s) { geomfn_0b980(s); return true; }   // (for the check)
 }  // namespace
 
 // a command handler as native code: false when there is none (nothing changed); true when it ran, with the
 // pc at the loop's 05c88 or where the SPU code continues the handler
 bool geom_native_handler(SPUThread& s, u32 handler) {
     switch (handler) {
+    case 0x05D30:   // op 37
+        geomfn_05d30(s);
+        return true;
+    case 0x06A30:   // op 40
+        geomfn_06a30(s);
+        return true;
+    case 0x07790:   // op 4
+        geomfn_07790(s);
+        return true;
+    case 0x07888:   // op 8
+        if (__builtin_expect(g_geom_check != 0, 0)) spu_geom_check("op8", 0x07888, run_07888, s);
+        geomfn_07888(s);
+        return true;
+    case 0x079B0:   // op 6
+        if (__builtin_expect(g_geom_check != 0, 0)) spu_geom_check("op6", 0x079B0, run_079b0, s);
+        geomfn_079b0(s);
+        return true;
+    case 0x07C50:   // op 12
+        if (__builtin_expect(g_geom_check != 0, 0)) spu_geom_check("op12", 0x07C50, run_07c50, s);
+        geomfn_07c50(s);
+        return true;
+    case 0x07E40:   // op 14
+        if (__builtin_expect(g_geom_check != 0, 0)) spu_geom_check("op14", 0x07E40, run_07e40, s);
+        geomfn_07e40(s);
+        return true;
+    case 0x07E70:   // op 15
+        if (__builtin_expect(g_geom_check != 0, 0)) spu_geom_check("op15", 0x07E70, run_07e70, s);
+        geomfn_07e70(s);
+        return true;
+    case 0x08C80:   // op 0
+        geomfn_08c80(s);
+        return true;
+    case 0x09FD8:   // op 30
+        geomfn_09fd8(s);
+        return true;
     case 0x0AFD0:   // op 35
         if (__builtin_expect(g_geom_check != 0, 0)) spu_geom_check("op35", 0x0AFD0, run_0afd0, s);
         geomfn_0afd0(s);
+        return true;
+    case 0x0B280:   // op 24
+        geomfn_0b280(s);
+        return true;
+    case 0x0B300:   // op 9
+        geomfn_0b300(s);
+        return true;
+    case 0x0B700:   // op 23
+        if (__builtin_expect(g_geom_check != 0, 0)) spu_geom_check("op23", 0x0B700, run_0b700, s);
+        geomfn_0b700(s);
+        return true;
+    case 0x0B980:   // op 32
+        geomfn_0b980(s);
         return true;
     default: return false;
     }

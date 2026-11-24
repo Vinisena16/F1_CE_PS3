@@ -903,6 +903,29 @@ void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const S
     if ((no & 1023) == 0) LOG_I("geom check %s: %u compared, %u differ, %u declined", name, no + 1, c->bad.load(), c->declined.load());
 }
 
+void geom_stop_stat(u32 handler, u32 pc) {
+    static std::mutex m;
+    static std::map<u64, u64> n;
+    static u64 window = 0;
+    std::lock_guard lk(m);
+    n[(u64)handler << 32 | pc]++;
+    const u64 now = time_usec();
+    if (!window) window = now;
+    if (now - window < 10000000) return;
+    std::vector<std::pair<u64, u64>> v;
+    for (auto& [k, c] : n) v.push_back({c, k});
+    std::sort(v.rbegin(), v.rend());
+    std::string line;
+    for (size_t i = 0; i < v.size() && i < 8; i++) {
+        char b[64];
+        snprintf(b, sizeof(b), " %05x@%05x %.0f/s", (u32)(v[i].second >> 32), (u32)v[i].second, v[i].first / ((now - window) / 1e6));
+        line += b;
+    }
+    LOG_I("geom stops (handler@pc):%s", line.c_str());
+    n.clear();
+    window = now;
+}
+
 void geom_list_stat(GeomListEvent e) {
     static std::atomic<u64> n[6], window{0};
     n[e].fetch_add(1, std::memory_order_relaxed);
