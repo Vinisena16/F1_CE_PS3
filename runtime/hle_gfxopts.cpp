@@ -48,7 +48,7 @@ const bool g_no_light_rays = g_no_postfx || env_off("F1CE_LIGHT_RAYS");
 const bool g_no_heat_haze = g_no_postfx || env_off("F1CE_HEAT_HAZE");
 const bool g_no_crowd = env_off("F1CE_CROWD");
 constexpr u32 ENGINE_HEAT = 2;
-const bool g_lod0_only = env_off("F1CE_CAR_LOD");
+const bool g_lod0_only = getenv("F1CE_CAR_LOD") && atof(getenv("F1CE_CAR_LOD")) == 0;   // (not env_off: 0.5 is a scale)
 constexpr u32 LOD0_DIST2 = 0x70E4A8, LOD_DISTS = 0x1000E664;   // 15 m squared; 25 m, 50 m
 constexpr u32 CAR_LOD_COUNT = 0x32A0;
 
