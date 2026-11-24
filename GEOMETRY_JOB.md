@@ -70,5 +70,12 @@ the gain must come from whole call trees running natively (no dispatcher round t
   touch DMA or the job manager and are verified by game runs. Only stop: op30 at `0x0A088`, interrupts enabled right
   after job end with the job manager's own event pending (correct, the SPU code takes it). 60 fps + LOD0, vsync off,
   three alternating pairs: 30.2/31.7, 28.1/28.7, 27.4/28.6 fps = +4% (on better in every pair).
+- [x] Targets of the job's function-pointer tables (de-interleave `0x12260`, vertex format decoders `0x12A60-0x12BDF`,
+  `0x12780`) as native functions too, reached through indirect calls (`geom_call`), checked at their own entry: 82
+  functions, ~12100 instructions; `0xBE00` 436k / `0xBF80` 46k checked calls, 0 differences. Same benchmark:
+  30.3/32.9, 30.5/32.5, 30.1/31.1 fps = +6%.
+- Host profile after it (workers, 60 fps + LOD0): dispatcher 9.1% (was 13.3%), `spu_fast_cmdlist` 4.4% (the operand
+  gathering, 152 instructions per command), native cull 4.2%, DMA path ~10%, `geomfn_08970` 3.3%, `geomfn_08c80` 2.3%,
+  `geomfn_0bd80` 1.4%, `geomfn_04c18` 1.3%. Translated code still running there: the job manager and workload w0's job.
 - [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
   handlers that issue DMA.
