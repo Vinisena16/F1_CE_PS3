@@ -267,16 +267,15 @@ OP(selb) {
     const v128& c = R(RRR_RC(w));
     R(RRR_RT(w)).pi = _mm_or_si128(_mm_and_si128(c.pi, R(RB(w)).pi), _mm_andnot_si128(c.pi, R(RA(w)).pi));
 }
-OP(shufb) {
+FORCE_INLINE __m128i shufb_v(__m128i a, __m128i b, __m128i c) {
     // byte-reversed layout: host lane j selects source byte (c & 31): index (c & 15) ^ 15 in a (bit 4 clear) or b;
     // control bytes with bit 7 set give 0x00 (10xxxxxx), 0xFF (110xxxxx) or 0x80 (111xxxxx)
-    __m128i c = R(RRR_RC(w)).pi;
     __m128i x = _mm_xor_si128(_mm_and_si128(c, _mm_set1_epi8(0x1F)), _mm_set1_epi8(15));   // bit 4 clear: a, set: b
     // + 0x70 moves bit 4 into bit 7, where pshufb gives 0; bit 7 of c also zeroes the byte
     __m128i top = _mm_and_si128(c, _mm_set1_epi8((char)0x80));
     __m128i ia = _mm_or_si128(_mm_add_epi8(x, _mm_set1_epi8(0x70)), top);
     __m128i ib = _mm_or_si128(_mm_add_epi8(_mm_xor_si128(x, _mm_set1_epi8(0x10)), _mm_set1_epi8(0x70)), top);
-    __m128i r = _mm_or_si128(_mm_shuffle_epi8(R(RA(w)).pi, ia), _mm_shuffle_epi8(R(RB(w)).pi, ib));
+    __m128i r = _mm_or_si128(_mm_shuffle_epi8(a, ia), _mm_shuffle_epi8(b, ib));
     // 0x80 is done; 110xxxxx and 111xxxxx give 0xFF and 0x80 (rare, but seen in masks)
     __m128i hi = _mm_cmpgt_epi8(_mm_set1_epi8((char)0xC0), c);     // c < -64: 0x80..0xBF, else all clear below
     __m128i sp = _mm_andnot_si128(hi, _mm_cmpgt_epi8(_mm_setzero_si128(), c));   // c in 0xC0..0xFF
@@ -286,8 +285,9 @@ OP(shufb) {
                                  _mm_and_si128(_mm_cmpeq_epi8(e, _mm_set1_epi8((char)0xE0)), _mm_set1_epi8((char)0x80)));
         r = _mm_blendv_epi8(r, v, sp);
     }
-    R(RRR_RT(w)).pi = r;
+    return r;
 }
+OP(shufb) { R(RRR_RT(w)).pi = shufb_v(R(RA(w)).pi, R(RB(w)).pi, R(RRR_RC(w)).pi); }
 
 // ------------------------------------------------------------------ shifts / rotates (per element)
 OP(shl) { v128 r; for (int i = 0; i < 4; i++) { u32 n = R(RB(w)).w[i] & 63; r.w[i] = n > 31 ? 0 : R(RA(w)).w[i] << n; } R(RT(w)) = r; }
@@ -964,6 +964,16 @@ template <class S> bool spu_skip_triangle_cull(S& s) {
     }
     return spu_fast_triangle_cull(s);
 }
+
+// ------------------------------------------------------------------ geometry job functions (LS 0x4000, guest 0x100A1280)
+// Native replacements of the geometry job's code, entered at the head of a block (tools/spu_aot.py SKIPS). Each must
+// leave the local store, the pc and the registers later code reads as the SPU code does. F1CE_GEOM_NATIVE=0 runs the
+// SPU code; F1CE_GEOM_CHECK=1 compares every 64th call (=2: every call) with the interpreter on copies of the SPU (all
+// registers, the whole LS, pc). (Note 2026-11-24: rewriting the loops at 0bd80 / 0be00 instruction for instruction was
+// exact but saved no time: they are bound by their loads, stores and shuffles, not by dispatch.)
+extern bool g_geom_native;
+extern int g_geom_check;
+void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t);
 
 // ------------------------------------------------------------------ native job manager (runtime/spu_pm.cpp)
 // Each runs on the thread (cluster code with local registers writes them back first, tools/spu_aot.py) and returns

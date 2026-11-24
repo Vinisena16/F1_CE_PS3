@@ -12,6 +12,7 @@
 
 #include "spu_ops.h"
 
+#include <map>
 #include <mutex>
 #include <set>
 #include <thread>
@@ -845,6 +846,51 @@ void spu_xform_check(const v128* gpr, const u8* ls) {
         }
     }
     if ((no & 1023) == 0) LOG_I("spu transform check: %u compared, %u differ, %u left to the translated loop", no + 1, c.bad.load(), c.declined.load());
+}
+
+bool g_geom_native = !(getenv("F1CE_GEOM_NATIVE") && atoi(getenv("F1CE_GEOM_NATIVE")) == 0);
+int g_geom_check = getenv("F1CE_GEOM_CHECK") ? atoi(getenv("F1CE_GEOM_CHECK")) : 0;
+
+// A native geometry job function (spu_ops.h) against the interpreter, on copies of the SPU, from its entry to the pc the
+// native version leaves at: every register, the whole local store and the pc must match.
+void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t) {
+    struct Counts { const char* name; std::atomic<u32> calls{0}, checked{0}, bad{0}, declined{0}; };
+    static std::mutex m;
+    static std::map<u32, Counts> counts;
+    Counts* c;
+    {
+        std::lock_guard lk(m);
+        c = &counts[entry];
+        c->name = name;
+    }
+    const u32 call = c->calls++;
+    if (g_geom_check < 2 && (call & 63)) return;
+    thread_local CheckPair p;
+    SPUThread& a = *p.a; SPUThread& b = *p.b;
+    memcpy(a.ls, t.ls, 0x40000);
+    memcpy(a.gpr, t.gpr, sizeof(a.gpr));
+    memcpy(b.ls, t.ls, 0x40000);
+    memcpy(b.gpr, t.gpr, sizeof(b.gpr));
+    b.pc = entry;
+    if (!fn(b)) { c->declined++; return; }
+    if (!check_interpret(a, entry, b.pc)) { LOG_W("geom check %s: the interpreter did not reach %05x", name, b.pc); return; }
+    const u32 no = c->checked++;
+    char why[200] = "";
+    if (memcmp(a.ls, b.ls, 0x40000)) {
+        u32 k = 0;
+        while (a.ls[k] == b.ls[k]) k++;
+        k &= ~15u;
+        snprintf(why, sizeof(why), "LS %05x: %08x %08x %08x %08x vs %08x %08x %08x %08x", k, a.ls32(k), a.ls32(k + 4), a.ls32(k + 8),
+                 a.ls32(k + 12), b.ls32(k), b.ls32(k + 4), b.ls32(k + 8), b.ls32(k + 12));
+    }
+    for (int r = 0; r < 128 && !why[0]; r++)
+        if (memcmp(&a.gpr[r], &b.gpr[r], 16)) {
+            const v128 &x = a.gpr[r], &y = b.gpr[r];
+            snprintf(why, sizeof(why), "r%d %08x %08x %08x %08x vs %08x %08x %08x %08x", r, x.w[3], x.w[2], x.w[1], x.w[0], y.w[3], y.w[2],
+                     y.w[1], y.w[0]);
+        }
+    if (why[0] && c->bad++ < 10) LOG_W("geom check %s: DIFFERENT (%s)", name, why);
+    if ((no & 1023) == 0) LOG_I("geom check %s: %u compared, %u differ, %u declined", name, no + 1, c->bad.load(), c->declined.load());
 }
 
 // each idiom against the interpreter, from random states: same local store and registers at the end of the loop
