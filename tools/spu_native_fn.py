@@ -135,6 +135,7 @@ def main():
         seen, ilas = funcs[f]
         pcs = sorted(seen)
         labels = {f} | ilas
+        used, written, sync = set(), set(), False
         for pc in pcs:
             t, op = ops(pc)
             if op in BRANCH_DIRECT:
@@ -143,17 +144,29 @@ def main():
                 labels.add(pc + 4)
             labels.update(NATIVE_AT.get(pc, ("", []))[1])
             labels.update(INDIRECT.get(pc, []))
+            w = word(pc)
+            r, wr = spu_aot.regs_of(w, table[w >> 21])
+            used |= r | wr
+            written |= wr
+            sync |= op in CHANNEL
         labels &= seen
-        body = [f"bool geomfn_{f:05x}(SPUThread& s) {{", "    u32 to;", f"    goto L_{f:05x};",
-                "jump:   // an indirect target or the pc a native loop left at",
-                "    switch (to) {"]
+        # local register copy (SpuLocal, as the translated clusters with loops do) unless the function has channel
+        # instructions; the registers go back to the thread before anything outside runs and are read again after
+        local = not sync
+        x = "L" if local else "s"
+        WB = (" ".join(f"s.gpr[{r}] = L.gpr[{r}];" for r in sorted(written)) + " ") if local else ""
+        RL = (" " + " ".join(f"L.gpr[{r}] = s.gpr[{r}];" for r in sorted(used))) if local else ""
+        body = [f"bool geomfn_{f:05x}(SPUThread& s) {{", "    u32 to;"]
+        if local:
+            body.append(f"    SpuLocal L(s);{RL}")
+        body += [f"    goto L_{f:05x};", "jump:   // an indirect target or the pc a native loop left at", "    switch (to) {"]
         body += [f"    case 0x{pc:05X}: goto L_{pc:05x};" for pc in sorted(labels)]
         # a jump to the link register's address is a return (bi r10 with r10 = r0 ends the triangle cull)
-        body += ["    default: s.pc = to; return to == (s.pref(0) & 0x3FFFC);", "    }"]
+        body += [f"    default: {WB}s.pc = to; return to == (s.pref(0) & 0x3FFFC);", "    }"]
         prev = None
         for pc in pcs:
             if prev is not None and pc != prev + 4:
-                body.append(f"    s.pc = 0x{(prev + 4) & 0x3FFFC:05X}; return false;   // (falls out of the scanned code)")
+                body.append(f"    {WB}s.pc = 0x{(prev + 4) & 0x3FFFC:05X}; return false;   // (falls out of the scanned code)")
             prev = pc
             w = word(pc)
             t, op = ops(pc)
@@ -162,8 +175,9 @@ def main():
                 body.append(f"L_{pc:05x}:")
             if pc in NATIVE_AT:
                 h, _ = NATIVE_AT[pc]
-                # (not in an exact check: these loops only keep the registers and bytes later code reads)
-                body.append(f"    s.pc = 0x{pc:05X}; if (!t_geom_exact && {h}(s)) {{ to = s.pc; goto jump; }}")
+                # (not in an exact check: these loops only keep the registers and bytes later code reads; a loop that
+                # declines changes nothing, so the local copy stays good)
+                body.append(f"    {WB}s.pc = 0x{pc:05X}; if (!t_geom_exact && {h}(s)) {{{RL} to = s.pc; goto jump; }}")
             c = f"   // {pc:05x} {t}"
             nxt = (pc + 4) & 0x3FFFC
             if name == "op_nop":
@@ -172,45 +186,45 @@ def main():
                 body.append(f"    s.instructions++; goto L_{target(t):05x};{c}")
             elif op in ("brz", "brnz", "brhz", "brhnz"):
                 rt = w & 0x7F
-                cond = {"brz": f"s.pref({rt}) == 0", "brnz": f"s.pref({rt}) != 0",
-                        "brhz": f"(s.pref({rt}) & 0xFFFF) == 0", "brhnz": f"(s.pref({rt}) & 0xFFFF) != 0"}[op]
+                cond = {"brz": f"{x}.pref({rt}) == 0", "brnz": f"{x}.pref({rt}) != 0",
+                        "brhz": f"({x}.pref({rt}) & 0xFFFF) == 0", "brhnz": f"({x}.pref({rt}) & 0xFFFF) != 0"}[op]
                 body.append(f"    s.instructions++; if ({cond}) goto L_{target(t):05x};{c}")
             elif op in ("brsl", "brasl"):
                 rt = w & 0x7F
-                body.append(f"    s.instructions++; s.set_pref({rt}, 0x{nxt:05X});{c}")
-                body.append(f"    if (!geomfn_{target(t):05x}(s)) s.run_until(0x{nxt:05X});")
-                body.append(f"    if (s.halted || s.pc != 0x{nxt:05X}) return false;")
+                body.append(f"    s.instructions++; {x}.set_pref({rt}, 0x{nxt:05X});{c}")
+                body.append(f"    {WB}if (!geomfn_{target(t):05x}(s)) s.run_until(0x{nxt:05X});")
+                body.append(f"    if (s.halted || s.pc != 0x{nxt:05X}) return false;{RL}")
             elif op in ("bi", "iret", "biz", "binz", "bihz", "bihnz", "bisl", "bisled"):
                 # the handler sets the pc and the interrupt state; a return (bi r0) goes back to the caller
                 rt, ra = w & 0x7F, (w >> 7) & 0x7F
-                cond = {"biz": f"s.pref({rt}) == 0", "binz": f"s.pref({rt}) != 0",
-                        "bihz": f"(s.pref({rt}) & 0xFFFF) == 0", "bihnz": f"(s.pref({rt}) & 0xFFFF) != 0"}.get(op)
+                cond = {"biz": f"{x}.pref({rt}) == 0", "binz": f"{x}.pref({rt}) != 0",
+                        "bihz": f"({x}.pref({rt}) & 0xFFFF) == 0", "bihnz": f"({x}.pref({rt}) & 0xFFFF) != 0"}.get(op)
                 ind = "        " if cond else "    "
                 body.append(f"    s.instructions++;{c}")
                 if cond:
                     body.append(f"    if ({cond}) {{")
-                body.append(f"{ind}s.pc = 0x{pc:05X}; {name}(s, 0x{w:08X}u);")
-                body.append(f"{ind}if (s.interrupts && (s.event_stat & s.event_mask)) return false;")
+                body.append(f"{ind}{x}.pc = 0x{pc:05X}; {name}({x}, 0x{w:08X}u);")
+                body.append(f"{ind}if (s.interrupts && (s.event_stat & s.event_mask)) {{ {WB}s.pc = {x}.pc; return false; }}")
                 if op == "bisl":
-                    body.append(f"{ind}if (!geom_call(s, 0x{nxt:05X})) return false;   // indirect call")
+                    body.append(f"{ind}{WB}s.pc = {x}.pc; if (!geom_call(s, 0x{nxt:05X})) return false;{RL}   // indirect call")
                 elif op in ("bisled", "iret"):
-                    body.append(f"{ind}return false;   // left to the dispatcher")
+                    body.append(f"{ind}{WB}s.pc = {x}.pc; return false;   // left to the dispatcher")
                 elif ra == 0:
-                    body.append(f"{ind}return true;")
+                    body.append(f"{ind}{WB}s.pc = {x}.pc; return true;")
                 else:
-                    body.append(f"{ind}to = s.pc; goto jump;")
+                    body.append(f"{ind}to = {x}.pc; goto jump;")
                 if cond:
                     body.append("    }")
             elif op in CHANNEL:
                 body.append(f"    s.pc = 0x{pc:05X}; s.instructions++; {name}(s, 0x{w:08X}u);{c}")
                 body.append(f"    if (s.halted) {{ s.pc = 0x{nxt:05X}; return false; }}")
             elif op in ("lqr", "stqr", "hbr", "hbra", "hbrr"):
-                body.append(f"    s.pc = 0x{pc:05X}; s.instructions++; {name}(s, 0x{w:08X}u);{c}")
+                body.append(f"    {x}.pc = 0x{pc:05X}; s.instructions++; {name}({x}, 0x{w:08X}u);{c}")
             else:
-                body.append(f"    s.instructions++; {name}(s, 0x{w:08X}u);{c}")
+                body.append(f"    s.instructions++; {name}({x}, 0x{w:08X}u);{c}")
         last_t, last_op = ops(pcs[-1])
         if last_op not in ("br", "bra", "bi", "iret", "stop", "stopd"):
-            body.append(f"    s.pc = 0x{(pcs[-1] + 4) & 0x3FFFC:05X}; return false;")
+            body.append(f"    {WB}s.pc = 0x{(pcs[-1] + 4) & 0x3FFFC:05X}; return false;")
         body.append("}")
         out += body
     out += [f"bool run_{h:05x}(SPUThread& s) {{ geomfn_{h:05x}(s); return true; }}   // (for the check)" for h in sorted(funcs)]
