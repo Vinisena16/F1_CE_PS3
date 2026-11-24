@@ -12,10 +12,12 @@
 
 #include "spu_ops.h"
 
+#include <algorithm>
 #include <map>
 #include <mutex>
 #include <set>
 #include <thread>
+#include <x86intrin.h>
 
 namespace {
 using Handler = void (*)(SPUThread&, u32);
@@ -891,6 +893,43 @@ void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const S
         }
     if (why[0] && c->bad++ < 10) LOG_W("geom check %s: DIFFERENT (%s)", name, why);
     if ((no & 1023) == 0) LOG_I("geom check %s: %u compared, %u differ, %u declined", name, no + 1, c->bad.load(), c->declined.load());
+}
+
+namespace {
+struct GeomOpStat { std::atomic<u64> calls{0}, ticks{0}; };
+GeomOpStat g_geom_ops[41];
+thread_local int t_geom_op = -1;
+thread_local u64 t_geom_t0 = 0;
+}  // namespace
+void geom_op_enter(int op) {
+    t_geom_op = op;
+    t_geom_t0 = __rdtsc();
+}
+void geom_op_back() {
+    if (t_geom_op < 0) return;
+    const u64 now = __rdtsc();
+    GeomOpStat& st = g_geom_ops[t_geom_op];
+    st.calls.fetch_add(1, std::memory_order_relaxed);
+    st.ticks.fetch_add(now - t_geom_t0, std::memory_order_relaxed);
+    t_geom_op = -1;
+    static std::atomic<u64> window{0}, tsc0{0};
+    const u64 us = time_usec();
+    u64 w = window.load(std::memory_order_relaxed);
+    if (!w) { window.compare_exchange_strong(w, us); tsc0 = now; return; }
+    if (us - w < 5000000 || !window.compare_exchange_strong(w, us)) return;
+    const double ticks_per_us = (double)(now - tsc0.exchange(now)) / (us - w), secs = (us - w) / 1e6;
+    std::vector<std::pair<u64, int>> v;
+    for (int i = 0; i < 41; i++) v.push_back({g_geom_ops[i].ticks.exchange(0), i});
+    std::sort(v.rbegin(), v.rend());
+    std::string line;
+    for (auto& [t, i] : v) {
+        const u64 c = g_geom_ops[i].calls.exchange(0);
+        if (!c) continue;
+        char b[80];
+        snprintf(b, sizeof(b), " op%d %.0f/s %.1f ms/s (%.2f us)", i, c / secs, t / ticks_per_us / 1e3 / secs, t / ticks_per_us / c);
+        line += b;
+    }
+    LOG_I("geom ops:%s", line.c_str());
 }
 
 // each idiom against the interpreter, from random states: same local store and registers at the end of the loop

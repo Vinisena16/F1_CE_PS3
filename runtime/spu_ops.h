@@ -974,6 +974,12 @@ template <class S> bool spu_skip_triangle_cull(S& s) {
 extern bool g_geom_native;
 extern int g_geom_check;
 void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t);
+// diagnostic build (SPU_AOT_GEOM_OPS=1 python -I tools/spu_aot.py): calls and time per command of the job's command loop
+// (handler entries from the table at 0x12180; the time runs until the loop's return point 05c88), logged as `geom ops:`
+void geom_op_enter(int op);
+void geom_op_back();
+template <int N, class S> bool spu_skip_geom_op(S&) { geom_op_enter(N); return false; }
+template <class S> bool spu_skip_geom_back(S&) { geom_op_back(); return false; }
 
 // ------------------------------------------------------------------ native job manager (runtime/spu_pm.cpp)
 // Each runs on the thread (cluster code with local registers writes them back first, tools/spu_aot.py) and returns
