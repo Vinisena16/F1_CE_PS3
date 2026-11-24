@@ -142,9 +142,11 @@ void ui_thread() {
         int a = 0, b = 0;
         if (sscanf(e, "%dx%d", &a, &b) == 2 && a >= 320 && b >= 180) { win_w = a; win_h = b; }
     }
+    // F1CE_HIDDEN=1 (test runs): the window is never shown, so it takes no focus or keys from the desktop
+    const bool hidden = getenv("F1CE_HIDDEN") && atoi(getenv("F1CE_HIDDEN")) != 0;
     SDL_Window* win = SDL_CreateWindow("Formula One: Championship Edition (recompiled)", win_w, win_h,
                                        (rsx::use_vulkan() ? SDL_WINDOW_VULKAN : SDL_WINDOW_OPENGL) | SDL_WINDOW_RESIZABLE |
-                                           (full ? SDL_WINDOW_FULLSCREEN : 0));
+                                           (full && !hidden ? SDL_WINDOW_FULLSCREEN : 0) | (hidden ? SDL_WINDOW_HIDDEN : 0));
     {
         std::lock_guard lk(g_win_mutex);
         g_window = win;
