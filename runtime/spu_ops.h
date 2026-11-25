@@ -1011,8 +1011,12 @@ void spu_native_check(const char* image, u32 entry, bool (*fn)(SPUThread&), cons
 // The loop head keeps the SPU loop's state, so an interrupt, or a handler that halts the SPU, leaves the rest to it.
 bool geom_native_handler(SPUThread& s, u32 handler);   // spu.cpp: false = none for this handler
 enum GeomListEvent { GL_START, GL_COMMAND, GL_INTERRUPT, GL_HALTED, GL_DONE, GL_NATIVE_STOPPED };
-void geom_stop_stat(u32 handler, u32 pc);   // spu.cpp: where native handlers stopped early (`geom stops:`)
-void geom_list_stat(GeomListEvent e);   // spu.cpp: counts, logged as `geom lists:` every 10 s
+// (only with F1CE_NATIVE_STATS: a counter shared by all workers on every command and a mutex on every early stop were
+// cache-line traffic between the threads)
+void geom_stop_stat_log(u32 handler, u32 pc);   // spu.cpp: where native handlers stopped early (`geom stops:`)
+void geom_list_stat_log(GeomListEvent e);   // spu.cpp: counts, logged as `geom lists:` every 10 s
+FORCE_INLINE void geom_stop_stat(u32 handler, u32 pc) { if (__builtin_expect(g_native_stats, 0)) geom_stop_stat_log(handler, pc); }
+FORCE_INLINE void geom_list_stat(GeomListEvent e) { if (__builtin_expect(g_native_stats, 0)) geom_list_stat_log(e); }
 template <class S> bool spu_fast_cmdlist(S& s) {
     static_assert(std::is_same_v<S, SPUThread>);
     op_lqd(s, 0x3408C182u);   // 05960 lqd r2,560(r3)

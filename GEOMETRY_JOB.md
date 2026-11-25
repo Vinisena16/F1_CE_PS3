@@ -116,5 +116,19 @@ the gain must come from whole call trees running natively (no dispatcher round t
 - Profile after (60 fps + LOD0): w1/w2 (geometry) ~62% of samples, w0 ~16%, w6/w7/w8 ~10% (the audio jobs, blob
   `0x10080880` `0x1C30` bytes, hot loop `0x5778` already the native idiom `spu_idiom_audio_voice`; code ~5.6%, job
   manager ~4.2%).
+- Weak CPU benchmark (`F1CE_CPUS=4`, 60 fps, normal car detail, vsync off): all generated code off 23.4 / 22.9 fps,
+  on 25.2 / 25.4 (+9.5%). Host profile there: the workers are 70% in waits (line waits, the GETLLAR yield); of the
+  busy time, w0's job main ~16%, the DMA copies (`write_ls`) and the dispatcher, the rest spread thin. GETLLARs are
+  mostly atomic updates (480k/s against 420k PUTLLCs, 20% of those fail), not idle polling.
+- [x] The other job binaries of the EBOOT (`OTHER_JOBS`: 9 blobs, LS base from their recorded blocks; among them the
+  audio jobs and the rain job) as generated images with dispatcher entries, the translated code's idioms and skips
+  called where their words match (`F1CE_JOBS_GEN=0`). Checked (no real difference); 4 CPUs: 25.7 / 26.4 / 26.0 fps off,
+  25.8 / 26.3 / 26.0 on = no change (their share was small).
+- [x] The command loop's statistics (a counter shared by all workers on every command, a mutex on every early stop)
+  only with `F1CE_NATIVE_STATS`: 26.1 / 26.0 / 26.1 fps, worker CPU 2.43 against ~2.48 cores.
+- Renderer (60 fps normal, rsx 0.95 core): `draw()` 23% + 14% in the driver, `hash_range` 10%, FIFO parsing 9%, flip 5%
+  (the index cache eviction walk); per frame vertices ~7 ms, textures 2.2, programs 1.3. Tried: a mixing hash with
+  power-of-two buckets for the draw path's maps (their lookups were the hottest addresses of `draw()`): 56.4 fps both
+  ways, reverted.
 - [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
   handlers that issue DMA.

@@ -3918,6 +3918,7 @@ L_088e0:
     s.instructions++; if (L.pref(10) == 0) { goto L_08938; }   // 08908 brz r10,0x8938
     s.instructions++; op_il(L, 0x40800007u);   // 0890c il r7,0x0
 L_08910:
+    spu_idiom_ramp_u16(L);   // (bulk iterations of the loop, as the translated code runs them)
     s.instructions++; op_a(L, 0x1801C385u);   // 08910 a r5,r7,r7
     s.instructions++; op_shlhi(L, 0x0FE10389u);   // 08914 shlhi r9,r7,4
     s.instructions++; op_ai(L, 0x1C004387u);   // 08918 ai r7,r7,1
@@ -3972,6 +3973,7 @@ L_088e0:
     s.instructions++; if (L.pref(10) == 0) { goto L_08938; }   // 08908 brz r10,0x8938
     s.instructions++; op_il(L, 0x40800007u);   // 0890c il r7,0x0
 L_08910:
+    spu_idiom_ramp_u16(L);   // (bulk iterations of the loop, as the translated code runs them)
     s.instructions++; op_a(L, 0x1801C385u);   // 08910 a r5,r7,r7
     s.instructions++; op_shlhi(L, 0x0FE10389u);   // 08914 shlhi r9,r7,4
     s.instructions++; op_ai(L, 0x1C004387u);   // 08918 ai r7,r7,1

@@ -188,8 +188,11 @@ void SPUThread::flush_blocks() {
 
 // Generated native code entered by the dispatcher (spu_ops.h SpuNativeImage): workload w0's job (F1CE_W0_NATIVE=0 runs
 // the SPU code), the job manager (F1CE_PM_GEN=0; its hand-written functions are F1CE_PM_NATIVE) and the geometry job's
-// resume points (with its command loop, F1CE_GEOM_NATIVE).
+// resume points (with its command loop, F1CE_GEOM_NATIVE) and the other job binaries (F1CE_JOBS_GEN=0).
 extern const SpuNativeImage g_spu_native_w0, g_spu_native_pm, g_spu_native_geom;
+extern const SpuNativeImage* const g_spu_native_jobs[];   // generated/spu_geom/native_jobs.cpp: the other job binaries
+extern const unsigned g_spu_native_jobs_n;
+static const bool g_jobs_gen = !(getenv("F1CE_JOBS_GEN") && atoi(getenv("F1CE_JOBS_GEN")) == 0);
 static const bool g_w0_native = !(getenv("F1CE_W0_NATIVE") && atoi(getenv("F1CE_W0_NATIVE")) == 0);
 bool g_pm_gen = !(getenv("F1CE_PM_GEN") && atoi(getenv("F1CE_PM_GEN")) == 0);
 bool g_native_stats = getenv("F1CE_NATIVE_STATS") && atoi(getenv("F1CE_NATIVE_STATS")) != 0;
@@ -198,15 +201,20 @@ bool g_native_stats = getenv("F1CE_NATIVE_STATS") && atoi(getenv("F1CE_NATIVE_ST
 static void (*spu_native_entry(const SPUThread& t, u32 pc))(SPUThread&) {
     const SpuNativeImage* images[] = {g_w0_native ? &g_spu_native_w0 : nullptr, g_pm_gen ? &g_spu_native_pm : nullptr,
                                       g_geom_native ? &g_spu_native_geom : nullptr};
-    for (const SpuNativeImage* img : images) {
-        if (!img || pc < img->lo || pc >= img->hi) continue;
+    const auto lookup = [&](const SpuNativeImage* img) -> void (*)(SPUThread&) {
+        if (!img || pc < img->lo || pc >= img->hi) return nullptr;
         const SpuNativeEntry* e = std::lower_bound(img->entries, img->entries + img->n, pc,
                                                    [](const SpuNativeEntry& a, u32 v) { return a.pc < v; });
-        if (e == img->entries + img->n || e->pc != pc) continue;
-        bool same = true;
-        for (u32 i = 0; i < img->hdr_n && same; i++) same = t.ls32(img->hdr_ls + 4 * i) == img->hdr[i];
-        if (same) return e->fn;
-    }
+        if (e == img->entries + img->n || e->pc != pc) return nullptr;
+        for (u32 i = 0; i < img->hdr_n; i++)
+            if (t.ls32(img->hdr_ls + 4 * i) != img->hdr[i]) return nullptr;
+        return e->fn;
+    };
+    for (const SpuNativeImage* img : images)
+        if (auto fn = lookup(img)) return fn;
+    if (g_jobs_gen)
+        for (u32 i = 0; i < g_spu_native_jobs_n; i++)
+            if (auto fn = lookup(g_spu_native_jobs[i])) return fn;
     return nullptr;
 }
 
@@ -966,7 +974,7 @@ void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const S
     if ((no & 1023) == 0) LOG_I("geom check %s: %u compared, %u differ, %u declined", name, no + 1, c->bad.load(), c->declined.load());
 }
 
-void geom_stop_stat(u32 handler, u32 pc) {
+void geom_stop_stat_log(u32 handler, u32 pc) {
     static std::mutex m;
     static std::map<u64, u64> n;
     static u64 window = 0;
@@ -989,7 +997,7 @@ void geom_stop_stat(u32 handler, u32 pc) {
     window = now;
 }
 
-void geom_list_stat(GeomListEvent e) {
+void geom_list_stat_log(GeomListEvent e) {
     static std::atomic<u64> n[6], window{0};
     n[e].fetch_add(1, std::memory_order_relaxed);
     if (e != GL_START) return;
