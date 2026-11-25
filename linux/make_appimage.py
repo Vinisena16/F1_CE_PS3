@@ -10,7 +10,8 @@ database usr/share/f1ce-recomp/programs.bin (build-win/shader_cache/programs.bin
 used, so the first start compiles every shader up front). The image is a SquashFS 4.0 filesystem (zlib, no
 fragments) written by this script, after the AppImage type 2 runtime (downloaded once into
 third_party/appimage-runtime). A .tar.gz holding the AppImage with its executable bit is written next to it, for
-copying from Windows (the bit does not survive most transfers).
+copying from Windows (the bit does not survive most transfers), and a -folder.tar.gz with the same files as a folder
+(F1CE/AppRun), for systems where the AppImage cannot mount itself (no FUSE).
 
 The AppImage contains code generated from the game's executable: it is for your own use, not for distribution.
 """
@@ -295,8 +296,25 @@ def main():
         info = tarfile.TarInfo(os.path.basename(args.out))
         info.size, info.mode, info.mtime = len(image), 0o755, mtime
         tar.addfile(info, io.BytesIO(image))
+    # the AppDir as a plain folder, for systems where the AppImage cannot mount itself ("Cannot mount AppImage, please
+    # check your FUSE setup": no /dev/fuse or fusermount, containers): unpack it and run F1CE/AppRun
+    folder = os.path.splitext(args.out)[0] + "-folder.tar.gz"
+    with tarfile.open(folder, "w:gz") as tar:
+        def put(node, path):
+            info = tarfile.TarInfo(path)
+            info.mtime = mtime
+            if node.is_dir:
+                info.type, info.mode = tarfile.DIRTYPE, 0o755
+                tar.addfile(info)
+                for name in sorted(node.children):
+                    put(node.children[name], path + "/" + name)
+            else:
+                info.size, info.mode = len(node.data), node.mode & 0o777
+                tar.addfile(info, io.BytesIO(node.data))
+        put(root, "F1CE")
     print(f"{args.out}: {len(image) / 1e6:.1f} MB ({len(fs) / 1e6:.1f} MB filesystem, {time.time() - t:.0f} s)")
     print(f"{tgz}: the same with its executable bit, for copying from Windows")
+    print(f"{folder}: the AppImage's files as a folder (F1CE/AppRun), for systems without FUSE")
 
 
 if __name__ == "__main__":
