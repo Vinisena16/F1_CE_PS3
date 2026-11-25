@@ -26,11 +26,31 @@ struct IdxRegion {
 };
 std::unordered_map<u64, IdxRegion> g_idx_regions;
 
+// Direct-mapped pointer caches in front of the maps above and g_raw_regions: a map lookup is two cache misses (the bucket
+// array, then the node), and each draw looks up an index region or list and a raw region per attribute group (the
+// largest costs of draw() in the renderer's profile, 2026-11-25). Node pointers stay valid until their entry is erased,
+// which clears its slot (or the whole cache).
+template <class V> struct PtrCache {
+    static constexpr u32 N = 16384;
+    struct Slot { u64 key; V* v; };
+    Slot slot[N] = {};
+    template <class Map> V& get(Map& m, u64 key) {
+        Slot& e = slot[key & (N - 1)];
+        if (e.key != key || !e.v) e = {key, &m[key]};
+        return *e.v;
+    }
+    void drop(u64 key) { Slot& e = slot[key & (N - 1)]; if (e.key == key) e.v = nullptr; }
+    bool has(u64 key) const { const Slot& e = slot[key & (N - 1)]; return e.key == key && e.v; }
+    void clear() { memset(slot, 0, sizeof(slot)); }
+};
+PtrCache<IdxEntry> g_idx_cache_ptr;
+PtrCache<IdxRegion> g_idx_regions_ptr;
+
 // drops entries not drawn for 120 frames from 1/slices of the map's buckets (cursor: the next bucket). The race keeps
 // 50-120k index lists: one pass over all of them took 7-15 ms, so a frame missed its vblank every 2 s; called every
 // frame with 60 slices, each entry is still looked at once every 60 frames. (erase never rehashes, so the buckets hold
 // still during a slice; a rehash between frames only moves the cursor's place)
-template <class Map> void evict_slice(Map& m, size_t& cursor, u32 slices) {
+template <class Map, class Cache> void evict_slice(Map& m, Cache& cache, size_t& cursor, u32 slices) {
     const size_t nb = m.bucket_count();
     if (!nb || m.empty()) return;
     const size_t per = slices <= 1 ? nb : nb / slices + 1;
@@ -46,12 +66,13 @@ template <class Map> void evict_slice(Map& m, size_t& cursor, u32 slices) {
         auto it = m.find(k);
         heap_free(g_iheap, it->second.off, it->second.bytes);
         m.erase(it);
+        cache.drop(k);
     }
 }
 void evict_index_caches(u32 slices) {
     static size_t regions_cursor = 0, lists_cursor = 0;
-    evict_slice(g_idx_regions, regions_cursor, slices);
-    evict_slice(g_idx_cache, lists_cursor, slices);
+    evict_slice(g_idx_regions, g_idx_regions_ptr, regions_cursor, slices);
+    evict_slice(g_idx_cache, g_idx_cache_ptr, lists_cursor, slices);
 }
 
 // Raw vertex data per buffer region (vertex pulling): as RegionEntry, but the guest bytes are copied unconverted
@@ -63,17 +84,12 @@ struct RawRegion {
     u64 sentinel = 0;   // sparse hash (one word per KB) taken with the last full hash of a large region; 0: none
 };
 std::unordered_map<u64, RawRegion> g_raw_regions;
-// direct-mapped in front of the map: ~18000 lookups per frame, the map's nodes are scattered (cleared when entries go)
-struct RawLookup { u64 key; RawRegion* r; };
-RawLookup g_raw_lookup[2048];
-RawRegion& raw_region(u64 key) {
-    RawLookup& l = g_raw_lookup[key & 2047];
-    if (l.key != key || !l.r) l = {key, &g_raw_regions[key]};
-    return *l.r;
-}
+// ~18000 lookups per frame over ~6500 regions (cleared when entries go)
+PtrCache<RawRegion> g_raw_lookup;
+RawRegion& raw_region(u64 key) { return g_raw_lookup.get(g_raw_regions, key); }
 
 void evict_raw_regions() {
-    memset(g_raw_lookup, 0, sizeof(g_raw_lookup));
+    g_raw_lookup.clear();
     for (auto it = g_raw_regions.begin(); it != g_raw_regions.end();)
         if (g_frame - it->second.last_frame > 120) {
             heap_free(g_heap, it->second.off, it->second.bytes);
@@ -283,7 +299,7 @@ bool gather_indices(bool indexed, DrawGeom& out) {
         if (indexed && contiguous && g_prim != 8 && g_prim != 9 && !(LINE_LOOP_AS_STRIP && g_prim == 3) && !idx_nocache && !no_idx_region && count &&
             ((first + count - 1) >> 14) == chunk) {
             u32 flags = (u16idx ? 1u : 0u) | (restart ? 2u | (rv << 8) : 0u) | (chunk << 24);
-            IdxRegion& ir = g_idx_regions[mix64(((u64)ea << 32) ^ flags) ^ 0x2545F491ull];
+            IdxRegion& ir = g_idx_regions_ptr.get(g_idx_regions, mix64(((u64)ea << 32) ^ flags) ^ 0x2545F491ull);
             if (ir.ea != ea || ir.flags != flags) { heap_free(g_iheap, ir.off, ir.bytes); ir = IdxRegion{}; ir.ea = ea; ir.flags = flags; }
             ir.last_frame = g_frame;
             if (ir.changes >= 3) goto idx_per_draw;
@@ -343,21 +359,33 @@ bool gather_indices(bool indexed, DrawGeom& out) {
             u32 id_src = indexed ? ea + first * isz : first;
             u32 id_flags = g_prim | (indexed ? 0x100 : 0) | (u16idx ? 0x200 : 0) | (restart ? 0x400 | (rv << 16) : 0);
             u64 key = mix64(((u64)id_src << 32) ^ count) ^ mix64(id_flags);
-            ie = &g_idx_cache[key];
-            bool cached = ie->off != ~0u;
-            if (cached && (ie->id_src != id_src || ie->id_count != count || ie->id_flags != id_flags)) ie->hash = 0;   // collision
-            ie->id_src = id_src; ie->id_count = count; ie->id_flags = id_flags;
-            if (cached && !indexed && ie->hash == 1) need = false;   // array draws: the list depends on the range only
-            else if (!indexed) h = 1;
-            else if (cached && count * isz > 16384 && ie->checked_frame == g_frame) {
-                need = false;   // large index lists are checked once per frame (the same mesh is drawn in several passes)
-            } else {
-                h = hash_range(gmem(ea + first * isz), count * isz, 8);
-                g_prof.hashed += count * isz;
-                need = !cached || h != ie->hash;
-                ie->checked_frame = g_frame;
+            // Most lists rebuilt per draw are never drawn again (the geometry jobs write new lists every frame, at new
+            // places): a key seen for the first time, or only in this frame, is built and streamed without a hash or a
+            // map entry; from its first draw in a later frame on it goes through the cache (stored one frame later than
+            // before). The tags are refreshed by every draw that uses the cache, so a cached list keeps its place.
+            struct SeenTag { u64 key, frame; };
+            static SeenTag seen[1 << 16];
+            SeenTag& st = seen[key >> 48];
+            const bool known = (st.key == key && st.frame != g_frame) || g_idx_cache_ptr.has(key);
+            if (st.key != key) st = {key, g_frame};
+            if (known) {
+                st.frame = 0;   // (known: stays known while this tag holds it)
+                ie = &g_idx_cache_ptr.get(g_idx_cache, key);
+                bool cached = ie->off != ~0u;
+                if (cached && (ie->id_src != id_src || ie->id_count != count || ie->id_flags != id_flags)) ie->hash = 0;   // collision
+                ie->id_src = id_src; ie->id_count = count; ie->id_flags = id_flags;
+                if (cached && !indexed && ie->hash == 1) need = false;   // array draws: the list depends on the range only
+                else if (!indexed) h = 1;
+                else if (cached && count * isz > 16384 && ie->checked_frame == g_frame) {
+                    need = false;   // large index lists are checked once per frame (the same mesh is drawn in several passes)
+                } else {
+                    h = hash_range(gmem(ea + first * isz), count * isz, 8);
+                    g_prof.hashed += count * isz;
+                    need = !cached || h != ie->hash;
+                    ie->checked_frame = g_frame;
+                }
+                if (cached) ie->last_frame = g_frame;
             }
-            if (cached) ie->last_frame = g_frame;
         }
         if (need) {
             // one pass: byte swap, restart index, vertex range (the lists stay absolute: drawn with base vertex -min_v)

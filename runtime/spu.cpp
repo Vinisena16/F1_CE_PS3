@@ -12,9 +12,12 @@
 
 #include "spu_ops.h"
 
+#include <algorithm>
+#include <map>
 #include <mutex>
 #include <set>
 #include <thread>
+#include <x86intrin.h>
 
 namespace {
 using Handler = void (*)(SPUThread&, u32);
@@ -183,6 +186,70 @@ void SPUThread::flush_blocks() {
     memset(line_code, 0, sizeof(line_code));
 }
 
+// Generated native code entered by the dispatcher (spu_ops.h SpuNativeImage): workload w0's job (F1CE_W0_NATIVE=0 runs
+// the SPU code), the job manager (F1CE_PM_GEN=0; its hand-written functions are F1CE_PM_NATIVE) and the geometry job's
+// resume points (with its command loop, F1CE_GEOM_NATIVE) and the other job binaries (F1CE_JOBS_GEN=0).
+extern const SpuNativeImage g_spu_native_w0, g_spu_native_pm, g_spu_native_geom;
+extern const SpuNativeImage* const g_spu_native_jobs[];   // generated/spu_geom/native_jobs.cpp: the other job binaries
+extern const unsigned g_spu_native_jobs_n;
+static const bool g_jobs_gen = !(getenv("F1CE_JOBS_GEN") && atoi(getenv("F1CE_JOBS_GEN")) == 0);
+static const bool g_w0_native = !(getenv("F1CE_W0_NATIVE") && atoi(getenv("F1CE_W0_NATIVE")) == 0);
+bool g_pm_gen = !(getenv("F1CE_PM_GEN") && atoi(getenv("F1CE_PM_GEN")) == 0);
+bool g_native_stats = getenv("F1CE_NATIVE_STATS") && atoi(getenv("F1CE_NATIVE_STATS")) != 0;
+
+// the generated entry for a block at pc, when its image is in the local store
+static void (*spu_native_entry(const SPUThread& t, u32 pc))(SPUThread&) {
+    const SpuNativeImage* images[] = {g_w0_native ? &g_spu_native_w0 : nullptr, g_pm_gen ? &g_spu_native_pm : nullptr,
+                                      g_geom_native ? &g_spu_native_geom : nullptr};
+    const auto lookup = [&](const SpuNativeImage* img) -> void (*)(SPUThread&) {
+        if (!img || pc < img->lo || pc >= img->hi) return nullptr;
+        const SpuNativeEntry* e = std::lower_bound(img->entries, img->entries + img->n, pc,
+                                                   [](const SpuNativeEntry& a, u32 v) { return a.pc < v; });
+        if (e == img->entries + img->n || e->pc != pc) return nullptr;
+        for (u32 i = 0; i < img->hdr_n; i++)
+            if (t.ls32(img->hdr_ls + 4 * i) != img->hdr[i]) return nullptr;
+        return e->fn;
+    };
+    for (const SpuNativeImage* img : images)
+        if (auto fn = lookup(img)) return fn;
+    if (g_jobs_gen)
+        for (u32 i = 0; i < g_spu_native_jobs_n; i++)
+            if (auto fn = lookup(g_spu_native_jobs[i])) return fn;
+    return nullptr;
+}
+
+// F1CE_NATIVE_STATS: entries per second and where the entered code stopped early (image:entry@pc), every 10 s
+void spu_native_stat(const char* image, u32 entry, bool returned, u32 pc) {
+    static std::mutex m;
+    static std::map<std::string, u64> n;
+    static u64 window = 0, calls = 0, stops = 0;
+    std::lock_guard lk(m);
+    calls++;
+    if (!returned) {
+        stops++;
+        char k[48];
+        snprintf(k, sizeof(k), "%s:%05x@%05x", image, entry, pc);
+        n[k]++;
+    }
+    const u64 now = time_usec();
+    if (!window) window = now;
+    if (now - window < 10000000) return;
+    const double secs = (now - window) / 1e6;
+    std::vector<std::pair<u64, std::string>> v;
+    for (auto& [k, c] : n) v.push_back({c, k});
+    std::sort(v.rbegin(), v.rend());
+    std::string line;
+    for (size_t i = 0; i < v.size() && i < 12; i++) {
+        char b[80];
+        snprintf(b, sizeof(b), " %s %.0f/s", v[i].second.c_str(), v[i].first / secs);
+        line += b;
+    }
+    LOG_I("native entries: %.0f/s, %.0f/s stopped early:%s", calls / secs, stops / secs, line.c_str());
+    n.clear();
+    calls = stops = 0;
+    window = now;
+}
+
 // decodes the basic block at pc (reusing the slot's previous block object): up to 256 instructions, ending
 // after a branch or stop
 // Each slot keeps up to 8 variants: job code DMA'd into a shared LS buffer alternates between a few binaries, and a
@@ -232,6 +299,13 @@ SPUThread::Block* SPUThread::build_block(u32 pc) {
                 v->nlines = c.nlines;
                 v->cluster = (s32)ci;
             }
+        }
+        if (void (*fn)(SPUThread&) = no_aot ? nullptr : spu_native_entry(*this, pc)) {   // generated call trees
+            v->native = fn;
+            v->count_n = 0;
+            v->lines = nullptr;
+            v->nlines = 0;
+            v->cluster = -1;
         }
         v->home = v->lines ? v->lines[0] >> LINES_PER_REGION_SHIFT : v->line0 >> LINES_PER_REGION_SHIFT;
         if (v->lines) for (u32 i = 0; i < v->nlines; i++) link_region(v->lines[i], v->home);
@@ -313,8 +387,12 @@ void SPUThread::run() {
     _mm_setcsr(_mm_getcsr() | 0x8040);   // flush denormals to zero (FTZ | DAZ), as the SPU does
     if (const char* e = getenv("F1CE_LS_WRITERS")) lsw_base = (u32)strtoul(e, nullptr, 16) & 0x3FFF0;
     if (!blocks_on) flush_blocks();   // host-side LS writes invalidate through write_ls/ls_written
+    run_until(~0u);
+}
+
+void SPUThread::run_until(u32 stop) {
     static const bool per_instruction = getenv("F1CE_SPU_NOBLOCK") || !g_pc_log.empty();
-    while (!halted) {
+    while (!halted && pc != stop) {
         if (kernel_limit && pc < kernel_limit && on_kernel_call) {
             if (on_kernel_call(*this)) continue;
         }
@@ -845,6 +923,131 @@ void spu_xform_check(const v128* gpr, const u8* ls) {
         }
     }
     if ((no & 1023) == 0) LOG_I("spu transform check: %u compared, %u differ, %u left to the translated loop", no + 1, c.bad.load(), c.declined.load());
+}
+
+bool g_geom_native = !(getenv("F1CE_GEOM_NATIVE") && atoi(getenv("F1CE_GEOM_NATIVE")) == 0);
+int g_geom_check = getenv("F1CE_GEOM_CHECK") ? atoi(getenv("F1CE_GEOM_CHECK")) : 0;
+thread_local bool t_geom_exact = false;
+
+// A native geometry job function (spu_ops.h) against the interpreter, on copies of the SPU, from its entry to the pc the
+// native version leaves at: every register, the whole local store and the pc must match.
+void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t) {
+    struct Counts { const char* name; std::atomic<u32> calls{0}, checked{0}, bad{0}, declined{0}; };
+    static std::mutex m;
+    static std::map<u32, Counts> counts;
+    Counts* c;
+    {
+        std::lock_guard lk(m);
+        c = &counts[entry];
+        c->name = name;
+    }
+    const u32 call = c->calls++;
+    if (g_geom_check < 2 && (call & 63)) return;
+    thread_local CheckPair p;
+    SPUThread& a = *p.a; SPUThread& b = *p.b;
+    memcpy(a.ls, t.ls, 0x40000);
+    memcpy(a.gpr, t.gpr, sizeof(a.gpr));
+    memcpy(b.ls, t.ls, 0x40000);
+    memcpy(b.gpr, t.gpr, sizeof(b.gpr));
+    b.pc = entry;
+    t_geom_exact = true;
+    const bool ran = fn(b);
+    t_geom_exact = false;
+    if (!ran) { c->declined++; return; }
+    if (!check_interpret(a, entry, b.pc)) { LOG_W("geom check %s: the interpreter did not reach %05x", name, b.pc); return; }
+    const u32 no = c->checked++;
+    char why[200] = "";
+    if (memcmp(a.ls, b.ls, 0x40000)) {
+        u32 k = 0;
+        while (a.ls[k] == b.ls[k]) k++;
+        k &= ~15u;
+        snprintf(why, sizeof(why), "LS %05x: %08x %08x %08x %08x vs %08x %08x %08x %08x", k, a.ls32(k), a.ls32(k + 4), a.ls32(k + 8),
+                 a.ls32(k + 12), b.ls32(k), b.ls32(k + 4), b.ls32(k + 8), b.ls32(k + 12));
+    }
+    for (int r = 0; r < 128 && !why[0]; r++)
+        if (memcmp(&a.gpr[r], &b.gpr[r], 16)) {
+            const v128 &x = a.gpr[r], &y = b.gpr[r];
+            snprintf(why, sizeof(why), "r%d %08x %08x %08x %08x vs %08x %08x %08x %08x", r, x.w[3], x.w[2], x.w[1], x.w[0], y.w[3], y.w[2],
+                     y.w[1], y.w[0]);
+        }
+    if (why[0] && c->bad++ < 10) LOG_W("geom check %s: DIFFERENT (%s)", name, why);
+    if ((no & 1023) == 0) LOG_I("geom check %s: %u compared, %u differ, %u declined", name, no + 1, c->bad.load(), c->declined.load());
+}
+
+void geom_stop_stat_log(u32 handler, u32 pc) {
+    static std::mutex m;
+    static std::map<u64, u64> n;
+    static u64 window = 0;
+    std::lock_guard lk(m);
+    n[(u64)handler << 32 | pc]++;
+    const u64 now = time_usec();
+    if (!window) window = now;
+    if (now - window < 10000000) return;
+    std::vector<std::pair<u64, u64>> v;
+    for (auto& [k, c] : n) v.push_back({c, k});
+    std::sort(v.rbegin(), v.rend());
+    std::string line;
+    for (size_t i = 0; i < v.size() && i < 8; i++) {
+        char b[64];
+        snprintf(b, sizeof(b), " %05x@%05x %.0f/s", (u32)(v[i].second >> 32), (u32)v[i].second, v[i].first / ((now - window) / 1e6));
+        line += b;
+    }
+    LOG_I("geom stops (handler@pc):%s", line.c_str());
+    n.clear();
+    window = now;
+}
+
+void geom_list_stat_log(GeomListEvent e) {
+    static std::atomic<u64> n[6], window{0};
+    n[e].fetch_add(1, std::memory_order_relaxed);
+    if (e != GL_START) return;
+    const u64 now = time_usec();
+    u64 w = window.load(std::memory_order_relaxed);
+    if (!w) { window.compare_exchange_strong(w, now); return; }
+    if (now - w < 10000000 || !window.compare_exchange_strong(w, now)) return;
+    const double secs = (now - w) / 1e6;
+    const u64 start = n[GL_START].exchange(0), cmd = n[GL_COMMAND].exchange(0);
+    LOG_I("geom lists: %.0f/s run natively, %.1f commands each; %.0f/s finished, %.0f/s handed back at an interrupt, %.0f/s in a halted "
+          "handler; native handlers stopped early %.0f/s",
+          start / secs, start ? (double)cmd / start : 0.0, n[GL_DONE].exchange(0) / secs, n[GL_INTERRUPT].exchange(0) / secs,
+          n[GL_HALTED].exchange(0) / secs, n[GL_NATIVE_STOPPED].exchange(0) / secs);
+}
+
+namespace {
+struct GeomOpStat { std::atomic<u64> calls{0}, ticks{0}; };
+GeomOpStat g_geom_ops[41];
+thread_local int t_geom_op = -1;
+thread_local u64 t_geom_t0 = 0;
+}  // namespace
+void geom_op_enter(int op) {
+    t_geom_op = op;
+    t_geom_t0 = __rdtsc();
+}
+void geom_op_back() {
+    if (t_geom_op < 0) return;
+    const u64 now = __rdtsc();
+    GeomOpStat& st = g_geom_ops[t_geom_op];
+    st.calls.fetch_add(1, std::memory_order_relaxed);
+    st.ticks.fetch_add(now - t_geom_t0, std::memory_order_relaxed);
+    t_geom_op = -1;
+    static std::atomic<u64> window{0}, tsc0{0};
+    const u64 us = time_usec();
+    u64 w = window.load(std::memory_order_relaxed);
+    if (!w) { window.compare_exchange_strong(w, us); tsc0 = now; return; }
+    if (us - w < 5000000 || !window.compare_exchange_strong(w, us)) return;
+    const double ticks_per_us = (double)(now - tsc0.exchange(now)) / (us - w), secs = (us - w) / 1e6;
+    std::vector<std::pair<u64, int>> v;
+    for (int i = 0; i < 41; i++) v.push_back({g_geom_ops[i].ticks.exchange(0), i});
+    std::sort(v.rbegin(), v.rend());
+    std::string line;
+    for (auto& [t, i] : v) {
+        const u64 c = g_geom_ops[i].calls.exchange(0);
+        if (!c) continue;
+        char b[80];
+        snprintf(b, sizeof(b), " op%d %.0f/s %.1f ms/s (%.2f us)", i, c / secs, t / ticks_per_us / 1e3 / secs, t / ticks_per_us / c);
+        line += b;
+    }
+    LOG_I("geom ops:%s", line.c_str());
 }
 
 // each idiom against the interpreter, from random states: same local store and registers at the end of the loop

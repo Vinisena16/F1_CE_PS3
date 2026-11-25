@@ -16,6 +16,7 @@
 void set_thread_name(const char* name);   // core.cpp
 
 namespace rsx { u64 g_last_frame_draws = 0; }
+void spurs_watchdog_report();   // hle_spurs.cpp
 std::string profile_main_between(u64 t0, u64 t1);   // core.cpp
 bool shake_filter_on();   // hle_physics.cpp
 void log_thread_cpu();    // core.cpp
@@ -314,6 +315,12 @@ void log_frame_pacing(u64 flip_us) {
             slow_logged++;
             LOG_I("pacing: slow frame %.1f ms at %.2f s | renderer: semaphore waits %.1f ms, flip %.1f ms, this flip %.1f ms, %u draws",
                   d / 1e3, now / 1e6, dsem / 1e3, dfl / 1e3, flip_us / 1e3, (u32)rsx::g_last_frame_draws);
+            // a stall (frames of a few hundred ms with the SPUs idle, 2026-11-25): the SPURS state while it lasts
+            static int stall_dumps = 0;
+            if (d > 300000 && stall_dumps < 6) {
+                stall_dumps++;
+                spurs_watchdog_report();
+            }
             if (prof) {
                 LOG_I("pacing:   main thread %s", profile_main_between(last, now).c_str());
                 std::string sl;

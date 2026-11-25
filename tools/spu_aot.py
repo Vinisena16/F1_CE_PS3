@@ -34,6 +34,7 @@ IDIOMS = {(0x04AE4, 0x38944402, 7): "spu_idiom_fill_word",
 SKIPS = {(0x0D7F8, 0x4020007F, 134): "spu_skip_triangle_cull",
          (0x0D628, 0x7A8FDCBF, 44): "spu_skip_vertex_transform",
          (0x04824, 0x18028502, 43): "spu_skip_tri_search",   # the rain job's triangle search
+         (0x05960, 0x3408C182, 202): "spu_skip_cmdlist",   # geometry job: command interpreter (spu_ops.h)
          # job manager policy module: functions rewritten natively (runtime/spu_pm.cpp)
          (0x019F8, 0x42810182, 16): "spu_skip_pm_buffers",
          (0x02D48, 0x1C000302, 15): "spu_skip_pm_dma_info",
@@ -42,6 +43,16 @@ SKIPS = {(0x0D7F8, 0x4020007F, 134): "spu_skip_triangle_cull",
          (0x02288, 0x42004032, 36): "spu_skip_pm_grab",
          (0x00A2C, 0x00200000, 17): "spu_skip_pm_irq_enter",
          (0x00A98, 0x40867803, 11): "spu_skip_pm_irq_leave"}
+# diagnostic build only (SPU_AOT_GEOM_OPS=1): calls and time per command of the geometry job (spu_ops.h geom_op_*); the
+# handler entries of the 15 commands ever recorded (table at 0x12180) and the command loop's return point 05c88
+if os.environ.get("SPU_AOT_GEOM_OPS") == "1":
+    for op, pc, w0, n in [(0, 0x08C80, 0x10112E16, 23), (4, 0x07790, 0x40812006, 16), (6, 0x079B0, 0x4080BA08, 29),
+                          (8, 0x07888, 0x40819802, 20), (9, 0x0B300, 0x0F3B4202, 58), (12, 0x07C50, 0x4020007F, 21),
+                          (14, 0x07E40, 0x40812806, 12), (15, 0x07E70, 0x40813006, 12), (23, 0x0B700, 0x04000082, 60),
+                          (24, 0x0B280, 0x04000082, 27), (30, 0x09FD8, 0x04000186, 20), (32, 0x0B980, 0x04000082, 34),
+                          (35, 0x0AFD0, 0x1015BB09, 10), (37, 0x05D30, 0x4080C202, 39), (40, 0x06A30, 0x40FCE802, 32)]:
+        SKIPS[(pc, w0, n)] = f"spu_skip_geom_op<{op}>"
+    SKIPS[(0x05C88, 0x4020007F, 16)] = "spu_skip_geom_back"
 
 
 def skip_call(pc, words, ctx, leave):

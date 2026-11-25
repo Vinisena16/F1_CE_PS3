@@ -28,6 +28,7 @@
 
 bool g_pm_native = !(getenv("F1CE_PM_NATIVE") && atoi(getenv("F1CE_PM_NATIVE")) == 0);
 static const int g_pm_check = getenv("F1CE_PM_CHECK") ? atoi(getenv("F1CE_PM_CHECK")) : 0;
+int g_native_check = getenv("F1CE_NATIVE_CHECK") ? atoi(getenv("F1CE_NATIVE_CHECK")) : 0;   // (spu_native_check below)
 // diagnostics (SPURS report): job queue entries the grab passed over as skips (kind 3), and the longest run of them
 std::atomic<u64> g_pm_skips{0};
 std::atomic<u32> g_pm_skip_run_max{0};
@@ -1086,6 +1087,7 @@ void check_fn(SPUThread& t, FnCheck& c, const std::vector<int>& regs, bool (Pm::
 FnCheck g_chk_buffers{"019f8", 0x19F8}, g_chk_dma_info{"02d48", 0x2D48}, g_chk_release{"02ce8", 0x2CE8}, g_chk_job_done{"01670", 0x1670},
     g_chk_grab{"02288", 0x2288}, g_chk_irq_enter{"00a2c", 0xA2C}, g_chk_irq_leave{"00a98", 0xA98};
 const std::vector<int> g_first80 = [] { std::vector<int> v; for (int r = 0; r < 80; r++) v.push_back(r); return v; }();
+const std::vector<int> g_all128 = [] { std::vector<int> v; for (int r = 0; r < 128; r++) v.push_back(r); return v; }();
 
 template <class F> bool run_native(SPUThread& t, FnCheck& c, const std::vector<int>& regs, F fn, u32 lock_ea = 0) {
     if (__builtin_expect(g_pm_check != 0, 0)) check_fn(t, c, regs, fn, lock_ea);
@@ -1093,6 +1095,65 @@ template <class F> bool run_native(SPUThread& t, FnCheck& c, const std::vector<i
     return (pm.*fn)();
 }
 }  // namespace
+
+// Generated native code entered by the dispatcher (tools/spu_native_fn.py, w0's job and this job manager), with
+// F1CE_NATIVE_CHECK=1 (every 4096th entry per entry point, =2 every 64th, =3 every one): from the entry to the pc the native code leaves
+// at, on two copies of the SPU, natively and by the interpreter, with DMA puts only logged; local store, registers,
+// MFC state and the DMA commands must match. (The interpreter takes no interrupts; the native code stops where one is
+// pending, at the pc the interpreter then stops at too.)
+void spu_native_check(const char* image, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t) {
+    static std::mutex m;
+    static std::map<u64, FnCheck*> checks;
+    FnCheck* c;
+    {
+        std::lock_guard lk(m);
+        FnCheck*& e = checks[(u64)(uintptr_t)image << 20 | entry];
+        if (!e) {
+            char b[24];
+            snprintf(b, sizeof(b), "%s%05x", image, entry);
+            e = new FnCheck{strdup(b), entry};
+        }
+        c = e;
+    }
+    const u32 call = c->calls++;
+    if (call & (g_native_check == 1 ? 4095 : g_native_check == 2 ? 63 : 0)) return;
+    thread_local PmCheck p;
+    SPUThread& a = *p.a;
+    SPUThread& b = *p.b;
+    copy_spu(a, t);
+    copy_spu(b, t);
+    a.on_kernel_call = b.on_kernel_call = nullptr;
+    p.la.clear(); p.lb.clear();
+    b.dma_log = &p.lb;
+    b.pc = entry;
+    fn(b);
+    b.dma_log = nullptr;
+    a.dma_log = &p.la;
+    a.pc = entry;
+    const u64 steps = spu_interpret_to(a, b.pc, 20000000);
+    a.dma_log = nullptr;
+    if (steps == ~0ull) { LOG_W("native check %s: the interpreter did not reach %05x", c->name, b.pc); return; }
+    const u32 no = c->checked++;
+    if (!p.la.empty()) c->with_dma++;
+    std::string why;
+    bool same = same_spu(a, b, g_all128, why);
+    if (same && p.la.size() != p.lb.size()) { same = false; why = "DMA command count " + std::to_string(p.la.size()) + " vs " + std::to_string(p.lb.size()); }
+    for (size_t i = 0; same && i < p.la.size(); i++) {
+        const SpuDmaRec &x = p.la[i], &y = p.lb[i];
+        if (memcmp(&x, &y, sizeof(SpuDmaRec))) {
+            char msg[160];
+            snprintf(msg, sizeof(msg), "DMA %zu: cmd %02x lsa %05x ea %08x size %x tag %u vs cmd %02x lsa %05x ea %08x size %x tag %u", i,
+                     x.cmd, x.lsa, x.ea, x.size, x.tag, y.cmd, y.lsa, y.ea, y.size, y.tag);
+            why = msg;
+            same = false;
+        }
+    }
+    if (!same && c->bad++ < 20)
+        LOG_W("native check %s: DIFFERENT (%s); to %05x, %llu instructions, %zu DMA commands", c->name, why.c_str(), b.pc,
+              (unsigned long long)steps, p.la.size());
+    if ((no & 1023) == 0)
+        LOG_I("native check %s: %u compared, %u differ, %u with DMA", c->name, no + 1, c->bad.load(), c->with_dma.load());
+}
 
 // Entry points, at the head of each function's first block (spu_ops.h). Each returns false to leave the call to the SPU code.
 

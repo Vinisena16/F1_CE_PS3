@@ -267,16 +267,15 @@ OP(selb) {
     const v128& c = R(RRR_RC(w));
     R(RRR_RT(w)).pi = _mm_or_si128(_mm_and_si128(c.pi, R(RB(w)).pi), _mm_andnot_si128(c.pi, R(RA(w)).pi));
 }
-OP(shufb) {
+FORCE_INLINE __m128i shufb_v(__m128i a, __m128i b, __m128i c) {
     // byte-reversed layout: host lane j selects source byte (c & 31): index (c & 15) ^ 15 in a (bit 4 clear) or b;
     // control bytes with bit 7 set give 0x00 (10xxxxxx), 0xFF (110xxxxx) or 0x80 (111xxxxx)
-    __m128i c = R(RRR_RC(w)).pi;
     __m128i x = _mm_xor_si128(_mm_and_si128(c, _mm_set1_epi8(0x1F)), _mm_set1_epi8(15));   // bit 4 clear: a, set: b
     // + 0x70 moves bit 4 into bit 7, where pshufb gives 0; bit 7 of c also zeroes the byte
     __m128i top = _mm_and_si128(c, _mm_set1_epi8((char)0x80));
     __m128i ia = _mm_or_si128(_mm_add_epi8(x, _mm_set1_epi8(0x70)), top);
     __m128i ib = _mm_or_si128(_mm_add_epi8(_mm_xor_si128(x, _mm_set1_epi8(0x10)), _mm_set1_epi8(0x70)), top);
-    __m128i r = _mm_or_si128(_mm_shuffle_epi8(R(RA(w)).pi, ia), _mm_shuffle_epi8(R(RB(w)).pi, ib));
+    __m128i r = _mm_or_si128(_mm_shuffle_epi8(a, ia), _mm_shuffle_epi8(b, ib));
     // 0x80 is done; 110xxxxx and 111xxxxx give 0xFF and 0x80 (rare, but seen in masks)
     __m128i hi = _mm_cmpgt_epi8(_mm_set1_epi8((char)0xC0), c);     // c < -64: 0x80..0xBF, else all clear below
     __m128i sp = _mm_andnot_si128(hi, _mm_cmpgt_epi8(_mm_setzero_si128(), c));   // c in 0xC0..0xFF
@@ -286,8 +285,9 @@ OP(shufb) {
                                  _mm_and_si128(_mm_cmpeq_epi8(e, _mm_set1_epi8((char)0xE0)), _mm_set1_epi8((char)0x80)));
         r = _mm_blendv_epi8(r, v, sp);
     }
-    R(RRR_RT(w)).pi = r;
+    return r;
 }
+OP(shufb) { R(RRR_RT(w)).pi = shufb_v(R(RA(w)).pi, R(RB(w)).pi, R(RRR_RC(w)).pi); }
 
 // ------------------------------------------------------------------ shifts / rotates (per element)
 OP(shl) { v128 r; for (int i = 0; i < 4; i++) { u32 n = R(RB(w)).w[i] & 63; r.w[i] = n > 31 ? 0 : R(RA(w)).w[i] << n; } R(RT(w)) = r; }
@@ -964,6 +964,316 @@ template <class S> bool spu_skip_triangle_cull(S& s) {
     }
     return spu_fast_triangle_cull(s);
 }
+
+// ------------------------------------------------------------------ geometry job functions (LS 0x4000, guest 0x100A1280)
+// Native replacements of the geometry job's code, entered at the head of a block (tools/spu_aot.py SKIPS). Each must
+// leave the local store, the pc and the registers later code reads as the SPU code does. F1CE_GEOM_NATIVE=0 runs the
+// SPU code; F1CE_GEOM_CHECK=1 compares every 64th call (=2: every call) with the interpreter on copies of the SPU (all
+// registers, the whole LS, pc). (Note 2026-11-24: rewriting the loops at 0bd80 / 0be00 instruction for instruction was
+// exact but saved no time: they are bound by their loads, stores and shuffles, not by dispatch.)
+extern bool g_geom_native;
+extern int g_geom_check;
+void spu_geom_check(const char* name, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t);
+// set while a check runs a native call tree: the native loops it would enter (triangle cull, vertex transform) keep only
+// the registers and bytes later code reads, so a full-state comparison runs their SPU code instead
+extern thread_local bool t_geom_exact;
+// diagnostic build (SPU_AOT_GEOM_OPS=1 python -I tools/spu_aot.py): calls and time per command of the job's command loop
+// (handler entries from the table at 0x12180; the time runs until the loop's return point 05c88), logged as `geom ops:`
+void geom_op_enter(int op);
+void geom_op_back();
+template <int N, class S> bool spu_skip_geom_op(S&) { geom_op_enter(N); return false; }
+template <class S> bool spu_skip_geom_back(S&) { geom_op_back(); return false; }
+
+// Images whose generated native code (tools/spu_native_fn.py: workload w0's job, the job manager) the dispatcher enters
+// at the head of a block: the roots and the resume points of their functions (spu.cpp spu_native_entry). An entry runs
+// until a return or until it stops with the pc where the SPU code continues; either way the dispatcher goes on from the
+// pc. The image is recognised by the words at hdr_ls (its id), the block's own words by the block cache.
+struct SpuNativeEntry { u32 pc; void (*fn)(SPUThread&); };
+struct SpuNativeImage {
+    const char* name;
+    u32 hdr_ls;
+    const u32* hdr;
+    u32 hdr_n;
+    const SpuNativeEntry* entries;   // pc order
+    u32 n;
+    u32 lo, hi;   // code range
+};
+extern bool g_native_stats;   // F1CE_NATIVE_STATS=1: `native entries:` line every 10 s
+void spu_native_stat(const char* image, u32 entry, bool returned, u32 pc);
+extern int g_native_check;   // spu_pm.cpp spu_native_check (F1CE_NATIVE_CHECK)
+extern bool g_pm_gen;        // spu.cpp: the job manager's generated code in use (F1CE_PM_GEN)
+bool spu_native_call_pm(SPUThread& s, u32 ret);   // generated/spu_geom/pm_native.cpp: an indirect call into it
+void spu_native_check(const char* image, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t);
+
+// 05960 (from 04bbc): the job's command interpreter (GEOMETRY_JOB.md). The prologue, the operand gathering of each command
+// and the stream advance are the SPU code's instructions (generated from the disassembly); the handler call at 05c84
+// goes to a native handler when there is one, else to the SPU handler through a nested run until it returns to 05c88.
+// The loop head keeps the SPU loop's state, so an interrupt, or a handler that halts the SPU, leaves the rest to it.
+bool geom_native_handler(SPUThread& s, u32 handler);   // spu.cpp: false = none for this handler
+enum GeomListEvent { GL_START, GL_COMMAND, GL_INTERRUPT, GL_HALTED, GL_DONE, GL_NATIVE_STOPPED };
+// (only with F1CE_NATIVE_STATS: a counter shared by all workers on every command and a mutex on every early stop were
+// cache-line traffic between the threads)
+void geom_stop_stat_log(u32 handler, u32 pc);   // spu.cpp: where native handlers stopped early (`geom stops:`)
+void geom_list_stat_log(GeomListEvent e);   // spu.cpp: counts, logged as `geom lists:` every 10 s
+FORCE_INLINE void geom_stop_stat(u32 handler, u32 pc) { if (__builtin_expect(g_native_stats, 0)) geom_stop_stat_log(handler, pc); }
+FORCE_INLINE void geom_list_stat(GeomListEvent e) { if (__builtin_expect(g_native_stats, 0)) geom_list_stat_log(e); }
+template <class S> bool spu_fast_cmdlist(S& s) {
+    static_assert(std::is_same_v<S, SPUThread>);
+    op_lqd(s, 0x3408C182u);   // 05960 lqd r2,560(r3)
+    op_stqd(s, 0x24FF00D3u);   // 05964 stqd r83,-64(r1)
+    op_ori(s, 0x040001D3u);   // 05968 ori r83,r3,0
+    op_stqd(s, 0x24FF40D2u);   // 0596c stqd r82,-48(r1)
+    op_ai(s, 0x1C5801D2u);   // 05970 ai r82,r3,352
+    op_stqd(s, 0x24FEC0D4u);   // 05974 stqd r84,-80(r1)
+    op_il(s, 0x40800E54u);   // 05978 il r84,0x1c
+    op_stqd(s, 0x24FE80D5u);   // 0597c stqd r85,-96(r1)
+    op_il(s, 0x40800F55u);   // 05980 il r85,0x1e
+    op_stqd(s, 0x24FE40D6u);   // 05984 stqd r86,-112(r1)
+    op_il(s, 0x40800B56u);   // 05988 il r86,0x16
+    op_stqd(s, 0x24FE00D7u);   // 0598c stqd r87,-128(r1)
+    op_il(s, 0x40800C57u);   // 05990 il r87,0x18
+    op_stqd(s, 0x24FDC0D8u);   // 05994 stqd r88,-144(r1)
+    op_il(s, 0x40800D58u);   // 05998 il r88,0x1a
+    op_stqd(s, 0x24FD80D9u);   // 0599c stqd r89,-160(r1)
+    op_il(s, 0x40800659u);   // 059a0 il r89,0xc
+    op_rotqby(s, 0x3B94C102u);   // 059a4 rotqby r2,r2,r83
+    op_cwd(s, 0x3ED82984u);   // 059a8 cwd r4,r83,-32
+    op_stqd(s, 0x24FD40DAu);   // 059ac stqd r90,-176(r1)
+    op_il(s, 0x4080075Au);   // 059b0 il r90,0xe
+    op_stqd(s, 0x24FD00DBu);   // 059b4 stqd r91,-192(r1)
+    op_ai(s, 0x1C008102u);   // 059b8 ai r2,r2,2
+    op_stqd(s, 0x24FCC0DCu);   // 059bc stqd r92,-208(r1)
+    op_il(s, 0x4080095Bu);   // 059c0 il r91,0x12
+    op_stqd(s, 0x24FC80DDu);   // 059c4 stqd r93,-224(r1)
+    op_il(s, 0x40800A5Cu);   // 059c8 il r92,0x14
+    op_stqd(s, 0x24FC40DEu);   // 059cc stqd r94,-240(r1)
+    op_il(s, 0x4080035Du);   // 059d0 il r93,0x6
+    op_stqd(s, 0x24FC00DFu);   // 059d4 stqd r95,-256(r1)
+    op_il(s, 0x4080045Eu);   // 059d8 il r94,0x8
+    op_stqd(s, 0x24FBC0E0u);   // 059dc stqd r96,-272(r1)
+    op_il(s, 0x4080055Fu);   // 059e0 il r95,0xa
+    op_stqd(s, 0x24FB80E1u);   // 059e4 stqd r97,-288(r1)
+    op_il(s, 0x40800160u);   // 059e8 il r96,0x2
+    op_il(s, 0x40800261u);   // 059f0 il r97,0x4
+    op_stqd(s, 0x24FB40E2u);   // 059f4 stqd r98,-304(r1)
+    op_ila(s, 0x4290C062u);   // 059f8 ila r98,0x12180
+    op_stqd(s, 0x24FB00E3u);   // 059fc stqd r99,-320(r1)
+    op_ila(s, 0x42911863u);   // 05a00 ila r99,0x12230
+    op_stqd(s, 0x24004080u);   // 05a04 stqd r0,16(r1)
+    op_stqd(s, 0x24FFC0D0u);   // 05a08 stqd r80,-16(r1)
+    op_stqd(s, 0x24FF80D1u);   // 05a0c stqd r81,-32(r1)
+    op_stqd(s, 0x24F90081u);   // 05a14 stqd r1,-448(r1)
+    op_ai(s, 0x1C900081u);   // 05a18 ai r1,r1,-448
+    op_lqd(s, 0x34058183u);   // 05a1c lqd r3,352(r3)
+    op_shufb(s, 0xB060C104u);   // 05a20 shufb r3,r2,r3,r4
+    op_stqd(s, 0x2405A983u);   // 05a24 stqd r3,352(r83)
+    s.instructions += 50;
+    for (;;) {
+        // loop head 05a28: the state is the SPU loop's here; an interrupt the SPU code would take goes back to it
+        if (s.interrupts && (s.event_stat & s.event_mask)) { geom_list_stat(GL_INTERRUPT); s.pc = 0x5A28; return true; }
+        geom_list_stat(GL_COMMAND);
+        op_ori(s, 0x04002983u);   // 05a28 ori r3,r83,0
+        op_lqd(s, 0x34002902u);   // 05a2c lqd r2,0(r82)
+        op_lqd(s, 0x3401008Au);   // 05a30 lqd r10,64(r1)
+        op_chd(s, 0x3EA0008Fu);   // 05a34 chd r15,r1,0
+        op_chd(s, 0x3EA08098u);   // 05a38 chd r24,r1,2
+        op_chd(s, 0x3EA1009Au);   // 05a3c chd r26,r1,4
+        op_chd(s, 0x3EA180A0u);   // 05a40 chd r32,r1,6
+        op_rotqby(s, 0x3B948106u);   // 05a44 rotqby r6,r2,r82
+        op_chd(s, 0x3EA200A2u);   // 05a4c chd r34,r1,8
+        op_ori(s, 0x04000D19u);   // 05a50 ori r25,r26,0
+        op_chd(s, 0x3EA280A4u);   // 05a54 chd r36,r1,10
+        op_chd(s, 0x3EA300A5u);   // 05a5c chd r37,r1,12
+        op_ai(s, 0x1C038305u);   // 05a60 ai r5,r6,14
+        op_lqd(s, 0x34000309u);   // 05a64 lqd r9,0(r6)
+        op_a(s, 0x18180307u);   // 05a68 a r7,r6,r96
+        op_lqx(s, 0x3898030Eu);   // 05a6c lqx r14,r6,r96
+        op_a(s, 0x18178304u);   // 05a70 a r4,r6,r94
+        op_lqx(s, 0x38978312u);   // 05a74 lqx r18,r6,r94
+        op_ai(s, 0x1C038387u);   // 05a78 ai r7,r7,14
+        op_lqx(s, 0x38984310u);   // 05a7c lqx r16,r6,r97
+        op_a(s, 0x18184308u);   // 05a80 a r8,r6,r97
+        op_lqx(s, 0x38974311u);   // 05a84 lqx r17,r6,r93
+        op_a(s, 0x18174302u);   // 05a88 a r2,r6,r93
+        op_lqx(s, 0x3896830Cu);   // 05a8c lqx r12,r6,r90
+        op_ai(s, 0x1C038204u);   // 05a90 ai r4,r4,14
+        op_rotqby(s, 0x3B814489u);   // 05a94 rotqby r9,r9,r5
+        op_ai(s, 0x1C038102u);   // 05a98 ai r2,r2,14
+        op_rotqby(s, 0x3B81C70Eu);   // 05a9c rotqby r14,r14,r7
+        op_ai(s, 0x1C038408u);   // 05aa0 ai r8,r8,14
+        op_rotqby(s, 0x3B810917u);   // 05aa4 rotqby r23,r18,r4
+        op_a(s, 0x1817C305u);   // 05aa8 a r5,r6,r95
+        op_lqx(s, 0x3897C30Du);   // 05aac lqx r13,r6,r95
+        op_a(s, 0x18164307u);   // 05ab0 a r7,r6,r89
+        op_shufb(s, 0xB142848Fu);   // 05ab4 shufb r10,r9,r10,r15
+        op_ai(s, 0x1C038285u);   // 05ab8 ai r5,r5,14
+        op_rotqby(s, 0x3B808896u);   // 05abc rotqby r22,r17,r2
+        op_a(s, 0x18168302u);   // 05ac0 a r2,r6,r90
+        op_rotqby(s, 0x3B820808u);   // 05ac4 rotqby r8,r16,r8
+        op_ai(s, 0x1C038387u);   // 05ac8 ai r7,r7,14
+        op_lqx(s, 0x3896430Bu);   // 05acc lqx r11,r6,r89
+        op_ori(s, 0x04000504u);   // 05ad0 ori r4,r10,0
+        op_chd(s, 0x3EA0809Cu);   // 05ad4 chd r28,r1,2
+        op_ai(s, 0x1C038102u);   // 05ad8 ai r2,r2,14
+        op_rotqby(s, 0x3B814685u);   // 05adc rotqby r5,r13,r5
+        op_ai(s, 0x1C038321u);   // 05ae0 ai r33,r6,14
+        op_shufb(s, 0xB0810718u);   // 05ae4 shufb r4,r14,r4,r24
+        op_a(s, 0x1816C315u);   // 05ae8 a r21,r6,r91
+        op_rotqby(s, 0x3B80860Au);   // 05aec rotqby r10,r12,r2
+        op_ori(s, 0x04000798u);   // 05af0 ori r24,r15,0
+        op_cdd(s, 0x3EE2008Cu);   // 05af4 cdd r12,r1,8
+        op_ai(s, 0x1C038A95u);   // 05af8 ai r21,r21,14
+        op_rotqby(s, 0x3B81C589u);   // 05afc rotqby r9,r11,r7
+        op_a(s, 0x18170314u);   // 05b00 a r20,r6,r92
+        op_shufb(s, 0xB041041Au);   // 05b04 shufb r2,r8,r4,r26
+        op_a(s, 0x18158312u);   // 05b08 a r18,r6,r86
+        op_chd(s, 0x3EA38087u);   // 05b0c chd r7,r1,14
+        op_ai(s, 0x1C038A14u);   // 05b10 ai r20,r20,14
+        op_cdd(s, 0x3EE0008Bu);   // 05b14 cdd r11,r1,0
+        op_ai(s, 0x1C038912u);   // 05b18 ai r18,r18,14
+        op_shlqbyi(s, 0x3FE00626u);   // 05b1c shlqbyi r38,r12,0
+        op_a(s, 0x1815C313u);   // 05b20 a r19,r6,r87
+        op_shufb(s, 0xB0408B20u);   // 05b24 shufb r2,r22,r2,r32
+        op_ori(s, 0x0400039Au);   // 05b28 ori r26,r7,0
+        op_ori(s, 0x040005A3u);   // 05b2c ori r35,r11,0
+        op_ai(s, 0x1C038993u);   // 05b30 ai r19,r19,14
+        op_a(s, 0x18160311u);   // 05b38 a r17,r6,r88
+        op_shufb(s, 0xB0408BA2u);   // 05b3c shufb r2,r23,r2,r34
+        op_a(s, 0x18150310u);   // 05b40 a r16,r6,r84
+        op_ai(s, 0x1C038891u);   // 05b44 ai r17,r17,14
+        op_ai(s, 0x1C038810u);   // 05b48 ai r16,r16,14
+        op_a(s, 0x1815430Fu);   // 05b50 a r15,r6,r85
+        op_shufb(s, 0xB04082A4u);   // 05b54 shufb r2,r5,r2,r36
+        op_ai(s, 0x1C03878Fu);   // 05b58 ai r15,r15,14
+        op_shufb(s, 0xB04084A5u);   // 05b5c shufb r2,r9,r2,r37
+        op_shufb(s, 0xB0408507u);   // 05b60 shufb r2,r10,r2,r7
+        op_stqd(s, 0x24010082u);   // 05b64 stqd r2,64(r1)
+        op_lqd(s, 0x34010088u);   // 05b68 lqd r8,64(r1)
+        op_lqd(s, 0x3400C084u);   // 05b6c lqd r4,48(r1)
+        op_rotqmbyi(s, 0x3FBE0402u);   // 05b70 rotqmbyi r2,r8,-8
+        op_shufb(s, 0xB081040Bu);   // 05b74 shufb r4,r8,r4,r11
+        op_shlqbyi(s, 0x3FE20105u);   // 05b7c shlqbyi r5,r2,8
+        op_ori(s, 0x04000202u);   // 05b80 ori r2,r4,0
+        op_stqd(s, 0x2400C084u);   // 05b84 stqd r4,48(r1)
+        op_lqd(s, 0x34010084u);   // 05b88 lqd r4,64(r1)
+        op_rotqbyi(s, 0x3F820209u);   // 05b8c rotqbyi r9,r4,8
+        op_shufb(s, 0xB040848Cu);   // 05b90 shufb r2,r9,r2,r12
+        op_rotqmbyi(s, 0x3FBE0484u);   // 05b94 rotqmbyi r4,r9,-8
+        op_stqd(s, 0x2400C082u);   // 05b9c stqd r2,48(r1)
+        op_or_(s, 0x08214204u);   // 05ba0 or r4,r4,r5
+        op_lqd(s, 0x34004305u);   // 05ba4 lqd r5,16(r6)
+        op_lqx(s, 0x3896C307u);   // 05ba8 lqx r7,r6,r91
+        op_lqd(s, 0x34014082u);   // 05bac lqd r2,80(r1)
+        op_lqx(s, 0x3897030Au);   // 05bb0 lqx r10,r6,r92
+        op_lqx(s, 0x3895830Bu);   // 05bb4 lqx r11,r6,r86
+        op_lqx(s, 0x3895C30Eu);   // 05bb8 lqx r14,r6,r87
+        op_rotqby(s, 0x3B884285u);   // 05bbc rotqby r5,r5,r33
+        op_lqx(s, 0x3896030Cu);   // 05bc0 lqx r12,r6,r88
+        op_lqx(s, 0x3895030Du);   // 05bc4 lqx r13,r6,r84
+        op_lqx(s, 0x38954306u);   // 05bc8 lqx r6,r6,r85
+        op_shufb(s, 0xB0408298u);   // 05bcc shufb r2,r5,r2,r24
+        op_rotqby(s, 0x3B854385u);   // 05bd0 rotqby r5,r7,r21
+        op_rotqby(s, 0x3B850507u);   // 05bd4 rotqby r7,r10,r20
+        op_rotqby(s, 0x3B84858Au);   // 05bd8 rotqby r10,r11,r18
+        op_rotqby(s, 0x3B84C70Bu);   // 05bdc rotqby r11,r14,r19
+        op_shufb(s, 0xB040829Cu);   // 05be0 shufb r2,r5,r2,r28
+        op_rotqby(s, 0x3B84460Cu);   // 05be4 rotqby r12,r12,r17
+        op_rotqby(s, 0x3B84068Du);   // 05be8 rotqby r13,r13,r16
+        op_rotqby(s, 0x3B83C306u);   // 05bec rotqby r6,r6,r15
+        op_shufb(s, 0xB0408399u);   // 05bf0 shufb r2,r7,r2,r25
+        op_shufb(s, 0xB0408520u);   // 05bf4 shufb r2,r10,r2,r32
+        op_shufb(s, 0xB04085A2u);   // 05bf8 shufb r2,r11,r2,r34
+        op_shufb(s, 0xB0408624u);   // 05bfc shufb r2,r12,r2,r36
+        op_shufb(s, 0xB04086A5u);   // 05c00 shufb r2,r13,r2,r37
+        op_shufb(s, 0xB040831Au);   // 05c04 shufb r2,r6,r2,r26
+        op_stqd(s, 0x24014082u);   // 05c08 stqd r2,80(r1)
+        op_lqd(s, 0x34014087u);   // 05c0c lqd r7,80(r1)
+        op_lqd(s, 0x3401C085u);   // 05c10 lqd r5,112(r1)
+        op_rotqmbyi(s, 0x3FBE0382u);   // 05c14 rotqmbyi r2,r7,-8
+        op_shufb(s, 0xB0A143A3u);   // 05c18 shufb r5,r7,r5,r35
+        op_shlqbyi(s, 0x3FE20106u);   // 05c1c shlqbyi r6,r2,8
+        op_stqd(s, 0x2401C085u);   // 05c20 stqd r5,112(r1)
+        op_lqd(s, 0x34014082u);   // 05c24 lqd r2,80(r1)
+        op_rotqbyi(s, 0x3F820102u);   // 05c28 rotqbyi r2,r2,8
+        op_shufb(s, 0xB1414126u);   // 05c2c shufb r10,r2,r5,r38
+        op_rotqmbyi(s, 0x3FBE0105u);   // 05c30 rotqmbyi r5,r2,-8
+        op_stqd(s, 0x2401C08Au);   // 05c34 stqd r10,112(r1)
+        op_or_(s, 0x08218285u);   // 05c38 or r5,r5,r6
+        op_lqd(s, 0x34018086u);   // 05c3c lqd r6,96(r1)
+        op_shufb(s, 0xB0C18423u);   // 05c40 shufb r6,r8,r6,r35
+        op_lqd(s, 0x3400C088u);   // 05c44 lqd r8,48(r1)
+        op_shufb(s, 0xB0C184A6u);   // 05c48 shufb r6,r9,r6,r38
+        op_rotqbyi(s, 0x3F834450u);   // 05c4c rotqbyi r80,r8,13
+        op_stqd(s, 0x24018086u);   // 05c50 stqd r6,96(r1)
+        op_andi(s, 0x143FE851u);   // 05c54 andi r81,r80,255
+        op_ceqbi(s, 0x7E002850u);   // 05c58 ceqbi r80,r80,0
+        op_shli(s, 0x0F60A888u);   // 05c5c shli r8,r81,2
+        op_xsbh(s, 0x56C02850u);   // 05c60 xsbh r80,r80,r0
+        op_a(s, 0x1818840Au);   // 05c68 a r10,r8,r98
+        op_lqx(s, 0x38988409u);   // 05c6c lqx r9,r8,r98
+        op_lqd(s, 0x34008088u);   // 05c70 lqd r8,32(r1)
+        op_rotqby(s, 0x3B828486u);   // 05c74 rotqby r6,r9,r10
+        op_shufb(s, 0xB10203A3u);   // 05c78 shufb r8,r7,r8,r35
+        op_shufb(s, 0xB0E20126u);   // 05c7c shufb r7,r2,r8,r38
+        op_stqd(s, 0x24008087u);   // 05c80 stqd r7,32(r1)
+        // 05c84 bisl r0,r6: the command's handler (r3 = context, r4 / r5 = operands)
+        const u32 handler = s.pref(6) & 0x3FFFC;
+        s.set_pref(0, 0x5C88);
+        s.instructions += 152;
+        if (!geom_native_handler(s, handler)) s.pc = handler;
+        else if (s.pc != 0x5C88) { geom_list_stat(GL_NATIVE_STOPPED); geom_stop_stat(handler, s.pc); }
+        s.run_until(0x5C88);   // the SPU handler, or the rest of a native one that stopped early
+        if (s.halted || s.pc != 0x5C88) { geom_list_stat(GL_HALTED); return true; }   // the SPU code carries on
+        op_lqx(s, 0x3898E883u);   // 05c8c lqx r3,r81,r99
+        op_a(s, 0x1818E882u);   // 05c90 a r2,r81,r99
+        op_lqd(s, 0x34002906u);   // 05c9c lqd r6,0(r82)
+        op_ai(s, 0x1C034102u);   // 05ca0 ai r2,r2,13
+        op_cwd(s, 0x3EC02905u);   // 05ca4 cwd r5,r82,0
+        op_rotqby(s, 0x3B808182u);   // 05ca8 rotqby r2,r3,r2
+        op_rotqby(s, 0x3B948303u);   // 05cac rotqby r3,r6,r82
+        op_andi(s, 0x143FC102u);   // 05cb0 andi r2,r2,255
+        op_a(s, 0x18008102u);   // 05cb4 a r2,r2,r2
+        op_a(s, 0x18008183u);   // 05cb8 a r3,r3,r2
+        op_shufb(s, 0xB0818185u);   // 05cbc shufb r4,r3,r6,r5
+        op_stqd(s, 0x24002904u);   // 05cc0 stqd r4,0(r82)
+        s.instructions += 16;
+        if ((s.pref(80) & 0xFFFF) != 0) break;   // 05cc4 brhz r80,0x5a28: opcode 0 ends the list
+    }
+    op_ai(s, 0x1C700081u);   // 05cc8 ai r1,r1,448
+    op_lqd(s, 0x34FFC0D0u);   // 05ccc lqd r80,-16(r1)
+    op_lqd(s, 0x34FF80D1u);   // 05cd0 lqd r81,-32(r1)
+    op_lqd(s, 0x34FF40D2u);   // 05cd4 lqd r82,-48(r1)
+    op_lqd(s, 0x34FF00D3u);   // 05cd8 lqd r83,-64(r1)
+    op_lqd(s, 0x34FEC0D4u);   // 05cdc lqd r84,-80(r1)
+    op_lqd(s, 0x34FE80D5u);   // 05ce0 lqd r85,-96(r1)
+    op_lqd(s, 0x34FE40D6u);   // 05ce4 lqd r86,-112(r1)
+    op_lqd(s, 0x34FE00D7u);   // 05ce8 lqd r87,-128(r1)
+    op_lqd(s, 0x34FDC0D8u);   // 05cec lqd r88,-144(r1)
+    op_lqd(s, 0x34FD80D9u);   // 05cf0 lqd r89,-160(r1)
+    op_lqd(s, 0x34FD40DAu);   // 05cf4 lqd r90,-176(r1)
+    op_lqd(s, 0x34FD00DBu);   // 05cf8 lqd r91,-192(r1)
+    op_lqd(s, 0x34FCC0DCu);   // 05cfc lqd r92,-208(r1)
+    op_lqd(s, 0x34FC80DDu);   // 05d00 lqd r93,-224(r1)
+    op_lqd(s, 0x34FC40DEu);   // 05d04 lqd r94,-240(r1)
+    op_lqd(s, 0x34FC00DFu);   // 05d08 lqd r95,-256(r1)
+    op_lqd(s, 0x34FBC0E0u);   // 05d10 lqd r96,-272(r1)
+    op_lqd(s, 0x34FB80E1u);   // 05d14 lqd r97,-288(r1)
+    op_lqd(s, 0x34FB40E2u);   // 05d18 lqd r98,-304(r1)
+    op_lqd(s, 0x34FB00E3u);   // 05d1c lqd r99,-320(r1)
+    op_lqd(s, 0x34004080u);   // 05d20 lqd r0,16(r1)
+    s.instructions += 24;
+    s.pc = s.pref(0) & 0x3FFFC;   // 05d24 bi r0
+    geom_list_stat(GL_DONE);
+    return true;
+}
+
+template <class S> bool spu_skip_cmdlist(S& s) {
+    static_assert(std::is_same_v<S, SPUThread>);
+    if (!g_geom_native) return false;
+    geom_list_stat(GL_START);
+    return spu_fast_cmdlist(s);
+}
+
 
 // ------------------------------------------------------------------ native job manager (runtime/spu_pm.cpp)
 // Each runs on the thread (cluster code with local registers writes them back first, tools/spu_aot.py) and returns

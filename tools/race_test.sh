@@ -6,6 +6,7 @@
 # usage: tools/race_test.sh <run dir name> [VAR=value ...]
 cd "$(dirname "$0")/.." || exit 1
 [ -n "$SOUND" ] || export SDL_AUDIO_DRIVER=dummy   # silent (same pacing); SOUND=1 to hear the run
+[ -n "$SHOW" ] || export F1CE_HIDDEN=1   # no window on the desktop; SHOW=1 to see the run
 GAME="C:/Users/user/Desktop/Repos/F1_CE_PS3/F1_CE_PS3_og/PS3_GAME"
 name="$1"; shift
 d="dbg/$name"; rm -rf "$d"; mkdir -p "$d"; cp -r dbg/menu/ps3_data "$d/"
