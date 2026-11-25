@@ -186,6 +186,62 @@ void SPUThread::flush_blocks() {
     memset(line_code, 0, sizeof(line_code));
 }
 
+// Generated native code entered by the dispatcher (spu_ops.h SpuNativeImage): workload w0's job (F1CE_W0_NATIVE=0 runs
+// the SPU code), the job manager (F1CE_PM_GEN=0; its hand-written functions are F1CE_PM_NATIVE) and the geometry job's
+// resume points (with its command loop, F1CE_GEOM_NATIVE).
+extern const SpuNativeImage g_spu_native_w0, g_spu_native_pm, g_spu_native_geom;
+static const bool g_w0_native = !(getenv("F1CE_W0_NATIVE") && atoi(getenv("F1CE_W0_NATIVE")) == 0);
+bool g_pm_gen = !(getenv("F1CE_PM_GEN") && atoi(getenv("F1CE_PM_GEN")) == 0);
+bool g_native_stats = getenv("F1CE_NATIVE_STATS") && atoi(getenv("F1CE_NATIVE_STATS")) != 0;
+
+// the generated entry for a block at pc, when its image is in the local store
+static void (*spu_native_entry(const SPUThread& t, u32 pc))(SPUThread&) {
+    const SpuNativeImage* images[] = {g_w0_native ? &g_spu_native_w0 : nullptr, g_pm_gen ? &g_spu_native_pm : nullptr,
+                                      g_geom_native ? &g_spu_native_geom : nullptr};
+    for (const SpuNativeImage* img : images) {
+        if (!img || pc < img->lo || pc >= img->hi) continue;
+        const SpuNativeEntry* e = std::lower_bound(img->entries, img->entries + img->n, pc,
+                                                   [](const SpuNativeEntry& a, u32 v) { return a.pc < v; });
+        if (e == img->entries + img->n || e->pc != pc) continue;
+        bool same = true;
+        for (u32 i = 0; i < img->hdr_n && same; i++) same = t.ls32(img->hdr_ls + 4 * i) == img->hdr[i];
+        if (same) return e->fn;
+    }
+    return nullptr;
+}
+
+// F1CE_NATIVE_STATS: entries per second and where the entered code stopped early (image:entry@pc), every 10 s
+void spu_native_stat(const char* image, u32 entry, bool returned, u32 pc) {
+    static std::mutex m;
+    static std::map<std::string, u64> n;
+    static u64 window = 0, calls = 0, stops = 0;
+    std::lock_guard lk(m);
+    calls++;
+    if (!returned) {
+        stops++;
+        char k[48];
+        snprintf(k, sizeof(k), "%s:%05x@%05x", image, entry, pc);
+        n[k]++;
+    }
+    const u64 now = time_usec();
+    if (!window) window = now;
+    if (now - window < 10000000) return;
+    const double secs = (now - window) / 1e6;
+    std::vector<std::pair<u64, std::string>> v;
+    for (auto& [k, c] : n) v.push_back({c, k});
+    std::sort(v.rbegin(), v.rend());
+    std::string line;
+    for (size_t i = 0; i < v.size() && i < 12; i++) {
+        char b[80];
+        snprintf(b, sizeof(b), " %s %.0f/s", v[i].second.c_str(), v[i].first / secs);
+        line += b;
+    }
+    LOG_I("native entries: %.0f/s, %.0f/s stopped early:%s", calls / secs, stops / secs, line.c_str());
+    n.clear();
+    calls = stops = 0;
+    window = now;
+}
+
 // decodes the basic block at pc (reusing the slot's previous block object): up to 256 instructions, ending
 // after a branch or stop
 // Each slot keeps up to 8 variants: job code DMA'd into a shared LS buffer alternates between a few binaries, and a
@@ -235,6 +291,13 @@ SPUThread::Block* SPUThread::build_block(u32 pc) {
                 v->nlines = c.nlines;
                 v->cluster = (s32)ci;
             }
+        }
+        if (void (*fn)(SPUThread&) = no_aot ? nullptr : spu_native_entry(*this, pc)) {   // generated call trees
+            v->native = fn;
+            v->count_n = 0;
+            v->lines = nullptr;
+            v->nlines = 0;
+            v->cluster = -1;
         }
         v->home = v->lines ? v->lines[0] >> LINES_PER_REGION_SHIFT : v->line0 >> LINES_PER_REGION_SHIFT;
         if (v->lines) for (u32 i = 0; i < v->nlines; i++) link_region(v->lines[i], v->home);

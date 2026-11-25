@@ -984,6 +984,27 @@ void geom_op_back();
 template <int N, class S> bool spu_skip_geom_op(S&) { geom_op_enter(N); return false; }
 template <class S> bool spu_skip_geom_back(S&) { geom_op_back(); return false; }
 
+// Images whose generated native code (tools/spu_native_fn.py: workload w0's job, the job manager) the dispatcher enters
+// at the head of a block: the roots and the resume points of their functions (spu.cpp spu_native_entry). An entry runs
+// until a return or until it stops with the pc where the SPU code continues; either way the dispatcher goes on from the
+// pc. The image is recognised by the words at hdr_ls (its id), the block's own words by the block cache.
+struct SpuNativeEntry { u32 pc; void (*fn)(SPUThread&); };
+struct SpuNativeImage {
+    const char* name;
+    u32 hdr_ls;
+    const u32* hdr;
+    u32 hdr_n;
+    const SpuNativeEntry* entries;   // pc order
+    u32 n;
+    u32 lo, hi;   // code range
+};
+extern bool g_native_stats;   // F1CE_NATIVE_STATS=1: `native entries:` line every 10 s
+void spu_native_stat(const char* image, u32 entry, bool returned, u32 pc);
+extern int g_native_check;   // spu_pm.cpp spu_native_check (F1CE_NATIVE_CHECK)
+extern bool g_pm_gen;        // spu.cpp: the job manager's generated code in use (F1CE_PM_GEN)
+bool spu_native_call_pm(SPUThread& s, u32 ret);   // generated/spu_geom/pm_native.cpp: an indirect call into it
+void spu_native_check(const char* image, u32 entry, bool (*fn)(SPUThread&), const SPUThread& t);
+
 // 05960 (from 04bbc): the job's command interpreter (GEOMETRY_JOB.md). The prologue, the operand gathering of each command
 // and the stream advance are the SPU code's instructions (generated from the disassembly); the handler call at 05c84
 // goes to a native handler when there is one, else to the SPU handler through a nested run until it returns to 05c88.

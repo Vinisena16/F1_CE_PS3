@@ -80,5 +80,41 @@ the gain must come from whole call trees running natively (no dispatcher round t
 - [x] Generated functions on local register copies (SpuLocal, 74 of 82; the 8 with channel instructions stay on the
   thread): exact, but no measurable change (30.4/31.2, 29.9/32.2, 30.4/32.1 fps = +5% against the SPU job, same as
   before within noise): register memory traffic is not what limits this code.
+- [x] (2026-11-25) The same generator for workload w0's job and the job manager (`tools/spu_native_fn.py`, images
+  GEOM / W0 / PM -> `generated/spu_geom/{geom,w0,pm}_native.cpp`).
+  - w0's job: blob guest `0x10094700`, `0xA040` bytes at LS `0x4000` (the frame job list writer; a second small blob
+    `0x10093700` alternates with it in w0). Position-independent: entry `0x4030` (header word `0x30`), constructor
+    `0x41D8`, main `0x41F0` reached by `br` with r0 set by hand; `brsl rX,next` = pc into a register; interrupts
+    off / on with `brsl rT,next; ai rT,rT,8; bi rT (d/e)`; main's switch at `0x5298` through the offset table at
+    `0x52A0`; job manager services through the table pointer at `0xE020`. 9 functions, 8329 instructions.
+  - Job manager: roots `0xA00` (main loop at `0x2A10`, continuations set by hand: `ila r0,next; br f`), event handler
+    `0x21C0`, the services; the hand-written natives of `spu_pm.cpp` entered at their heads. 39 functions, 2510
+    instructions. Its hot spots were already native (the DMA and atomics of `spu_pm.cpp`).
+  - Entered by the dispatcher (`spu.cpp` `spu_native_entry`, when a block is built and the image's id words at its
+    base match): the roots and resume points (return points of calls, targets of interrupt enables), 395 + 63. These
+    images never nest runs: code that cannot finish natively (a call out of the image, a job launch, a halt, a pending
+    interrupt) unwinds to the dispatcher, which comes back in at the next resume point (a nested run could hold the
+    thread for good when the job manager leaves for the SPURS kernel). Every `bi` goes through the label switch;
+    backward branches take pending interrupts. `F1CE_W0_NATIVE=0` / `F1CE_PM_GEN=0` switch them off,
+    `F1CE_NATIVE_STATS=1` logs entries and early stops (costly), `F1CE_NATIVE_CHECK=1/2/3` compares entries with the
+    interpreter on copies (every 4096th / 64th / every entry, DMA puts only logged).
+  - Check: 37 w0 and 15 job manager entry points compared, no real difference (the differences seen are the queue line
+    other SPUs change between the two runs, at LS `0x90`, and a decrementer read in the w0 entry).
+  - Speed, 60 fps + LOD0, vsync off: off 29.2 / 27.9 / 29.5 / 28.5 fps, on 34.0 / 33.1 / 35.2 / 32.9 / 32.6 / 33.7 / 34.3 /
+    34.1 fps = +15-20% (SPU instructions per frame 108 M -> ~100 M; the gain is dispatch, not work).
+  - OPEN: an intermittent stall with both images on: 1 of 10 stress runs (on3, ~5 s at 1.5-17 fps) and 1 of 5 150 s
+    races at 30 fps (`long30`, 15 s of 0.4-1.3 s frames ~105 s into the race; all workers idle, every ready count 0,
+    wkl 6/7/8 queues holding jobs, main sleeping in fn 0x48AC34). Not seen in 7 runs with one image only or 5 with
+    both off (too few to pin it on one image).
+  - Stall hunt (a dump of the SPURS state on frames over 300 ms, `hle_gcm.cpp`): 0 stalls in 10 + 10 paired stress
+    runs and 5 + 5 paired 150 s races at 30 fps. In all, 2 stalls in ~44 runs with the generated code, 0 in ~24 without.
+- [x] Geometry job resume points (dispatcher entries, nesting kept; targets of `ila rT,next; bi rT (e/d)` too: 124
+  entries) and indirect calls from job images straight into the job manager's generated code (`spu_native_call_pm`):
+  dispatcher entries 1.8 M/s -> 1.3 M/s, no measurable fps change (33.6 / 33.9 / 33.6 against 29.2 / 29.1 / 29.0 off).
+  With the generated code the stress test is renderer-bound now (rsx 0.92-0.93 core): further SPU savings show as
+  lower CPU use, not fps, on this machine.
+- Profile after (60 fps + LOD0): w1/w2 (geometry) ~62% of samples, w0 ~16%, w6/w7/w8 ~10% (the audio jobs, blob
+  `0x10080880` `0x1C30` bytes, hot loop `0x5778` already the native idiom `spu_idiom_audio_voice`; code ~5.6%, job
+  manager ~4.2%).
 - [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
   handlers that issue DMA.
