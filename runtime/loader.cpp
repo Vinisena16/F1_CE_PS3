@@ -215,6 +215,8 @@ int main(int argc, char** argv) {
     start_profiler();
     extern void start_host_profiler();
     start_host_profiler();
+    extern void start_discord_rpc();
+    start_discord_rpc();
     if (getenv("F1CE_SPU_BENCH")) { extern void spu_bench(); spu_bench(); exit(0); }
     LoadedProcess p = load_elf(elf);
     std::vector<u8>().swap(elf);
