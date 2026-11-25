@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <bit>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -46,6 +47,7 @@ void sub_001C04DC(PPUContext& __restrict c);
 void sub_001BFDB0(PPUContext& __restrict c);
 void sub_000CB0E4(PPUContext& __restrict c);
 void sub_0011E7B0(PPUContext& __restrict c);
+void sub_00113F90(PPUContext& __restrict c);
 
 namespace {
 
@@ -577,6 +579,118 @@ void diversify_pit_strategies(PPUContext& c, u32 track_logic) {
           race_dist * 100.0f, total_laps, counts[1], counts[2], counts[3]);
 }
 
+// ------------------------------------------------------------------ Tyre wear & degradation (F1CE_TYRE_WEAR)
+//
+// In the retail game, sub_00113F90 (UpdateTyreTempAndWear) reads four per-compound floats copied from dynamics.bin
+// section 9 into car + 0x37C..0x388:
+//   +0x37C  high-speed/load wear rate  (dry hard 0.070, dry soft 0.085, inter 0.350, wet 0.7875)
+//   +0x380  base rolling wear rate     (dry 0.0175, inter 0.035, wet 0.045)
+//   +0x384  wear cliff threshold       (dry 0.375 -> 0% grip drop for the first 37.5% of wear)
+//   +0x388  max grip loss at 100% wear (dry hard 0.065, dry soft 0.075 -> barely felt even on bald tyres)
+// Both human (car + 0x2E0 == 0) and AI (car + 0x2E0 != 0) accumulate per-wheel wear in car + 0x8B0 [0..1],
+// but the retail code skips L_114DDC (wear grip penalty) for AI cars and writes final 4-wheel tyre grip to car + 0x4D0.
+// When enabled, tyre_wear_hook temporarily scales +0x37C..+0x388 while 0x113F90 runs (restoring originals right after),
+// and applies matching proportional grip degradation to AI cars' car + 0x4D0 so tyre management and undercuts are fair.
+
+enum class TyreWearMode { original, mild, medium, realistic, high, custom };
+
+struct TyreWearConfig {
+    TyreWearMode mode = TyreWearMode::original;
+    float dry_mult = 1.0f;
+    float soft_extra = 1.0f;
+    float wet_mult = 1.0f;
+    float dry_threshold = 0.375f;
+    float hard_loss = 0.065f;
+    float soft_loss = 0.075f;
+    float wet_loss = 0.095f;
+    const char* label = "original";
+};
+
+TyreWearConfig parse_tyre_wear() {
+    TyreWearConfig cfg;
+    const char* env = getenv("F1CE_TYRE_WEAR");
+    if (!env || !*env) return cfg;
+    std::string s(env);
+    for (char& ch : s) ch = (char)tolower((unsigned char)ch);
+    if (s == "0" || s == "off" || s == "original") return cfg;
+    if (s == "mild" || s == "1.5") {
+        cfg.mode = TyreWearMode::mild;
+        cfg.dry_mult = 1.5f;
+        cfg.soft_extra = 1.12f;
+        cfg.wet_mult = 1.15f;
+        cfg.dry_threshold = 0.22f;
+        cfg.hard_loss = 0.15f;
+        cfg.soft_loss = 0.18f;
+        cfg.wet_loss = 0.15f;
+        cfg.label = "mild (1.5x)";
+        return cfg;
+    }
+    if (s == "medium" || s == "2.0") {
+        cfg.mode = TyreWearMode::medium;
+        cfg.dry_mult = 2.0f;
+        cfg.soft_extra = 1.12f;
+        cfg.wet_mult = 1.20f;
+        cfg.dry_threshold = 0.20f;
+        cfg.hard_loss = 0.16f;
+        cfg.soft_loss = 0.19f;
+        cfg.wet_loss = 0.16f;
+        cfg.label = "medium (2.0x)";
+        return cfg;
+    }
+    if (s == "1" || s == "realistic" || s == "on" || s == "2.5") {
+        cfg.mode = TyreWearMode::realistic;
+        cfg.dry_mult = 2.5f;
+        cfg.soft_extra = 1.12f;
+        cfg.wet_mult = 1.25f;
+        cfg.dry_threshold = 0.20f;
+        cfg.hard_loss = 0.16f;
+        cfg.soft_loss = 0.19f;
+        cfg.wet_loss = 0.16f;
+        cfg.label = "realistic (2.5x)";
+        return cfg;
+    }
+    if (s == "2" || s == "high" || s == "heavy" || s == "3.5") {
+        cfg.mode = TyreWearMode::high;
+        cfg.dry_mult = 3.5f;
+        cfg.soft_extra = 1.15f;
+        cfg.wet_mult = 1.40f;
+        cfg.dry_threshold = 0.15f;
+        cfg.hard_loss = 0.22f;
+        cfg.soft_loss = 0.26f;
+        cfg.wet_loss = 0.20f;
+        cfg.label = "high (3.5x)";
+        return cfg;
+    }
+    char* end = nullptr;
+    float v = strtof(env, &end);
+    if (end && end != env && std::isfinite(v) && v >= 0.5f && v <= 6.0f) {
+        cfg.mode = TyreWearMode::custom;
+        cfg.dry_mult = v;
+        float t = std::clamp((v - 1.0f) / 2.5f, 0.0f, 1.0f);
+        cfg.soft_extra = 1.0f + 0.15f * t;
+        cfg.wet_mult = 1.0f + 0.35f * t;
+        cfg.dry_threshold = 0.25f - 0.10f * t;
+        cfg.hard_loss = 0.14f + 0.08f * t;
+        cfg.soft_loss = 0.17f + 0.09f * t;
+        cfg.wet_loss = 0.14f + 0.06f * t;
+        cfg.label = "custom";
+    }
+    return cfg;
+}
+
+const TyreWearConfig& tyre_wear_config() {
+    static const TyreWearConfig cfg = [] {
+        TyreWearConfig c = parse_tyre_wear();
+        if (c.mode != TyreWearMode::original) {
+            LOG_I("tyre_wear: %s (dry x%.2f, soft extra x%.2f, wet x%.2f, cliff %.0f%%, max grip loss %.0f%%/%.0f%%)",
+                  c.label, c.dry_mult, c.soft_extra, c.wet_mult,
+                  c.dry_threshold * 100.0f, c.hard_loss * 100.0f, c.soft_loss * 100.0f);
+        }
+        return c;
+    }();
+    return cfg;
+}
+
 }  // namespace
 
 // 0x1D5F50(trackData, stream): loads the .tbf section-6 AI segment speed tables into trackData + 0xEC.
@@ -616,5 +730,100 @@ bool ai_pit_strategies_hook(PPUContext& c) {
     sub_000CB0E4(c);
     inside = false;
     diversify_pit_strategies(c, track_logic);
+    return true;
+}
+
+// 0x113F90(car): updates tyre temperature, per-wheel wear (car + 0x8B0), and final 4-wheel tyre grip (car + 0x4D0).
+bool tyre_wear_hook(PPUContext& c) {
+    static thread_local bool inside = false;
+    const TyreWearConfig& cfg = tyre_wear_config();
+    if (inside || cfg.mode == TyreWearMode::original) return false;
+
+    const u32 car = (u32)c.r[3];
+    // Bit 1 of car + 0x1148 is SET when tyre wear is active (0x114988 runs when (flags & 2) != 0)
+    if (!(ld32(car + 0x1148) & 0x2u)) return false;
+
+    const u32 orig_hi_u = ld32(car + 0x37C);
+    const u32 orig_base_u = ld32(car + 0x380);
+    const u32 orig_thr_u = ld32(car + 0x384);
+    const u32 orig_loss_u = ld32(car + 0x388);
+
+    const float orig_hi = std::bit_cast<float>(orig_hi_u);
+    const float orig_base = std::bit_cast<float>(orig_base_u);
+    const float orig_thr = std::bit_cast<float>(orig_thr_u);
+    const float orig_loss = std::bit_cast<float>(orig_loss_u);
+
+    // Dry compounds have orig_hi < 0.20 (hard 0.070, soft 0.085); inter (0.35) and wet (0.7875) already wear fast.
+    const bool is_dry = orig_hi > 0.001f && orig_hi < 0.20f;
+    const bool is_soft = is_dry && orig_hi >= 0.080f;
+
+    const float rate_mult = is_dry ? (cfg.dry_mult * (is_soft ? cfg.soft_extra : 1.0f)) : cfg.wet_mult;
+    const float new_hi = orig_hi * rate_mult;
+    const float new_base = orig_base * rate_mult;
+    const float new_thr = is_dry ? std::min(orig_thr, cfg.dry_threshold) : std::min(orig_thr, 0.35f);
+    const float new_loss = is_dry ? (is_soft ? cfg.soft_loss : cfg.hard_loss) : std::max(orig_loss, cfg.wet_loss);
+
+    const u32 mine_hi_u = std::bit_cast<u32>(new_hi);
+    const u32 mine_base_u = std::bit_cast<u32>(new_base);
+    const u32 mine_thr_u = std::bit_cast<u32>(new_thr);
+    const u32 mine_loss_u = std::bit_cast<u32>(new_loss);
+
+    st32(car + 0x37C, mine_hi_u);
+    st32(car + 0x380, mine_base_u);
+    st32(car + 0x384, mine_thr_u);
+    st32(car + 0x388, mine_loss_u);
+
+    inside = true;
+    sub_00113F90(c);
+    inside = false;
+
+    if (ld32(car + 0x37C) == mine_hi_u) st32(car + 0x37C, orig_hi_u);
+    if (ld32(car + 0x380) == mine_base_u) st32(car + 0x380, orig_base_u);
+    if (ld32(car + 0x384) == mine_thr_u) st32(car + 0x384, orig_thr_u);
+    if (ld32(car + 0x388) == mine_loss_u) st32(car + 0x388, orig_loss_u);
+
+    // Apply proportional wear grip degradation to AI cars too (retail skips L_114DDC when car + 0x2E0 != 0)
+    const bool is_ai = ld8(car + 0x2E0) != 0;
+    float w[4], avg_w = 0.0f;
+    for (int i = 0; i < 4; i++) {
+        w[i] = std::clamp(ldf(car + 0x8B0 + 4 * i), 0.0f, 1.0f);
+        avg_w += w[i];
+    }
+    avg_w *= 0.25f;
+
+    static float s_ai_wear_sum = 0.0f;
+    static int s_ai_wear_cnt = 0;
+
+    if (is_ai) {
+        s_ai_wear_sum += avg_w;
+        s_ai_wear_cnt++;
+        const float denom = std::max(0.05f, 1.0f - new_thr);
+        const float ai_loss = new_loss * 0.75f;  // fair stint pace drop without making AI spin out
+        for (int i = 0; i < 4; i++) {
+            const float blended = 0.5f * (w[i] + avg_w);
+            const float eff = std::clamp((blended - new_thr) / denom, 0.0f, 1.0f);
+            stf(car + 0x8D0 + 4 * i, eff);
+            const float grip = ldf(car + 0x4D0 + 4 * i);
+            if (grip > 0.0f && eff > 0.0f) {
+                stf(car + 0x4D0 + 4 * i, grip * (1.0f - eff * ai_loss));
+            }
+        }
+    } else if (avg_w > 0.005f) {
+        using clock = std::chrono::steady_clock;
+        static auto s_last_log = clock::now() - std::chrono::seconds(20);
+        auto now = clock::now();
+        if (now - s_last_log >= std::chrono::seconds(15)) {
+            s_last_log = now;
+            const float denom = std::max(0.05f, 1.0f - new_thr);
+            const float eff = std::clamp((avg_w - new_thr) / denom, 0.0f, 1.0f);
+            const float grip_mult = 1.0f - eff * new_loss;
+            const float ai_avg = s_ai_wear_cnt > 0 ? (s_ai_wear_sum / (float)s_ai_wear_cnt) : 0.0f;
+            s_ai_wear_sum = 0.0f;
+            s_ai_wear_cnt = 0;
+            LOG_I("tyre_wear: player FL=%.0f%% FR=%.0f%% RL=%.0f%% RR=%.0f%% (%s, grip x%.3f) | ai_avg=%.0f%%",
+                  w[0] * 100.0f, w[1] * 100.0f, w[2] * 100.0f, w[3] * 100.0f,
+                  is_dry ? (is_soft ? "soft" : "hard") : "wet/inter", grip_mult, ai_avg * 100.0f);
+        }
+    }
     return true;
 }

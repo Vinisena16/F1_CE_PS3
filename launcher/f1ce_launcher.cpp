@@ -147,6 +147,14 @@ Combo g_combos[] = {
      {{L"Original", nullptr}, {L"Realistic variety (1/2/3-stop)", L"1"}}, 0, GAME,
      L"Mixes 1-stop, 2-stop and 3-stop AI strategies across the grid in 50%/75%/100% races (in the original game, "
      L"100% races skip the strategy randomiser and give every AI team the same stop count)."},
+    {L"Tyre wear", L"F1CE_TYRE_WEAR",
+     {{L"Original", nullptr},
+      {L"Mild (1.5x + grip drop)", L"1.5"},
+      {L"Medium (2.0x + grip drop)", L"2.0"},
+      {L"Realistic (2.5x + grip drop)", L"1"},
+      {L"High (3.5x)", L"2"}}, 0, GAME,
+     L"Accelerates dry tyre wear (soft faster than hard) and increases end-of-stint grip drop for both player and AI "
+     L"(1.5x is ideal for 50% scaled races; 2.0x-2.5x suits 100% races)."},
     // in-game cameras (runtime/hle_camera.cpp): the second TV pod camera of the view cycle as a broadcast T-cam, and
     // the right stick turning the chase cameras
     {L"Onboard TV camera", L"F1CE_TVCAM",
