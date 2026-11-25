@@ -204,8 +204,10 @@ std::vector<Option> make_options() {
                        "prepares the shaders again (a few minutes with OpenGL)."));
     v.push_back(choice(VIDEO, "Car detail distance", "F1CE_CAR_LOD",
                        {{"Near (x0.5, lighter)", "0.5"}, {"Original (15/25/50 m)", nullptr}, {"Far (x2)", "2"},
-                        {"Very far (x4)", "4"}},
-                       1, "How far away the cars switch to their simpler models (15, 25 and 50 m in the original)."));
+                        {"Very far (x4)", "4"}, {"LOD0 only", "0"}},
+                       1, "How far away the cars switch to their simpler models (15, 25 and 50 m in the original). "
+                          "LOD0 only: every car always uses its full model, its shadow too (for imported car models "
+                          "without matching LOD1/LOD2). Costs CPU and GPU time."));
     v.push_back(choice(VIDEO, "Crowd", "F1CE_CROWD", {{"On (original)", nullptr}, {"Off", "0"}}, 0,
                        "Off: empty grandstands in every session, as the game does in Time Trial. A little lighter "
                        "on the CPU and GPU. The crowd's sound stays."));

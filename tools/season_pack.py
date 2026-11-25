@@ -112,6 +112,7 @@ import functools
 import hashlib
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -489,6 +490,22 @@ class Game:
         self.wads = {a: wad.Wad(self.usrdir / a) for a in ARCHIVES}
         names = [n.strip() for n in open(Path(__file__).with_name('wad_names.txt'), encoding='latin1') if n.strip()]
         self.names = list({wad.name_hash(n): n for n in reversed(names)}.values())   # one spelling per hash
+        self.unpacked = {}      # (archive, path) -> data unpacked by preload, taken by scene()
+
+    def preload(self, items, what):
+        """Unpacks the compressed entries of [(archive, path)] on every core, for scene() (the figures are ~190 MB of
+        LZSS: half a minute on one core)."""
+        jobs = []
+        for archive, path in dict.fromkeys(items):
+            e = self.wads[archive].by_hash.get(wad.name_hash(path))
+            if e is not None and e[2] != e[3] and (archive, path) not in self.unpacked:
+                jobs.append((archive, path, e))
+        if not jobs:
+            return
+        with concurrent.futures.ProcessPoolExecutor() as pool:
+            for i, data in enumerate(pool.map(unpack_entry, [(self.wads[a].path, e) for a, _, e in jobs])):
+                self.unpacked[jobs[i][:2]] = data
+                progress(i + 1, len(jobs), what)
 
     def get(self, archive, path):
         # the car models are read once per texture: keep them unpacked (LZSS in Python, ~0.5 s each)
@@ -498,7 +515,7 @@ class Game:
 
     @functools.lru_cache(maxsize=None)
     def scene(self, archive, path):
-        data = self.wads[archive].get(path)
+        data = self.unpacked.pop((archive, path), None) or self.wads[archive].get(path)
         try:
             return sg.SceneGraph(data) if data is not None else None
         except ValueError as e:      # the other mesh storage kind (some classic drivers' heads), not decoded
@@ -508,6 +525,14 @@ class Game:
     def where(self, path):
         """Archives that have an entry of this path."""
         return [a for a in ARCHIVES if wad.name_hash(path) in self.wads[a].by_hash]
+
+
+def unpack_entry(job):
+    """Game.preload worker: one archive entry, unpacked."""
+    path, (_, offset, size, stored) = job
+    with open(path, 'rb') as f:
+        f.seek(offset)
+        return wad.lzss_decode(f.read(stored), size)
 
 
 def garage_models(game, model):
@@ -536,6 +561,8 @@ def model_sources(game, team, model):
 def figure_sources(game, ents):
     """The drivers' garage and podium figure textures (face, hair, cap, eyes, teeth, overalls; one PNG for the same
     texture in both): {pack path: [(archive, wad path, texture key)]}."""
+    game.preload([(a, p) for d in ents['drivers'] if d.get('abbreviation')
+                  for a, p, _ in figure_models(d['abbreviation'])], 'reading the garage and podium figures')
     out = {}
     for d in ents['drivers']:
         if not d.get('abbreviation'):
@@ -909,7 +936,15 @@ def cmd_figures(usrdir, pack, models):
     ents = entities.export(entities.parse(game.get('offline.wad', 'entities.bin')))
     sources = {rel: t for rel, t in figure_sources(game, ents).items() if rel not in manifest['files']}
     if sources:
-        write_images(pack, sources, game, manifest)
+        # pictures put in the pack by hand under a game texture's name are kept: the template gets the original's
+        # sha1 (decoded aside), so build takes them as edited
+        kept = {rel: t for rel, t in sources.items() if (pack / rel).exists()}
+        if len(kept) < len(sources):
+            write_images(pack, {rel: t for rel, t in sources.items() if rel not in kept}, game, manifest)
+        if kept:
+            with tempfile.TemporaryDirectory() as tmp:
+                write_images(Path(tmp), kept, game, manifest)
+            log(f'{len(kept)} figure textures already in the pack kept: ' + ', '.join(sorted(kept)))
         for rel in sources:
             if rel in manifest['files']:
                 manifest['files'][rel]['used_in'] = used_in(rel, manifest['files'][rel]['targets'])
