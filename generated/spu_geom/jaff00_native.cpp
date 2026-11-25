@@ -826,6 +826,7 @@ L_0bc70:
 L_0bc78:
     s.pc = 0x0BC78; s.instructions++; op_stopd(s, 0x28000000u);   // 0bc78 stopd r0,r0,r0
     if (s.halted) { s.pc = 0x0BC7C; return false; }
+    s.pc = 0x0BC7C; return false;
 }
 bool jaff00fn_0e3e8(SPUThread& s, u32 at) {
     u32 to;
@@ -1364,6 +1365,7 @@ L_0f6fc:
 L_0f704:
     s.pc = 0x0F704; s.instructions++; op_stopd(s, 0x28000000u);   // 0f704 stopd r0,r0,r0
     if (s.halted) { s.pc = 0x0F708; return false; }
+    s.pc = 0x0F708; return false;
 }
 bool run_04040(SPUThread& s) { jaff00fn_04040(s); return true; }   // (for the check)
 bool run_0b830(SPUThread& s) { jaff00fn_0b830(s); return true; }   // (for the check)

@@ -1603,6 +1603,7 @@ L_0632c:
 L_06350:
     s.pc = 0x06350; s.instructions++; op_stop(s, 0x00006370u);   // 06350 stop 0x2370
     if (s.halted) { s.pc = 0x06354; return false; }
+    s.pc = 0x06354; return false;
 }
 bool geomfn_066b8(SPUThread& s, u32 at) {
     u32 to;

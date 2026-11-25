@@ -393,7 +393,7 @@ def generate(img):
             else:
                 body.append(f"    s.instructions++; {name}({x}, 0x{w:08X}u);{c}")
         last_t, last_op = ops(pcs[-1])
-        if last_op not in ("br", "bra", "bi", "iret", "stop", "stopd"):
+        if last_op not in ("br", "bra", "bi", "iret"):   # (a stop that does not halt goes on: the SPU code continues)
             body.append(f"    {WB}s.pc = 0x{(pcs[-1] + 4) & 0x3FFFC:05X}; return false;")
         body.append("}")
         out += body
