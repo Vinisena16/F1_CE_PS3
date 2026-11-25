@@ -130,5 +130,16 @@ the gain must come from whole call trees running natively (no dispatcher round t
   (the index cache eviction walk); per frame vertices ~7 ms, textures 2.2, programs 1.3. Tried: a mixing hash with
   power-of-two buckets for the draw path's maps (their lookups were the hottest addresses of `draw()`): 56.4 fps both
   ways, reverted.
+- [x] Renderer index lists (commit 2de4f10): timers in `gather_indices` showed the per-draw list path (lookup + hash
+  1.2 ms, build 0.6 ms per frame) behind index regions that fall back for rewritten buffers; ~1350 of ~1700 rebuilt
+  lists per frame are one-shot (geometry job output at new places). Keys seen for the first time skip the hash and
+  the map; pointer caches in front of the maps. 56.4 / 57.0 / 57.4 -> 57.6 / 58.8 / 58.9 fps, rsx 0.95 -> 0.92, index
+  ~2.4 -> ~1.7 ms, flip 5.1% -> 1.2% of the renderer (smaller map to evict).
+- Renderer profile after (line tables via `-gline-tables-only` on rsx_vk / rsx_common / rsx.cpp, `llvm-symbolizer`):
+  `draw()` 22%, FIFO parsing 10.6%, `hash_range` 9.3% (5.3% the sparse sampling loop: static mesh / texture checks),
+  `hash_fp` 2.8% (fragment program hash every draw). Left: fewer sparse checks (a streamed mesh seen a frame later),
+  FP hash per address (programs patched in place: needs write tracking), or FIFO parsing on its own thread (large).
+  One GL boot run hit "RSX: unmapped IO offset 1f800000" (FIFO parse of float data, before any draw); the rerun and the
+  baseline were fine: intermittent, see the FIFO stale tail notes.
 - [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
   handlers that issue DMA.
