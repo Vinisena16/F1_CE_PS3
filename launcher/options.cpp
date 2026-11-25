@@ -117,6 +117,15 @@ std::vector<Option> make_options() {
                        "In 100% races the original game assigns the same pit stop count to every AI team. Realistic "
                        "variety mixes 1-stop, 2-stop and 3-stop strategies across the grid (50%/75%/100% races), "
                        "staggering teammates and recalculating stint fuel automatically."));
+    v.push_back(choice(GENERAL, "Tyre wear", "F1CE_TYRE_WEAR",
+                       {{"Original", nullptr},
+                        {"Mild (1.5x + grip drop)", "1.5"},
+                        {"Medium (2.0x + grip drop)", "2.0"},
+                        {"Realistic (2.5x + grip drop)", "1"},
+                        {"High (3.5x)", "2"}}, 0,
+                       "In the original game dry tyres wear very slowly and lose only 6.5-7.5% grip at 100% wear. "
+                       "1.5x is ideal for 50% scaled races; 2.0x-2.5x suits 100% realistic races. Lowers the grip-drop "
+                       "threshold, raises end-of-stint grip loss (soft wears faster than hard), and degrades AI tyres fairly."));
     v.push_back(header(GENERAL, "Discord"));
     v.push_back(toggle(GENERAL, "Discord Rich Presence", "F1CE_DISCORD_RPC",
                        "Shows your current circuit, team and lap on Discord via local IPC (requires a numeric "
