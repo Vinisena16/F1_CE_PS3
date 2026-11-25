@@ -1002,6 +1002,14 @@ class App(tk.Tk):
         self._build_ui()
         self.set_launcher_dir(launcher_dir)
         self.after(100, self._poll)
+        self.protocol('WM_DELETE_WINDOW', self.close)
+
+    def close(self):
+        # the task's output goes to this window: closing it stops the task part way
+        if self.busy and not messagebox.askyesno('Content Manager', 'Still working (see the bar at the bottom). '
+                                                 'Closing now stops the task and leaves it half done. Close anyway?'):
+            return
+        self.destroy()
 
     # ------------------------------------------------------------------ layout
     def _build_ui(self):

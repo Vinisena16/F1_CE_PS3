@@ -31,6 +31,7 @@ def name_hash(path: str) -> int:
 
 
 _BITS = [format(i, '08b') for i in range(256)]
+_BYTE = {b: i for i, b in enumerate(_BITS)}
 
 
 def lzss_decode(src: bytes, size: int) -> bytes:
@@ -42,7 +43,7 @@ def lzss_decode(src: bytes, size: int) -> bytes:
     n = 0
     while n < size:
         if s[p] == '1':
-            out.append(int(s[p + 1:p + 9], 2))
+            out.append(_BYTE[s[p + 1:p + 9]])
             p += 9
             n += 1
         else:
@@ -52,9 +53,12 @@ def lzss_decode(src: bytes, size: int) -> bytes:
             # output index of window position wp: the most recent i < n with (1 + i) & 0x1FFF == wp; the game copies
             # byte by byte (read before write), so position wp + k holds index i + k, older than the k-th new byte
             i = n - 1 - ((n - wp) & 0x1FFF)
-            for k in range(ln):
-                j = i + k
-                out.append(out[j] if j >= 0 else 0)
+            if 0 <= i and i + ln <= n:
+                out += out[i:i + ln]        # no overlap with the new bytes: one slice
+            else:
+                for k in range(ln):
+                    j = i + k
+                    out.append(out[j] if j >= 0 else 0)
             n += ln
     del out[size:]
     return bytes(out)
