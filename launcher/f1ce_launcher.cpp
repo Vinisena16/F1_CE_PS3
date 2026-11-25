@@ -138,6 +138,15 @@ Combo g_combos[] = {
      L"Improved low: the suspension absorbs kerb hits, so an aggressive kerb no longer throws the car in the air and "
      L"spins it. Improved high: also no tyre grip while a wheel is off the ground, so a car that jumps a kerb no longer "
      L"twists in the air and spins on landing. Original: the game's own suspension."},
+    // AI pace balancing and pit stop strategy variety (runtime/hle_ai.cpp)
+    {L"AI pace", L"F1CE_AI_PACE",
+     {{L"Original", nullptr}, {L"Balanced (Melbourne/Suzuka)", L"balanced"}, {L"Fast", L"fast"}}, 0, GAME,
+     L"Balances weak AI circuits (Magny-Cours, Bahrain, Hungary, Nürburgring, etc.) up to the Melbourne and Suzuka "
+     L"benchmark by lifting under-baked corner speeds at track load. Fast: raises cornering pace on all circuits."},
+    {L"AI pit strategies", L"F1CE_AI_STRATEGIES",
+     {{L"Original", nullptr}, {L"Realistic variety (1/2/3-stop)", L"1"}}, 0, GAME,
+     L"Mixes 1-stop, 2-stop and 3-stop AI strategies across the grid in 50%/75%/100% races (in the original game, "
+     L"100% races skip the strategy randomiser and give every AI team the same stop count)."},
     // in-game cameras (runtime/hle_camera.cpp): the second TV pod camera of the view cycle as a broadcast T-cam, and
     // the right stick turning the chase cameras
     {L"Onboard TV camera", L"F1CE_TVCAM",
@@ -228,6 +237,7 @@ Check g_checks[] = {
      L"Experimental:|flashing shadows, odd pit stop animations, broken replay and ghost car behaviour. "
      L"Turn it off if anything goes wrong."},
     {L"Skip the language menu and the intro (start at Press Start)", L"F1CE_SKIP_INTRO", GAME},
+    {L"Discord Rich Presence", L"F1CE_DISCORD_RPC", GAME},
     {L"No log file (keep it off when reporting a bug)", L"F1CE_NO_LOG", GAME},
     // Developer Tools: labels are the variables, the notes their tooltips (README, "Debugging aids")
     {L"--trace", L"--trace", DEV_LOG, L"Logs every HLE call and syscall (very slow)."},
@@ -278,6 +288,7 @@ Check g_checks[] = {
 };
 
 Field g_fields[] = {
+    {L"F1CE_DISCORD_APP_ID", GAME, L"Numeric Application ID from https://discord.com/developers/applications (optional asset key: f1ce)."},
     {L"F1CE_SPU_DUMP_BLOCKS", DEV_VALUES, L"File: records SPU blocks without a translation (input of tools/spu_aot.py)."},
     {L"F1CE_HOST_PROFILE", DEV_VALUES, L"Seconds: then samples the SPU worker threads for 10 s (hottest host functions)."},
     {L"F1CE_SPU_PROFILE", DEV_VALUES, L"Seconds after the SPU workers start: samples workload and SPU pc every ms for 10 s."},

@@ -106,6 +106,24 @@ std::vector<Option> make_options() {
                        "throws the car in the air and spins it. Improved high: also no tyre grip while a wheel is off "
                        "the ground, so a car that jumps a kerb no longer twists in the air and spins on landing. "
                        "Original: the game's own suspension."));
+    v.push_back(header(GENERAL, "AI"));
+    v.push_back(choice(GENERAL, "AI pace", "F1CE_AI_PACE",
+                       {{"Original", nullptr}, {"Balanced (Melbourne/Suzuka)", "balanced"}, {"Fast", "fast"}}, 0,
+                       "Balances weak AI circuits (Magny-Cours, Bahrain, Hungary, Nürburgring, etc.) up to the Melbourne "
+                       "and Suzuka Hard-AI benchmark by lifting under-baked corner speeds in each track's speed table. "
+                       "Fast: raises AI cornering pace across every track."));
+    v.push_back(choice(GENERAL, "AI pit strategies", "F1CE_AI_STRATEGIES",
+                       {{"Original", nullptr}, {"Realistic variety (1/2/3-stop)", "1"}}, 0,
+                       "In 100% races the original game assigns the same pit stop count to every AI team. Realistic "
+                       "variety mixes 1-stop, 2-stop and 3-stop strategies across the grid (50%/75%/100% races), "
+                       "staggering teammates and recalculating stint fuel automatically."));
+    v.push_back(header(GENERAL, "Discord"));
+    v.push_back(toggle(GENERAL, "Discord Rich Presence", "F1CE_DISCORD_RPC",
+                       "Shows your current circuit, team and lap on Discord via local IPC (requires a numeric "
+                       "Application ID below from https://discord.com/developers/applications)."));
+    v.push_back(greyed(text(GENERAL, "Discord App ID", "F1CE_DISCORD_APP_ID",
+                            "Numeric Application ID from the Discord Developer Portal (optional asset key: f1ce)."),
+                       "F1CE_DISCORD_RPC", nullptr));
     v.push_back(header(GENERAL, "Custom camera"));
     v.push_back(choice(GENERAL, "Onboard TV camera", "F1CE_TVCAM",
                        {{"On", nullptr}, {"On, tune with the numpad", "tune"}, {"Off (original camera)", "0"}}, 0,
