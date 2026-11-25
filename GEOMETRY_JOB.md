@@ -141,5 +141,10 @@ the gain must come from whole call trees running natively (no dispatcher round t
   FP hash per address (programs patched in place: needs write tracking), or FIFO parsing on its own thread (large).
   One GL boot run hit "RSX: unmapped IO offset 1f800000" (FIFO parse of float data, before any draw); the rerun and the
   baseline were fine: intermittent, see the FIFO stale tail notes.
+- Pre-merge checks (2026-11-25): Linux cross build (zig) clean after fixing three generated functions that ran off
+  their end after a trailing stop (commit 4c79354); test AppImage `out/F1CE-x86_64-native-test.AppImage`. Scenario set
+  at 30 fps, no FATAL and no stall in any: 420 s race (Silverstone, Vulkan), heavy rain (Spain), Monaco Time Trial
+  (AI drive, 240 s), Quick Race -> pause -> Replay (viewer works), OpenGL race (Monza), f1ce_online boot to its menus.
+  Not covered: a LAN / online race, the PGO build (not used for releases).
 - [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
   handlers that issue DMA.
