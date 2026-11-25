@@ -41,11 +41,13 @@
 
 #include "kernel.h"
 
-void sub_001D5F50(PPUContext& __restrict c);
-void sub_001C04DC(PPUContext& __restrict c);
-void sub_001BFDB0(PPUContext& __restrict c);
-void sub_000CB0E4(PPUContext& __restrict c);
-void sub_0011E7B0(PPUContext& __restrict c);
+// (weak: the multiplayer executable f1ce_online is translated from ONLINE.BIN without these functions; it also has none
+// of the hooks below - tools/recomp.py installs them in the EBOOT's code only - so nothing calls them there)
+__attribute__((weak)) void sub_001D5F50(PPUContext& __restrict c);
+__attribute__((weak)) void sub_001C04DC(PPUContext& __restrict c);
+__attribute__((weak)) void sub_001BFDB0(PPUContext& __restrict c);
+__attribute__((weak)) void sub_000CB0E4(PPUContext& __restrict c);
+__attribute__((weak)) void sub_0011E7B0(PPUContext& __restrict c);
 
 namespace {
 
