@@ -951,18 +951,29 @@ template <class S> bool spu_skip_tri_search(S& s) {
     if (g_spu_cull_check) spu_search_check(s.gpr, s.ls);
     return spu_fast_tri_search(s);
 }
+extern bool g_geom_op_prof;   // hle_geom.cpp (F1CE_GEOM_OP_PROF=1): time per command handler (and these two loops)
+void geom_op_prof(u32 handler, u64 tsc);
+extern void (*g_geom_snap)(const SPUThread& s, const char* where);   // hle_geom.cpp (F1CE_GEOM_SNAP): debug snapshots
 template <class S> bool spu_skip_vertex_transform(S& s) {
+    if (__builtin_expect(g_geom_snap != nullptr, 0)) g_geom_snap(s, "xform");
     if (g_spu_cull_check) spu_xform_check(s.gpr, s.ls);
-    return spu_fast_vertex_transform(s);
+    const u64 t0 = __builtin_expect(g_geom_op_prof, 0) ? __rdtsc() : 0;
+    const bool r = spu_fast_vertex_transform(s);
+    if (t0) geom_op_prof(1, __rdtsc() - t0);
+    return r;
 }
 template <class S> bool spu_skip_triangle_cull(S& s) {
+    if (__builtin_expect(g_geom_snap != nullptr, 0)) g_geom_snap(s, "cull");
     if (g_spu_cull_check) spu_cull_check(s.gpr, s.ls);
     if (g_spu_nocull) {
         s.set_pref(13, s.pref(33) * 8);
         s.pc = 0xDDF0;
         return true;
     }
-    return spu_fast_triangle_cull(s);
+    const u64 t0 = __builtin_expect(g_geom_op_prof, 0) ? __rdtsc() : 0;
+    const bool r = spu_fast_triangle_cull(s);
+    if (t0) geom_op_prof(2, __rdtsc() - t0);
+    return r;
 }
 
 // ------------------------------------------------------------------ geometry job functions (LS 0x4000, guest 0x100A1280)
@@ -1017,6 +1028,9 @@ void geom_stop_stat_log(u32 handler, u32 pc);   // spu.cpp: where native handler
 void geom_list_stat_log(GeomListEvent e);   // spu.cpp: counts, logged as `geom lists:` every 10 s
 FORCE_INLINE void geom_stop_stat(u32 handler, u32 pc) { if (__builtin_expect(g_native_stats, 0)) geom_stop_stat_log(handler, pc); }
 FORCE_INLINE void geom_list_stat(GeomListEvent e) { if (__builtin_expect(g_native_stats, 0)) geom_list_stat_log(e); }
+// hle_geom.cpp (F1CE_GEOM_NJ): command handlers replaced by the native job; true when it did the handler's work
+extern bool (*g_geom_nj_handler)(SPUThread& s, u32 handler);
+extern bool (*g_geom_nj_list)(SPUThread& s);   // and the whole command list (0x5960), run from C++
 template <class S> bool spu_fast_cmdlist(S& s) {
     static_assert(std::is_same_v<S, SPUThread>);
     op_lqd(s, 0x3408C182u);   // 05960 lqd r2,560(r3)
@@ -1220,9 +1234,12 @@ template <class S> bool spu_fast_cmdlist(S& s) {
         const u32 handler = s.pref(6) & 0x3FFFC;
         s.set_pref(0, 0x5C88);
         s.instructions += 152;
-        if (!geom_native_handler(s, handler)) s.pc = handler;
+        const u64 prof_t0 = __builtin_expect(g_geom_op_prof, 0) ? __rdtsc() : 0;
+        if (__builtin_expect(g_geom_nj_handler != nullptr, 0) && g_geom_nj_handler(s, handler)) s.pc = 0x5C88;   // hle_geom.cpp
+        else if (!geom_native_handler(s, handler)) s.pc = handler;
         else if (s.pc != 0x5C88) { geom_list_stat(GL_NATIVE_STOPPED); geom_stop_stat(handler, s.pc); }
         s.run_until(0x5C88);   // the SPU handler, or the rest of a native one that stopped early
+        if (prof_t0) geom_op_prof(handler, __rdtsc() - prof_t0);
         if (s.halted || s.pc != 0x5C88) { geom_list_stat(GL_HALTED); return true; }   // the SPU code carries on
         op_lqx(s, 0x3898E883u);   // 05c8c lqx r3,r81,r99
         op_a(s, 0x1818E882u);   // 05c90 a r2,r81,r99
@@ -1271,6 +1288,13 @@ template <class S> bool spu_skip_cmdlist(S& s) {
     static_assert(std::is_same_v<S, SPUThread>);
     if (!g_geom_native) return false;
     geom_list_stat(GL_START);
+    if (__builtin_expect(g_geom_nj_list != nullptr, 0) && g_geom_nj_list(s)) return true;   // hle_geom.cpp: the native job's list
+    if (__builtin_expect(g_geom_op_prof, 0)) {   // the whole list (slot 3)
+        const u64 t0 = __rdtsc();
+        const bool r = spu_fast_cmdlist(s);
+        geom_op_prof(3, __rdtsc() - t0);
+        return r;
+    }
     return spu_fast_cmdlist(s);
 }
 

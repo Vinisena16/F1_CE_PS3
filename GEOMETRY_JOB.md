@@ -148,3 +148,148 @@ the gain must come from whole call trees running natively (no dispatcher round t
   Not covered: a LAN / online race, the PGO build (not used for releases).
 - [ ] Semantic rewrites of the hottest generated functions (host profile names them), DMA-safe check mode for the
   handlers that issue DMA.
+
+## Without the policy module (`F1CE_GEOM_HLE=1`, `runtime/hle_geom.cpp`, 2026-11-26)
+
+Step 1 of `GEOMETRY_HLE_HANDOFF.md`. The worker that the SPURS scheduler gives w1 / w2 (same rules, ready counts and
+contention as before) runs the jobs itself instead of the job manager: grab from the queue, the job on a private SPU of
+the worker thread (its own code, generated / translated as before), a native stand-in for the PM's services.
+
+What a geometry job gets from the PM (from the PM's code and a dump of its buffer lists, `F1CE_GEOM_DUMP` in spu_pm.cpp):
+- Queue entry `0x00300001 desc`: kind 1, `(w0 >> 16) & 511` = 0x30 bytes of descriptor fetched to LS 0xC00. The
+  descriptor is a buffer list: declare set 0 (blocks 0x10.., 0x3C blocks: the binary) and set 1 (block 0x58, 32 KB),
+  fetch the binary into set 0 (mode 0x2000: kept while the next job names the same EA), gather set 1 by a DMA list at
+  desc + 0x1C (= desc - 0x80), release both declarations, end.
+- Job record in main memory, 0x160 bytes per job: matrix (0x40), 0x20 of flags, the DMA list (8 elements), the command
+  stream (0x40), the descriptor (0x30), params (0x30: done-window EAs 0x10414F80 / 0x10414E80, output RSX offset and
+  EA, ...). The gather list: 0x100 from the command stream on, params, 0x70 shared constants, the matrix, 0x50
+  constant (0x1001FC00), then the piece's data in RSX-visible memory (0x20 header, vertex data, index data).
+- Command stream: halfwords, opcode in the high byte. A typical piece: `op4(0x100) op6(0xF8,0) op8(0x230,0)
+  op9(0x270,1,0) op12(0xE80,0xBC,0) op14(0x130) op15(0x1A0) op30 op35 op37 op0`: operands are offsets into the
+  gathered set-1 buffer (params, vertex format, vertex data, source indices with the triangle count 0xBC, shared
+  constants, matrix). op30 releases set 1 and calls job end; op35 = transform + cull (0xD400); op37 packs the kept
+  triangles to 6-byte index triples (0x10780); op0 streams them out (list put, a 16-byte per-SPU record, a 4-byte put,
+  a PUTLLUC).
+- Main (0x47F8) declares set 2 (block 0x78, 64 KB, context) and set 3 (block 0xB8, two 30 KB elements) through service
+  +0x30 with lists on its stack. Services used: +0x30, +0x34 (DMA info), +0x44 (job end), +0x48 (release).
+- Table at LS 0x1340: SPU number, SPURS EA (+0x0C), workload << 16 | job index (+0x10), queue (+0x18), params pointer
+  (+0x20). Entry = binary + header word +0x10 (0x4080), r3 = 0x1340, r4 = e0 >> 28, r1 = 0x3FFD0.
+- Done: the PM's per-SPU halfword in the queue line (set by the grab's atomic update to the job index, 0xFFFF when it
+  holds no job) and counters from type-4 list entries (none seen for geometry jobs).
+
+Result: renders the same (30 fps race, Silverstone); ~10k SPU instructions per job against ~13.4k with the PM, 0
+interpreted. A first version with a pool of threads of its own was as fast with 12 hardware threads (41.5 fps stress)
+but lost badly with `F1CE_CPUS=8` (31 against 35 fps): the extra threads took cores from the workers. The worker
+version was still slower until the job no longer started through `SPUThread::run()`: its `getenv` and flush check on
+every one of ~150k jobs/s cost more than the PM saved (run_until directly, FTZ set per workload run).
+
+Speed (carbench, Vulkan, AI drive, three alternating pairs, default = off):
+- 60 fps + `F1CE_CAR_LOD=0`, `F1CE_CPUS=8`: off 36.6 / 36.1 / 35.8 fps, on 41.1 / 43.2 / 42.0 (+16%); worker CPU
+  4.47-4.53 -> 4.29-4.34 cores; SPU instructions per frame (PM + job) ~13.4k -> ~10k per geometry job.
+- 60 fps, normal detail, `F1CE_CPUS=4` (Deck-like): off 25.4 / 26.7 / 26.7, on 32.6 / 32.9 / 32.2 (+24%); worker CPU
+  2.68 -> 2.50-2.55 cores.
+- Per job: ~16 us on a worker, 5.5 GETLLARs (the job's own ring / in-order atomics), ~1% of jobs over 50 us.
+
+Scenario set with `F1CE_GEOM_HLE=1` (30 fps, Vulkan unless noted), no FATAL: 420 s race, heavy rain (Spain), Quick Race
+-> pause -> Replay, OpenGL race (Monza), f1ce_online boot, three 150 s races (no stall). Monaco Time Trial: in 1 of 4
+runs a cluster of 0.6-1.6 s frames at 216 s (the w1 queue line showed one worker still holding job 0x69 with the head
+at 0xAA, i.e. one job ran ~1 s and the in-order jobs after it waited); not seen in 3 more runs, where no job took over
+100 ms. OPEN. Diagnostics: `geom hle: job ... took` (jobs over 100 ms), `geom hle jobs:` in the watchdog / stall dump
+(each worker's job, its time so far, pc, reservation line), `F1CE_GEOM_HLE_STATS=1` (GETLLARs per job, jobs over
+50 us), `F1CE_GEOM_HLE_TRACE=<n>` (the MFC commands of n jobs). The 3.4 s frame of another Time Trial run is the load
+point the baseline also has (no SPU work queued during it).
+
+Not done: step 2 (the semantic rewrite). With step 1 the job itself is what is left: ~10k SPU instructions per piece,
+~16 us. A rewrite of the 15 opcodes (vertex decode, transform, cull, index packing, the output ring / done records) is
+the next big item; the operand layout above is its starting point, and the private SPU of hle_geom.cpp gives an easy
+check (same job on both paths, compare the MFC puts).
+
+## Step 2: what a geometry job does to main memory (2026-11-26)
+
+Because a job now runs on a private SPU (`F1CE_GEOM_HLE`), a native replacement only has to reproduce its effects on
+guest memory, not its local store. `F1CE_GEOM_HLE_TRACE=<n>` logs every MFC command of n jobs with put data and the
+lines the atomics read. A typical mesh piece:
+1. Ring allocation (fn 0x4220, called from the streaming engine): GETLLAR / PUTLLC on line 0x10414F80, word 0 = ring
+   write pointer (0x35900000.., +size rounded up to 128 bytes, retried when the reservation is lost), word 4 = ring end
+   (0x35E00000).
+2. PUT of the kept triangles' indices (big-endian u16, 6 bytes per triangle, padded) to the allocated ring space.
+3. GET of the per-SPU done records (0x60 bytes at 0x10414F00).
+4. PUT of 0x30-0x40 bytes of RSX commands into the piece's slot of a command buffer (0x3124xxxx, from the params):
+   `0008181c <ring offset> 00000011` (SET_INDEX_ARRAY_ADDRESS: offset, u16 in main memory), `00041808 00000005`
+   (SET_BEGIN_END triangles), `40041824 <count-1 << 24>` (DRAW_INDEX_ARRAY), `00041808 00000000`, zero padding.
+5. GETLLAR on the in-order line 0x10414E80 (word 8 = 0x20001000, a kick address; words 12-13 counters), sometimes a
+   PUTLLC; a barrier; PUT of this SPU's 16-byte done record at 0x10414F00 + SPU * 0x10 (base, mask bits); for some
+   jobs a 4-byte PUT to the kick address and a PUTLLUC of the in-order line.
+
+Per-opcode time with the HLE path (60 fps + LOD0 stress, `F1CE_GEOM_OP_PROF=1`), per job ~16.4 us: setup 1.0 us,
+command list 13.5 us (handlers ~11.3, operand gathering ~2.1), rest of main ~1.2 us. Handlers: op35 3.3 us (native
+cull loop 1.8, native transform 0.5), op0 2.5, op9 2.0, op12 0.46, op37 0.47, op4 0.3, op8 / op14 / op15 ~0.25;
+op40 8.9 us and op32 5.4 us once per ~11 pieces.
+
+Tried: an eight-wide cull with AVX2 gathers from host-order x / y / z arrays: exact (77k checks with
+`F1CE_SPU_CULL_CHECK=1/2`) but slower on the Ryzen 5600G (2.6 against 1.8 us): gathers do not beat the four-wide loads
+and transposes. Removed. `F1CE_SPU_NOCULL` (keep every triangle) adds ~10% vertices and ~17% draws but needs GPU-side
+back-face culling to look the same (single-sided transparent parts); left for step 3.
+
+Next: a native job for the common shape (ops 4 6 8 9 12 14 15 30 35 37 0, attribute mask 1) that reads the job record
+directly and writes 1-5 itself, checked against the SPU job run dry (puts logged, atomics on a copy).
+
+## Native job (`F1CE_GEOM_NJ=1`, `runtime/geom_native_job.cpp` + `hle_geom.cpp`, 2026-11-26)
+
+Shapes (`F1CE_GEOM_SHAPES=1`): w1 and w2 get the same job counts (the same lists twice). ~96% of jobs are
+`4 6 8 9[1] 12 14 [15] 30 35 37 0` with op8 word 2 = 0x00100000 (positions only, the first word varies 0x1C-0x30);
+the rest add ops 23 24 32 40 and more attributes (~30 us each, declined: still ~0.5 cores at the stress test).
+
+What the covered shape computes (from the job's code, checked against snapshots `F1CE_GEOM_SNAP` and the checks below):
+op9 positions = packed big-endian float3; op12 = u16 triangles; op14 copies 0x68 bytes (viewport words, three projection
+rows, the w row, half sizes, near value), op15 0x40 (world matrix, identity without it). 0xD400: Ci = Pi W, the
+viewport scale with a +k (0.5 / 0.0625) on y, then the transform and cull of spu_ops.h with constants c34 = 2^-23,
+c45 = 2^-22, c55 = 0x28800000, c52 = near, c71 / c69 = scissor width / height, c57 = facing sign from byte 1 of the
+viewport word. The cull list is (a b c a) entries compacted in place; the slot after the kept ones holds the last
+triangle dropped after them (padding).
+
+The native job keeps the SPU code for everything that reaches main memory (op4, op12, op30, op37, op0: the index ring,
+the RSX commands, the in-order completion) and replaces the rest:
+- the kept triangles computed at the job's start straight from its input (8-wide transform, 4-wide cull, same
+  operations in the same order);
+- op35 writes them into the list and sets ctx[384] = kept * 3, ctx[388] = 0, ctx[1152] = 1;
+- the stream is rewritten without ops 6 8 9 14 15 (they only fed op35);
+- the command list (0x5960) runs from C++: [ctx+352] = the command, r3 = context, r4 / r5 = the 32 stream bytes from
+  it (also at 64 / 80 of the loop's frame), r0 = 0x5C88, then [ctx+352] += 2 * length; r1 and r0 as the caller's at
+  the end (generated callers compare r0 with the pc).
+
+Checks: `F1CE_GEOM_NJ_CHECK=1` (kept triangles against the job's index put: 1.7 M jobs, 0 differences);
+`F1CE_GEOM_NJ=2` (every 16th job twice from the same state, native with dry DMA then the original for real; puts compared
+without atomics, the index ring by data, RSX command slots by total index count since the draw chunks follow the ring
+address: 127k jobs, 0 differences, also in the other order with `F1CE_GEOM_NJ_REGDIFF=1`). Lesson: the list runner first
+read the stream 2 bytes late (a register dump aligned down misread) and "worked" for a few jobs by luck.
+
+Per covered job (stress, `F1CE_GEOM_OP_PROF=1`): 15.6 us with the HLE alone -> 11.8 us (setup 4.05 incl. the native
+computation 2.1, run 7.76: op0 2.4, op37 0.47, op12 ~0.46, op4 0.34, op35 0.32, op30 0.15, the job's main and entry ~3.5).
+
+Speed (carbench, three alternating pairs, `F1CE_GEOM_HLE=1` alone against `+ F1CE_GEOM_NJ=1`):
+- 60 fps + `F1CE_CAR_LOD=0`, `F1CE_CPUS=8`: 44.9 / (crash, see below) / 44.3 -> 47.4 / 47.1 / 47.4 fps (+6%; the renderer
+  is near its limit here, rsx 0.93); worker CPU 4.34-4.38 -> 4.00-4.03 cores.
+- 60 fps, normal detail, `F1CE_CPUS=4`: 31.1 / 31.2 / 30.8 -> 34.9 / 35.3 / 36.0 fps (+14%); worker CPU 2.25-2.35 ->
+  1.99-2.17 cores. Against the original path (~26.3 fps there) about +35%.
+- The HLE-only run of pair 2 died in the menus with the music stream's read fault at 0x40000000 (thread 0x0100000C,
+  workload 4, which the HLE does not touch): the MP3 decode poll race of 2026-11-09 on a path its probe does not cover
+  ("job polls" never logged). Not caused by this work; the clamp in 0xB3A7C noted then is the fallback.
+
+Scenario set with `F1CE_GEOM_HLE=1 F1CE_GEOM_NJ=1` (30 fps): 420 s race (23 M native jobs), heavy rain Spain, Monaco
+Time Trial, Quick Race -> pause -> Replay, f1ce_online boot, three 150 s races: no FATAL, no stall. OpenGL Monza: the
+first run died at boot with the known intermittent "RSX: unmapped IO offset 1f800000 (put=00012060 get=0004442c)"
+before any 3D (no geometry job had run); the rerun passed (7 M native jobs).
+
+## Step 4 so far: branch `rsx-parse-thread` on top (2026-11-26)
+
+The commit 75c623d (FIFO parsing on its own thread) applied to this branch's tree (its core.cpp hunk merged by hand: the
+futex helpers out of the anonymous namespace, 32 line slots kept). With `F1CE_GEOM_HLE=1 F1CE_GEOM_NJ=1`, three
+alternating pairs, `F1CE_FIFO_THREAD=0` against the default (on):
+- 60 fps + LOD0, 8 CPUs: 48.1 / 48.1 / 47.7 -> 47.9 / 47.4 / 47.6 fps (no change; renderer thread 0.93 -> 0.83 core).
+- 60 fps, 4 CPUs: 34.9 / 34.5 / 35.3 -> 37.4 / 38.1 / 39.0 fps (+9%).
+In the stress case no thread is saturated any more (workers ~0.8, renderer ~0.8, main ~0.7 core, ~6.2 of 8 CPUs): the
+frame is bound by its dependency chain (main waits for jobs, jobs for main), so shorter jobs help and renderer work such
+as write tracking (`hash_range` ~9% of the renderer) would not raise the frame rate on this machine. Write tracking
+not started: PPU writes would need page protection; worth it only where the renderer thread is the limit.
+4 CPUs in all: original path ~26.3 fps -> HLE 31.0 -> native job 35.4 -> parse thread 38.2.

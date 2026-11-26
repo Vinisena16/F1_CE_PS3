@@ -152,15 +152,7 @@ void sleep_usec(u64 us) {
     std::this_thread::sleep_for(std::chrono::microseconds(us));
 }
 // ---- blocking waits on guest memory lines (ppu_runtime.h)
-namespace {
-struct alignas(64) LineSlot {
-    std::atomic<u32> line0{~0u}, line1{~0u};
-    std::atomic<u32> seq{0};
-    std::atomic<u32> sleeping{0};
-};
-LineSlot g_line_slots[16];
-std::atomic<u32> g_line_slots_used{0};   // high-water mark: guest_written_slow scans slots below it
-std::atomic<u32> g_line_slots_taken{0};  // bit per slot owned by a live thread
+// (also the render queue, hle_gcm.cpp)
 void futex_wait(std::atomic<u32>* a, u32 expected, u32 timeout_ms) {
 #ifdef _WIN32
     WaitOnAddress((volatile void*)a, &expected, sizeof(u32), timeout_ms);
@@ -176,12 +168,21 @@ void futex_wake_all(std::atomic<u32>* a) {
     syscall(SYS_futex, (u32*)a, FUTEX_WAKE_PRIVATE, 0x7fffffff, nullptr, nullptr, 0);
 #endif
 }
+namespace {
+struct alignas(64) LineSlot {
+    std::atomic<u32> line0{~0u}, line1{~0u};
+    std::atomic<u32> seq{0};
+    std::atomic<u32> sleeping{0};
+};
+LineSlot g_line_slots[32];
+std::atomic<u32> g_line_slots_used{0};   // high-water mark: guest_written_slow scans slots below it
+std::atomic<u32> g_line_slots_taken{0};  // bit per slot owned by a live thread
 }  // namespace
 std::atomic<u32> g_line_waiters{0};
 
 void guest_written_slow(u32 ea, u32 size) {
     const u32 first = ea & ~127u, last = (ea + std::max(size, 1u) - 1) & ~127u;
-    const u32 n = std::min<u32>(g_line_slots_used.load(std::memory_order_acquire), 16);
+    const u32 n = std::min<u32>(g_line_slots_used.load(std::memory_order_acquire), 32);
     for (u32 i = 0; i < n; i++) {
         LineSlot& s = g_line_slots[i];
         const u32 l0 = s.line0.load(std::memory_order_relaxed), l1 = s.line1.load(std::memory_order_relaxed);
@@ -200,7 +201,7 @@ LineSlot& my_line_slot() {
     if (t_line_slot < 0) {
         u32 taken = g_line_slots_taken.load(std::memory_order_relaxed);
         do {
-            if (taken == 0xFFFF) fatal("line_wait: more than 16 waiting threads");
+            if (taken == 0xFFFFFFFFu) fatal("line_wait: more than 32 waiting threads");
             t_line_slot = __builtin_ctz(~taken);
         } while (!g_line_slots_taken.compare_exchange_weak(taken, taken | 1u << t_line_slot));
         u32 used = g_line_slots_used.load(std::memory_order_relaxed);

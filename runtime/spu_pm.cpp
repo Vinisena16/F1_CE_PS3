@@ -293,6 +293,23 @@ bool Pm::buffers() {
     bool ok = true;      // r10
     bool wrote = false;  // r9: a write-back was started for the last entry that needed blocks of the other slot
     n += 16;
+    static const int geom_dump = getenv("F1CE_GEOM_DUMP") ? atoi(getenv("F1CE_GEOM_DUMP")) : 0;
+    if (geom_dump && t.ls32(0x4020) == 0xC0DEC0DE && t.ls32(0x4014) == 0xEC20) {   // debug: geometry job buffer lists
+        static std::atomic<int> dumped{0};
+        static const u64 t0 = time_usec();
+        if (time_usec() - t0 > 15000000ull && dumped++ < geom_dump) {
+            std::string s;
+            char b[40];
+            for (u32 a = e; a < e + 0x80; a += 8) {
+                snprintf(b, sizeof(b), " %08x:%08x", rd32(a), rd32(a + 4));
+                s += b;
+                if (((rd32(a) >> 9) & 7) == 5 || ((rd32(a) >> 9) & 7) == 7) break;
+            }
+            LOG_I("geomdump: spu %u list %05x slot %u other %u ret %05x tbl %08x %08x %08x %08x %08x %08x %08x %08x "
+                  "[%08x]:%s", t.id, e, slot, other, ret, rd32(0x1340), rd32(0x1344), rd32(0x1348), rd32(0x134c),
+                  rd32(0x1350), rd32(0x1354), rd32(0x1360), rd32(0x1364), rd32(0x1400), s.c_str());
+        }
+    }
     for (;;) {
         // 0x1a1c
         const u32 w0 = rd32(e), w1 = rd32(e + 4), ea = e;   // ea: r14
@@ -885,6 +902,27 @@ bool Pm::grab() {
         stq(0x14B0, 0);
         set_r3(e0, e1, 0, h);
         inflight_add(ea, h);
+        static const int geom_dump = getenv("F1CE_GEOM_DUMP") ? atoi(getenv("F1CE_GEOM_DUMP")) : 0;
+        if (geom_dump && (ea == 0x10C15100 || ea == 0x10C29100)) {   // debug: job descriptors of w1/w2
+            static std::atomic<int> dumped{0};
+            static const u64 t0 = time_usec();
+            {   // every binary seen in the queue, once
+                static std::mutex m;
+                static std::map<u64, u32> seen;
+                std::lock_guard lk(m);
+                const u64 key = (u64)ea << 32 | ld32(e1 + 0x14);
+                if (seen[key]++ == 0) LOG_I("geomdump: queue %08x first job of binary %08x: entry %08x %08x", ea, ld32(e1 + 0x14), e0, e1);
+            }
+            if (time_usec() - t0 > 15000000ull && dumped++ < geom_dump / 8) {
+                std::string s;
+                char b[16];
+                for (u32 k = 0; k < 0x200; k += 4) {
+                    snprintf(b, sizeof(b), "%s%08x", k % 32 ? " " : "\n  ", ld32(e1 - 0x80 + k));
+                    s += b;
+                }
+                LOG_I("geomdump: queue %08x job %u entry %08x %08x spu %u:%s", ea, h, e0, e1, spu, s.c_str());
+            }
+        }
         static const bool skip_log = getenv("F1CE_PM_SKIP_LOG") != nullptr;
         if (skip_log) {   // debug: a job that follows a long run of skips (also over several grabs)
             static int logged = 0;
