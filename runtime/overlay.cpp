@@ -10,6 +10,7 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <ctime>
 #include <unordered_map>
@@ -643,6 +644,214 @@ void draw_bar(ImDrawList* dl, float W, float H) {
     text(dl, F.medium, 14 * S, ImVec2(sx - ss, L.y1 - 24 * S), IM_COL32(180, 180, 180, 255), h);
 }
 
+// ------------------------------------------------------------------ FPS counter
+std::atomic<bool> g_fps_on{[] {
+    const char* e = getenv("F1CE_SHOW_FPS");
+    return e && *e && atoi(e) != 0;
+}()};
+u64 g_fps_win_start = 0;
+u32 g_fps_win_frames = 0;
+int g_fps_disp = 0;
+float g_ms_disp = 0.0f;
+bool g_fps_valid = false;
+
+void update_fps(u64 now) {
+    if (!g_fps_win_start) {
+        g_fps_win_start = now;
+        g_fps_win_frames = 0;
+        return;
+    }
+    g_fps_win_frames++;
+    const u64 elapsed = now - g_fps_win_start;
+    if (elapsed >= 500000) {
+        g_fps_disp = (int)std::lround(g_fps_win_frames * 1e6 / (double)elapsed);
+        g_ms_disp = (float)((double)elapsed / (g_fps_win_frames * 1000.0));
+        g_fps_valid = true;
+        g_fps_win_start = now;
+        g_fps_win_frames = 0;
+    }
+}
+
+void draw_fps(ImDrawList* dl, float W, float H) {
+    const float S = std::min(W / 1280.0f, H / 720.0f);
+    char num[16], ms[24];
+    if (g_fps_valid) {
+        snprintf(num, sizeof(num), "%d", g_fps_disp);
+        snprintf(ms, sizeof(ms), "%.1f ms", g_ms_disp);
+    } else {
+        snprintf(num, sizeof(num), "--");
+        snprintf(ms, sizeof(ms), "--.- ms");
+    }
+    const float sz_num = 22 * S, sz_tag = 15 * S, sz_ms = 15 * S;
+    const float min_w = text_w(F.black, sz_num, "888") + text_w(F.semi, sz_tag, " FPS") + 14 * S +
+                        text_w(F.medium, sz_ms, "88.8 ms") + 28 * S;
+    const float bw = std::max(min_w, 152 * S), bh = 32 * S;
+    const float x0 = 14 * S, x1 = x0 + bw;
+    const float y1 = H - 14 * S, y0 = y1 - bh;
+    dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y1), IM_COL32(16, 16, 16, 200));
+    dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + 4 * S, y1), RED);
+    float x = x0 + 12 * S;
+    text(dl, F.black, sz_num, ImVec2(x, y0 + 5 * S), WHITE, num);
+    x += text_w(F.black, sz_num, num) + 5 * S;
+    text(dl, F.semi, sz_tag, ImVec2(x, y0 + 10 * S), RED, "FPS");
+    const float mw = text_w(F.medium, sz_ms, ms);
+    text(dl, F.medium, sz_ms, ImVec2(x1 - 10 * S - mw, y0 + 10 * S), IM_COL32(190, 190, 190, 255), ms);
+}
+
+// ------------------------------------------------------------------ Fastest Lap / timing pill (F4 / F1CE_SHOW_LAPTIMES)
+std::atomic<bool> g_lap_on{[] {
+    const char* e = getenv("F1CE_SHOW_LAPTIMES");
+    return e && *e && atoi(e) != 0;
+}()};
+
+struct LapSnapshot {
+    bool in_session = false;
+    int ai_best_ticks = 0;
+    int ai_best_team = -1;
+    int human_best_ticks = 0;
+    float dt = 0.0f;
+    float wetness = 0.0f;
+};
+LapSnapshot g_lap;
+u64 g_lap_sample_at = 0;
+
+constexpr const char* kTeamTag[11] = {
+    "REN", "MCL", "FER", "TOY", "WIL", "HON", "RBR", "BMW", "MF1", "STR", "SAF"
+};
+
+std::string fmt_lap_time(int ticks, float dt) {
+    if (ticks <= 0 || dt <= 0.0f) return "--:--.---";
+    const double sec = (double)ticks * (double)dt;
+    const int total_ms = (int)std::lround(sec * 1000.0);
+    const int mins = total_ms / 60000;
+    const int secs = (total_ms / 1000) % 60;
+    const int ms = total_ms % 1000;
+    char b[24];
+    snprintf(b, sizeof(b), "%d:%02d.%03d", mins, secs, ms);
+    return b;
+}
+
+void sample_laptimes(u64 now) {
+    if (g_lap_sample_at && now - g_lap_sample_at < 500000) return;
+    g_lap_sample_at = now;
+    LapSnapshot cur;
+    if (!mem::readable(0x100DB3B8, 4) || !mem::readable(0x10041BA8, 4)) {
+        g_lap = cur;
+        return;
+    }
+    const u32 tl = ld32(0x100DB3B8);
+    if (!tl || !mem::readable(tl + 0x7F0, 4) || !mem::readable(tl + 0x1AC8, 11 * 12)) {
+        g_lap = cur;
+        return;
+    }
+    const u32 ti = ld32(tl + 0x7F0);
+    if (!ti || !mem::readable(ti, 0x20)) {
+        g_lap = cur;
+        return;
+    }
+    const float dt = std::bit_cast<float>(ld32(0x10041BA8));
+    if (!(dt > 0.005f && dt < 0.05f)) {
+        g_lap = cur;
+        return;
+    }
+    cur.in_session = true;
+    cur.dt = dt;
+    if (mem::readable(tl + 0x80C, 4)) {
+        const u32 w = ld32(tl + 0x80C);
+        if (w && mem::readable(w + 0x24, 4))
+            cur.wetness = std::clamp(std::bit_cast<float>(ld32(w + 0x24)), 0.0f, 1.0f);
+    }
+
+    for (int t = 0; t < 11; t++) {
+        for (int s = 0; s < 2; s++) {
+            const u32 car = ld32(tl + 0x1AC8 + (u32)(t * 12 + s * 4));
+            if (!car || !mem::readable(car + 0xCC, 4)) continue;
+            const s16 best = (s16)ld16(car + 0xC4 + 4);
+            if (best <= 0) continue;
+            bool is_human = (ld32(car + 0x64) & 2u) != 0;
+            if (!is_human) {
+                const u32 slot = ld32(car + 0x6C);
+                if (slot < 22 && mem::readable(tl + 0x1A5C + 4 * slot, 4) && ld32(tl + 0x1A5C + 4 * slot) == 0)
+                    is_human = true;
+            }
+            if (is_human) {
+                if (cur.human_best_ticks == 0 || best < cur.human_best_ticks) cur.human_best_ticks = best;
+            } else {
+                if (cur.ai_best_ticks == 0 || best < cur.ai_best_ticks) {
+                    cur.ai_best_ticks = best;
+                    cur.ai_best_team = t;
+                }
+            }
+        }
+    }
+
+    // Log whenever AI best lap or player best lap improves (useful for A/B benchmarks!)
+    static int s_logged_ai = 0, s_logged_hum = 0;
+    if (!cur.in_session || (cur.ai_best_ticks == 0 && cur.human_best_ticks == 0)) {
+        s_logged_ai = s_logged_hum = 0;
+    } else if (cur.ai_best_ticks != s_logged_ai || cur.human_best_ticks != s_logged_hum) {
+        s_logged_ai = cur.ai_best_ticks;
+        s_logged_hum = cur.human_best_ticks;
+        const char* tag = (cur.ai_best_team >= 0 && cur.ai_best_team < 11) ? kTeamTag[cur.ai_best_team] : "---";
+        std::string ai_s = fmt_lap_time(cur.ai_best_ticks, cur.dt);
+        std::string hu_s = fmt_lap_time(cur.human_best_ticks, cur.dt);
+        if (cur.ai_best_ticks > 0 && cur.human_best_ticks > 0) {
+            const double delta = (double)(cur.human_best_ticks - cur.ai_best_ticks) * (double)cur.dt;
+            LOG_I("laptimes: [wet %.0f%%] AI FL %s (%s) | YOU %s (%+.3fs)",
+                  cur.wetness * 100.0f, ai_s.c_str(), tag, hu_s.c_str(), delta);
+        } else {
+            LOG_I("laptimes: [wet %.0f%%] AI FL %s (%s) | YOU %s",
+                  cur.wetness * 100.0f, ai_s.c_str(), tag, hu_s.c_str());
+        }
+    }
+    g_lap = cur;
+}
+
+void draw_laptimes(ImDrawList* dl, float W, float H) {
+    if (!g_lap.in_session) return;
+    const float S = std::min(W / 1280.0f, H / 720.0f);
+    const ImU32 PURPLE = IM_COL32(176, 68, 232, 255);
+    const ImU32 GREEN = IM_COL32(96, 224, 128, 255);
+    const ImU32 AMBER = IM_COL32(255, 180, 72, 255);
+    const ImU32 DIM = IM_COL32(190, 190, 190, 255);
+
+    const std::string ai_t = fmt_lap_time(g_lap.ai_best_ticks, g_lap.dt);
+    const std::string hu_t = fmt_lap_time(g_lap.human_best_ticks, g_lap.dt);
+    const char* tag = (g_lap.ai_best_team >= 0 && g_lap.ai_best_team < 11) ? kTeamTag[g_lap.ai_best_team] : "";
+    char delta_buf[24] = "";
+    ImU32 delta_col = DIM;
+    if (g_lap.ai_best_ticks > 0 && g_lap.human_best_ticks > 0) {
+        const double d = (double)(g_lap.human_best_ticks - g_lap.ai_best_ticks) * (double)g_lap.dt;
+        snprintf(delta_buf, sizeof(delta_buf), "%+.2fs", d);
+        delta_col = d <= 0.0 ? GREEN : AMBER;
+    }
+
+    const float sz_lbl = 14 * S, sz_val = 17 * S, sz_sub = 14 * S;
+    const float bw = 226 * S, bh = 54 * S;
+    const float x1 = W - 14 * S, x0 = x1 - bw;
+    // Positioned below the game's native top-right lap timer so they never overlap
+    const float y0 = 92 * S, y1 = y0 + bh;
+    dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y1), IM_COL32(16, 16, 16, 200));
+    dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + 4 * S, y1), PURPLE);
+
+    // Row 1: AI Fastest Lap
+    const float r1 = y0 + 6 * S;
+    text(dl, F.semi, sz_lbl, ImVec2(x0 + 12 * S, r1 + 2 * S), PURPLE, "AI FL");
+    text(dl, F.black, sz_val, ImVec2(x0 + 62 * S, r1), WHITE, ai_t);
+    if (*tag) {
+        const float tw = text_w(F.semi, sz_sub, tag);
+        text(dl, F.semi, sz_sub, ImVec2(x1 - 10 * S - tw, r1 + 2 * S), DIM, tag);
+    }
+    // Row 2: Player Best Lap + delta vs AI FL
+    const float r2 = y0 + 30 * S;
+    text(dl, F.semi, sz_lbl, ImVec2(x0 + 12 * S, r2 + 2 * S), DIM, "YOU");
+    text(dl, F.black, sz_val, ImVec2(x0 + 62 * S, r2), WHITE, hu_t);
+    if (*delta_buf) {
+        const float dw = text_w(F.medium, sz_sub, delta_buf);
+        text(dl, F.medium, sz_sub, ImVec2(x1 - 10 * S - dw, r2 + 2 * S), delta_col, delta_buf);
+    }
+}
+
 // ------------------------------------------------------------------ frame
 Target g_target;
 std::unordered_map<ImTextureData*, SoftTex> g_texes;   // ImGui's textures (the font atlas): their pixels as ImGui keeps them
@@ -666,10 +875,24 @@ void imgui_init() {
 }
 }  // namespace
 
+void toggle_fps() {
+    const bool now_on = !g_fps_on.load();
+    g_fps_on.store(now_on);
+    LOG_I("overlay: FPS counter %s", now_on ? "on" : "off");
+}
+
+void toggle_laptimes() {
+    const bool now_on = !g_lap_on.load();
+    g_lap_on.store(now_on);
+    LOG_I("overlay: fastest lap overlay %s", now_on ? "on" : "off");
+}
+
 bool frame(u32 win_w, u32 win_h, Image* out) {
     static u64 last = 0;
     const u64 now = time_usec();
     g_last_frame = now;
+    update_fps(now);
+    sample_laptimes(now);
     if (!win_w || !win_h) return false;
     if (g_bar_active.load() && now - g_bar_at.load() > 500000) {   // no update: the race loop was left (menus)
         std::lock_guard lk(g_m);
@@ -677,7 +900,9 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
         g_bar_active = false;
         g_bar_input = {};
     }
-    if (!g_open.load() && !g_bar_active.load()) return false;
+    const bool fps_on = g_fps_on.load();
+    const bool lap_on = g_lap_on.load() && g_lap.in_session;
+    if (!g_open.load() && !g_bar_active.load() && !fps_on && !lap_on) return false;
     std::lock_guard lk(g_m);
     static bool inited = false;
     bool dialog = g_open.load() && g_st.kind != Kind::None;
@@ -686,19 +911,24 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
         update(pressed(g_st.serial));
         dialog = g_st.kind != Kind::None;   // (answered)
     }
-    if (!dialog) {
+    bool show_bar = false;
+    if (!dialog && g_bar_active.load()) {
         if (!inited) { imgui_init(); inited = true; }   // (the layout measures text)
         bar_mouse((float)win_w, (float)win_h);
-        if (!bar_visible((float)win_w, (float)win_h)) return false;
+        show_bar = bar_visible((float)win_w, (float)win_h);
     }
+    if (!dialog && !show_bar && !fps_on && !lap_on) return false;
     if (!inited) { imgui_init(); inited = true; }
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)win_w, (float)win_h);
     io.DeltaTime = last && now > last ? std::min((now - last) / 1e6f, 0.25f) : 1.0f / 60.0f;
     last = now;
     ImGui::NewFrame();
-    if (dialog) draw(ImGui::GetForegroundDrawList(), (float)win_w, (float)win_h);
-    else draw_bar(ImGui::GetForegroundDrawList(), (float)win_w, (float)win_h);
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    if (dialog) draw(dl, (float)win_w, (float)win_h);
+    else if (show_bar) draw_bar(dl, (float)win_w, (float)win_h);
+    if (fps_on) draw_fps(dl, (float)win_w, (float)win_h);
+    if (lap_on && !dialog) draw_laptimes(dl, (float)win_w, (float)win_h);
     ImGui::Render();
     ImDrawData* dd = ImGui::GetDrawData();
     bool tex_changed = false;

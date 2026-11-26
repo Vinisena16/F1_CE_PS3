@@ -18,6 +18,10 @@ struct Image {
 bool frame(u32 win_w, u32 win_h, Image* out);
 // The game reads a released pad while this is true: a dialog has the input (and until its buttons are let go).
 bool input_captured();
+// Toggles the on-screen FPS counter (also enabled at launch with F1CE_SHOW_FPS=1; F3 in-game).
+void toggle_fps();
+// Toggles the on-screen Fastest Lap / AI vs Player timing pill (F1CE_SHOW_LAPTIMES=1; F4 in-game).
+void toggle_laptimes();
 
 // ---- save data dialogs: called on the game's save threads, they block until the player answers
 struct SaveEntry {

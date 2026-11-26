@@ -143,6 +143,13 @@ Combo g_combos[] = {
      {{L"Original", nullptr}, {L"Balanced (Melbourne/Suzuka)", L"balanced"}, {L"Fast", L"fast"}}, 0, GAME,
      L"Balances weak AI circuits (Magny-Cours, Bahrain, Hungary, Nürburgring, etc.) up to the Melbourne and Suzuka "
      L"benchmark by lifting under-baked corner speeds at track load. Fast: raises cornering pace on all circuits."},
+    {L"AI wet pace", L"F1CE_AI_WET_DROP",
+     {{L"Original (PS3, -17%)", nullptr},
+      {L"Realistic (-20%)", L"0.20"},
+      {L"Balanced (-22%)", L"0.22"},
+      {L"Cautious (-25%)", L"0.25"}}, 0, GAME,
+     L"Slows AI cornering in light and heavy rain to match human wet-tyre grip (retail only slows AI by 17% in full "
+     L"heavy rain and skips slowdown above 288 km/h)."},
     {L"AI pit strategies", L"F1CE_AI_STRATEGIES",
      {{L"Original", nullptr}, {L"Realistic variety (1/2/3-stop)", L"1"}}, 0, GAME,
      L"Mixes 1-stop, 2-stop and 3-stop AI strategies across the grid in 50%/75%/100% races (in the original game, "
@@ -244,6 +251,8 @@ Check g_checks[] = {
     {L"Up to 60 fps (game speed unchanged)", L"F1CE_60FPS", FRAMERATE,
      L"Experimental:|flashing shadows, odd pit stop animations, broken replay and ghost car behaviour. "
      L"Turn it off if anything goes wrong."},
+    {L"Show FPS counter (F3 toggles it)", L"F1CE_SHOW_FPS", FRAMERATE},
+    {L"Show fastest lap (F4 toggles it)", L"F1CE_SHOW_LAPTIMES", FRAMERATE},
     {L"Skip the language menu and the intro (start at Press Start)", L"F1CE_SKIP_INTRO", GAME},
     {L"Discord Rich Presence", L"F1CE_DISCORD_RPC", GAME},
     {L"No log file (keep it off when reporting a bug)", L"F1CE_NO_LOG", GAME},

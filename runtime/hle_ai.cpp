@@ -42,12 +42,15 @@
 
 #include "kernel.h"
 
-void sub_001D5F50(PPUContext& __restrict c);
-void sub_001C04DC(PPUContext& __restrict c);
-void sub_001BFDB0(PPUContext& __restrict c);
-void sub_000CB0E4(PPUContext& __restrict c);
-void sub_0011E7B0(PPUContext& __restrict c);
-void sub_00113F90(PPUContext& __restrict c);
+// (weak: the multiplayer executable f1ce_online is translated from ONLINE.BIN without these functions; it also has none
+// of the hooks below - tools/recomp.py installs them in the EBOOT's code only - so nothing calls them there)
+__attribute__((weak)) void sub_001D5F50(PPUContext& __restrict c);
+__attribute__((weak)) void sub_001C04DC(PPUContext& __restrict c);
+__attribute__((weak)) void sub_001BFDB0(PPUContext& __restrict c);
+__attribute__((weak)) void sub_000CB0E4(PPUContext& __restrict c);
+__attribute__((weak)) void sub_0011E7B0(PPUContext& __restrict c);
+__attribute__((weak)) void sub_000E22B0(PPUContext& __restrict c);
+__attribute__((weak)) void sub_00113F90(PPUContext& __restrict c);
 
 namespace {
 
@@ -730,6 +733,89 @@ bool ai_pit_strategies_hook(PPUContext& c) {
     sub_000CB0E4(c);
     inside = false;
     diversify_pit_strategies(c, track_logic);
+    return true;
+}
+
+// 0xE22B0(segPair, aiSpeedsOut): computes AI target speeds (r4 + 68..88 = current/next center, right, left) with
+// difficulty + wet-weather scaling. Retail computes wet_mult = 1.0 - 0.17 * wetness (0xE3980 -> 0x100DB3B4), skips
+// wet scaling on corners >= 80 m/s, clamps slow corners at >= 20 m/s (72 km/h), and skips AI puddle/aquaplaning grip
+// penalties (0x1148A0), leaving AI disproportionately fast in light and heavy rain. When F1CE_AI_WET_DROP is set,
+// scale wet corner speeds to a realistic 1.0 - drop * wetness curve (default realistic = 0.20, balanced = 0.22,
+// cautious = 0.25), lower the wet hairpin floor to 14 m/s (50 km/h), and smoothly cover 80..84 m/s fast corners while
+// leaving flat-out straights (>= 84 m/s) untouched.
+float ai_wet_drop() {
+    static const float drop = [] {
+        const char* e = getenv("F1CE_AI_WET_DROP");
+        if (!e || !*e) return 0.0f;
+        std::string s(e);
+        for (char& ch : s) ch = (char)tolower((unsigned char)ch);
+        if (s == "0" || s == "off" || s == "original") return 0.0f;
+        if (s == "realistic") return 0.20f;
+        if (s == "balanced") return 0.22f;
+        if (s == "cautious") return 0.25f;
+        if (s == "heavy") return 0.28f;
+        char* end = nullptr;
+        float v = strtof(e, &end);
+        if (end && end != e && std::isfinite(v)) return std::clamp(v, 0.0f, 0.40f);
+        return 0.0f;
+    }();
+    return drop;
+}
+
+bool ai_wet_speed_hook(PPUContext& c) {
+    static thread_local bool inside = false;
+    const float drop = ai_wet_drop();
+    if (inside || drop <= 0.171f) return false;
+
+    if (!mem::readable(0x100DB3B8, 4)) return false;
+    const u32 track_logic = ld32(0x100DB3B8);
+    if (!track_logic || !mem::readable(track_logic + 0x80C, 4)) return false;
+    const u32 weather = ld32(track_logic + 0x80C);
+    if (!weather || !mem::readable(weather + 0x24, 4)) return false;
+
+    const float wetness = std::clamp(ldf(weather + 0x24), 0.0f, 1.0f);
+    if (wetness <= 0.01f) return false;
+
+    const u32 out = (u32)c.r[4];
+    inside = true;
+    sub_000E22B0(c);
+    inside = false;
+
+    const float retail_mult = std::clamp(1.0f - 0.17f * wetness, 0.50f, 1.0f);
+    const float target_mult = std::clamp(1.0f - drop * wetness, 0.50f, 1.0f);
+    const float extra = target_mult / retail_mult;
+    const float retail_hi_cut = 80.0f * retail_mult + 0.25f;
+    const float wet_floor = 20.0f - 6.0f * wetness;   // 20 m/s dry -> 14 m/s (50 km/h) in full heavy rain
+
+    auto adjust_one = [&](float v) -> float {
+        if (!std::isfinite(v) || v <= 5.0f || v >= 84.0f) return v;
+        if (v < retail_hi_cut) return std::max(wet_floor, v * extra);
+        if (v >= 79.5f) {
+            // Fast corners (80..84 m/s) that retail's 80 m/s cutoff skipped completely
+            const float t = std::clamp((v - 79.5f) / 4.5f, 0.0f, 1.0f);
+            const float mult = target_mult + (1.0f - target_mult) * t;
+            return std::max(wet_floor, v * mult);
+        }
+        return v;
+    };
+
+    float sp[6];
+    for (int i = 0; i < 6; i++) sp[i] = adjust_one(ldf(out + 68 + 4 * i));
+    // Keep right/left passing-line speeds <= center racing-line speed
+    if (sp[1] > sp[0]) sp[1] = sp[0];
+    if (sp[2] > sp[0]) sp[2] = sp[0];
+    if (sp[4] > sp[3]) sp[4] = sp[3];
+    if (sp[5] > sp[3]) sp[5] = sp[3];
+    for (int i = 0; i < 6; i++) stf(out + 68 + 4 * i, sp[i]);
+
+    using clock = std::chrono::steady_clock;
+    static auto s_last_log = clock::now() - std::chrono::seconds(60);
+    const auto now = clock::now();
+    if (now - s_last_log >= std::chrono::seconds(30)) {
+        s_last_log = now;
+        LOG_I("ai pace: wet scaling active (wetness=%.0f%%, retail=%.3fx -> target=%.3fx, extra=%.3fx)",
+              wetness * 100.0f, retail_mult, target_mult, extra);
+    }
     return true;
 }
 
