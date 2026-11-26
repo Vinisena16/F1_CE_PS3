@@ -30,10 +30,11 @@ constexpr u32 kLuaLoadBuffer = 0x5A3CF8, kLuaPcall = 0x58C1DC, kLuaToString = 0x
               kLuaSetTop = 0x588D20;
 
 const char kPatch[] = R"LUA(
--- "QUIT GAME" in the bottom bar of the 2D front-end menus, between BACK and SELECT; reached with the pad by moving
--- past the last (or before the first) item of a menu, chosen with SELECT: os.exit, which the runtime turns into the
--- same shutdown as closing the window. Not over a 3D scene (garage, race pause menus): os.getenv("F1CE_SCENE3D"),
--- nor on the screens that hide the title bar (the 3D driver/team previews).
+-- "QUIT GAME" in the bottom bar of the Main Menu only (never in Career/submenus where it could be hit by accident),
+-- reached with the pad by moving past the last (or before the first) item, chosen with SELECT: opens the game's
+-- native confirmation dialog (gConfirm) before calling os.exit, which the runtime turns into the same shutdown as
+-- closing the window. Not over a 3D scene (garage, race pause menus): os.getenv("F1CE_SCENE3D"), nor on the screens
+-- that hide the title bar (the 3D driver/team previews).
 -- This runs after every script the loader runs, each time with that script's globals table: xmove makes a real
 -- global, as NavigationBars.lua does. The game's own tables get no new fields (only wrapped methods); the button's
 -- state is F1CEQuit and the objects it keeps are in S.
@@ -41,37 +42,89 @@ const char kPatch[] = R"LUA(
 -- in pcall and falls back to the game's behaviour.
 if F1CEQuit == nil then
   local state = {wrapped = setmetatable({}, {__mode = "k"})}
-  xmove("F1CEQuit", {focused = false, shown = -1, menuPatched = "", configPatched = "", navPatched = "",
+  xmove("F1CEQuit", {focused = false, shown = -1, onMainMenu = false, confirming = false,
+                     menuPatched = "", configPatched = "", navPatched = "",
                      state = function() return state end})
 end
 local Q = F1CEQuit
 local S = Q.state()
+-- Keep helpers in one table: the game's Lua 5.1-work compiler allows at most 24 locals per function
+local H = {}
 
-local function now()
+function H.now()
   return os.time()
 end
 
-local function visible()
-  return Q.shown >= 0 and now() - Q.shown < 0.3
+function H.visible()
+  return Q.shown >= 0 and H.now() - Q.shown < 0.3
 end
 
-local function label()
+function H.label()
   local lang = game.language()
   local t = {[1] = "SPIEL BEENDEN", [2] = "QUITTER LE JEU", [3] = "ESCI DAL GIOCO", [4] = "SALIR DEL JUEGO",
              [5] = "LOPETA PELI", [10] = "SAIR DO JOGO"}
   return t[lang] or "QUIT GAME"
 end
 
-local function selectable(menu, i)
+function H.confirmMessage()
+  local lang = game.language()
+  local t = {
+    [1] = "SPIEL WIRKLICH BEENDEN?",
+    [2] = "VOULEZ-VOUS VRAIMENT QUITTER LE JEU ?",
+    [3] = "SEI SICURO DI VOLER USCIRE DAL GIOCO?",
+    [4] = "SEGURO QUE QUIERES SALIR DEL JUEGO?",
+    [5] = "HALUATKO VARMASTI LOPETTAA PELIN?",
+    [10] = "TEM CERTEZA QUE DESEJA SAIR DO JOGO?",
+  }
+  return t[lang] or "ARE YOU SURE YOU WANT TO QUIT THE GAME?"
+end
+
+-- Offline/MainMenu.lua is the only screen whose menu outcomes start with SinglePlayer and include Extras
+function H.isMainMenu(menu)
+  if menu == nil or type(menu.mMenuOutcomeItems) ~= "table" then
+    return false
+  end
+  local items = menu.mMenuOutcomeItems
+  if items[1] ~= "SinglePlayer" then
+    return false
+  end
+  local i = 2
+  while items[i] ~= nil do
+    if items[i] == "Extras" then
+      return true
+    end
+    i = i + 1
+  end
+  return false
+end
+
+function H.confirmOpen()
+  if Q.confirming then
+    return true
+  end
+  return gConfirm ~= nil and gConfirm.blockOutcome == false
+end
+
+function H.canShowQuit()
+  if not Q.onMainMenu or S.mainMenu == nil then
+    return false
+  end
+  if S.mainMenu.mOutcomeSent == true or H.confirmOpen() then
+    return false
+  end
+  return true
+end
+
+function H.selectable(menu, i)
   local item = menu.mMenuObjects[i]
   return item ~= nil and item.mState ~= nil and item.mState < 2
 end
 
 -- true when no selectable item lies beyond the current one in direction dir
-local function atEnd(menu, dir)
+function H.atEnd(menu, dir)
   local i = menu.mCurrentMenuItem + dir
   while i >= 1 and i <= menu.mMenuItemCount do
-    if selectable(menu, i) then
+    if H.selectable(menu, i) then
       return false
     end
     i = i + dir
@@ -79,7 +132,7 @@ local function atEnd(menu, dir)
   return true
 end
 
-local function setArrows(menu, on)
+function H.setArrows(menu, on)
   local arrows = menu.mSelectionArrow
   if arrows == nil then
     return
@@ -95,30 +148,66 @@ local function setArrows(menu, on)
   end
 end
 
-local function unfocus()
+function H.unfocus()
   if Q.focused and S.menu ~= nil then
-    setArrows(S.menu, true)
+    H.setArrows(S.menu, true)
   end
   Q.focused = false
   S.menu = nil
   S.env = nil
 end
 
-local function quit()
-  sfx.play(sfx.select)
-  print("F1CE: Quit Game selected")
-  os.exit()
+function H.report(err)
+  print("F1CE: Quit Game error: " .. tostring(err))
 end
 
-local function report(err)
-  print("F1CE: Quit Game error: " .. tostring(err))
+function H.restoreFocus()
+  local menu = S.menu
+  H.unfocus()
+  if menu ~= nil and menu.mMenuObjects ~= nil then
+    local cur = menu.mMenuObjects[menu.mCurrentMenuItem]
+    if cur ~= nil and cur.mState == 0 then
+      cur:setState(1)
+    end
+  end
+end
+
+function H.onConfirmQuit(result)
+  Q.confirming = false
+  if result == 1 then
+    print("F1CE: Quit Game confirmed")
+    os.exit()
+  else
+    print("F1CE: Quit Game cancelled")
+    graph.pop()
+  end
+end
+
+function H.quit()
+  sfx.play(sfx.select)
+  print("F1CE: Quit Game selected")
+  H.restoreFocus()
+  if gConfirm ~= nil and gConfirm.start ~= nil and localised ~= nil then
+    Q.confirming = true
+    local ok, err = pcall(function()
+      local yesText = localised.string("MSC_YES")
+      local noText = localised.string("MSC_NO")
+      gConfirm.start(H.confirmMessage(), H.onConfirmQuit, yesText, noText, true)
+    end)
+    if ok then
+      return
+    end
+    Q.confirming = false
+    H.report(err)
+  end
+  os.exit()
 end
 
 -- the screen's own onSelect may act on the current item without calling Menu:userSelect (Quick Race and Grand Prix
 -- Weekend, PreRace.lua: START RACE): take SELECT first. The screen is found on the call stack (its onMenuUp/onMenuDown
 -- called Menu:moveSelection): the environment whose Menu is the menu moved, else the first one with an onSelect (a
 -- level further up can be another screen's: wrapping that one left SELECT to the screen); returns the screen's env
-local function findScreen(menu)
+function H.findScreen(menu)
   local first
   for level = 1, 12 do
     local ok, env = pcall(getfenv, level)
@@ -132,15 +221,15 @@ local function findScreen(menu)
   return first
 end
 
-local function hookScreen(env)
+function H.hookScreen(env)
   if env == nil then
     return nil
   end
   local onSelect = rawget(env, "onSelect")
   if S.wrapped[env] ~= onSelect then
     local wrapped = function(state)
-      if state == 1 and Q.focused and S.env == env and visible() then
-        quit()
+      if state == 1 and Q.focused and S.env == env and H.visible() and H.canShowQuit() then
+        H.quit()
         return
       end
       return onSelect(state)
@@ -151,21 +240,56 @@ local function hookScreen(env)
   return env
 end
 
-local function patchReactivate(cls)
-  local reactivate = rawget(cls, "ReActivateMenu")
-  if reactivate == nil then
-    return
+function H.patchLifecycle(cls, isTextMenu)
+  -- onActivate / onDeactivate live on ClassMenu (via __index), not directly on cls, so read without rawget
+  local onActivate = cls.onActivate
+  if onActivate ~= nil then
+    cls.onActivate = function(self)
+      H.unfocus()
+      if isTextMenu and H.isMainMenu(self) then
+        Q.onMainMenu = true
+        S.mainMenu = self
+      else
+        Q.onMainMenu = false
+        S.mainMenu = nil
+      end
+      return onActivate(self)
+    end
   end
-  rawset(cls, "ReActivateMenu", function(self)
-    unfocus()
-    return reactivate(self)
-  end)
+  local reactivate = cls.ReActivateMenu
+  if reactivate ~= nil then
+    cls.ReActivateMenu = function(self)
+      H.unfocus()
+      if isTextMenu and H.isMainMenu(self) then
+        Q.onMainMenu = true
+        S.mainMenu = self
+      else
+        Q.onMainMenu = false
+        S.mainMenu = nil
+      end
+      return reactivate(self)
+    end
+  end
+  local onDeactivate = cls.onDeactivate
+  if onDeactivate ~= nil then
+    cls.onDeactivate = function(self)
+      if isTextMenu and (S.mainMenu == self or H.isMainMenu(self)) then
+        Q.onMainMenu = false
+        S.mainMenu = nil
+        H.unfocus()
+      end
+      return onDeactivate(self)
+    end
+  end
 end
 
 -- Up/Down in a menu: true when the move was the button's (focus taken), false to let the menu move
-local function quitMove(self, dir)
-  if Q.focused and (S.menu ~= self or not visible()) then
-    unfocus()
+function H.quitMove(self, dir)
+  if Q.focused and (S.menu ~= self or not H.visible() or not H.canShowQuit()) then
+    H.unfocus()
+  end
+  if not H.canShowQuit() or not H.isMainMenu(self) then
+    return false
   end
   if dir == 0 or self.mMenuObjects == nil or self.mOutcomeSent == true then
     return false
@@ -176,7 +300,7 @@ local function quitMove(self, dir)
     -- without a move. updateItemHighlight shifts the current and previous items by relative offsets (MainMenu's
     -- enlarged font), so a move from any other item would leave labels displaced, more on every round trip.
     local back = (dir > 0) ~= (S.dir > 0)
-    unfocus()
+    H.unfocus()
     if not back then
       return false
     end
@@ -188,7 +312,7 @@ local function quitMove(self, dir)
     sfx.play(sfx.move)
     return true
   end
-  if not visible() or not atEnd(self, dir) then
+  if not H.visible() or not H.atEnd(self, dir) then
     return false
   end
   local cur = self.mMenuObjects[self.mCurrentMenuItem]
@@ -200,18 +324,18 @@ local function quitMove(self, dir)
   Q.focused = true
   S.menu = self
   S.dir = dir
-  setArrows(self, false)
+  H.setArrows(self, false)
   sfx.play(sfx.move)
-  S.env = hookScreen(findScreen(self))
+  S.env = H.hookScreen(H.findScreen(self))
   return true
 end
 
-local function patchMenu(cls)
+function H.patchMenu(cls, isTextMenu)
   local moveSelection = cls.moveSelection
   cls.moveSelection = function(self, dir)
-    local ok, handled = pcall(quitMove, self, dir)
+    local ok, handled = pcall(H.quitMove, self, dir)
     if not ok then
-      report(handled)
+      H.report(handled)
     elseif handled then
       return
     end
@@ -220,8 +344,8 @@ local function patchMenu(cls)
   local userSelect = cls.userSelect
   if userSelect ~= nil then
     cls.userSelect = function(self)
-      if Q.focused and S.menu == self and visible() then
-        quit()
+      if Q.focused and S.menu == self and H.visible() and H.canShowQuit() then
+        H.quit()
         return
       end
       return userSelect(self)
@@ -237,11 +361,11 @@ local function patchMenu(cls)
       return changeValue(self, a, b)
     end)
   end
-  -- a menu rebuilt for another screen starts without the button focused (ClassTextMenu is shared by the screens)
-  patchReactivate(cls)
+  -- track active menu so Quit Game only appears on the Main Menu
+  H.patchLifecycle(cls, isTextMenu)
 end
 
-local function drawArrow(sprite, x, y, w, h, mirrored)
+function H.drawArrow(sprite, x, y, w, h, mirrored)
   local d = gDimensionDefs
   sprite:rectangle(x, y, w, h)
   if mirrored then
@@ -253,14 +377,14 @@ local function drawArrow(sprite, x, y, w, h, mirrored)
 end
 
 -- made on the first draw, in the navigation bar's own callback (the game makes its pens and sprites in its scripts)
-local function makeResources()
+function H.makeResources()
   S.pen = pen(gFonts.Small)
   S.pen:scalex(1)
   S.pen:alignv(pen.alignbottom)
   S.pen:alignh(pen.aligncentre)
   S.pen:subpixels(true)
   S.pos = point(0, 0)
-  S.text = label()
+  S.text = H.label()
   S.arrowTexture = texture("Frontend/Textures/Selection_Arrows_half.pct")
   S.arrowTexture:wrapu(texture.clamp)
   S.arrowTexture:wrapv(texture.clamp)
@@ -276,10 +400,10 @@ local function makeResources()
   S.arrows[4]:colour(red)
 end
 
-local function drawQuit(nb)
-  Q.shown = now()
+function H.drawQuit(nb)
+  Q.shown = H.now()
   if S.pen == nil then
-    makeResources()
+    H.makeResources()
   end
   local d = gDimensionDefs
   local cx = d.screenWidth / 2
@@ -298,14 +422,14 @@ local function drawQuit(nb)
     local bottom = y + S.pen:height(gFonts.LetterAUniCode) / 2 - h / 2
     local step = w * 0.55
     local gap = 4
-    drawArrow(S.arrows[1], cx - half - gap - w - step, bottom, w, h, false)
-    drawArrow(S.arrows[2], cx - half - gap - w, bottom, w, h, false)
-    drawArrow(S.arrows[3], cx + half + gap, bottom, w, h, true)
-    drawArrow(S.arrows[4], cx + half + gap + step, bottom, w, h, true)
+    H.drawArrow(S.arrows[1], cx - half - gap - w - step, bottom, w, h, false)
+    H.drawArrow(S.arrows[2], cx - half - gap - w, bottom, w, h, false)
+    H.drawArrow(S.arrows[3], cx + half + gap, bottom, w, h, true)
+    H.drawArrow(S.arrows[4], cx + half + gap + step, bottom, w, h, true)
   end
 end
 
-local function patchNavigation(env)
+function H.patchNavigation(env)
   local nb = rawget(env, "NavigationButtons")
   if nb == nil or Q.navPatched == tostring(nb) then
     return
@@ -318,30 +442,32 @@ local function patchNavigation(env)
     -- (the 3D preview screens, driver and team select, trophies, unlocks, hide the title and draw too little for
     -- F1CE_SCENE3D)
     local o = gNavBarOverride
-    if o.mShowNavButtons and o.mShowTitle ~= false and self.mButtons ~= nil and not S.broken and not os.getenv("F1CE_SCENE3D") then
-      local ok, err = pcall(drawQuit, self)
-      if not ok then
-        S.broken = true
-        report(err)
+    if H.canShowQuit() and o.mShowNavButtons and o.mShowTitle ~= false then
+      if self.mButtons ~= nil and not S.broken and not os.getenv("F1CE_SCENE3D") then
+        local ok, err = pcall(H.drawQuit, self)
+        if not ok then
+          S.broken = true
+          H.report(err)
+        end
       end
     end
   end
-  print("F1CE: Quit Game added to the navigation bar")
+  print("F1CE: Quit Game added to the navigation bar (Main Menu only)")
 end
 
 if gClassTextMenu ~= nil and Q.menuPatched ~= tostring(gClassTextMenu) then
   Q.menuPatched = tostring(gClassTextMenu)
-  patchMenu(gClassTextMenu)
-  print("F1CE: Quit Game added to the text menus")
+  H.patchMenu(gClassTextMenu, true)
+  print("F1CE: Quit Game added to the text menus (Main Menu only)")
 end
 -- the config menus (options: toggles and sliders) inherit from ClassMenu, not from gClassTextMenu
 if gClassConfigMenu ~= nil and Q.configPatched ~= tostring(gClassConfigMenu) then
   Q.configPatched = tostring(gClassConfigMenu)
-  patchMenu(gClassConfigMenu)
-  print("F1CE: Quit Game added to the config menus")
+  H.patchMenu(gClassConfigMenu, false)
+  print("F1CE: Quit Game config menu guard installed")
 end
 if gClassTextMenu ~= nil then
-  patchNavigation(getfenv(gClassTextMenu.updateItemHighlight))
+  H.patchNavigation(getfenv(gClassTextMenu.updateItemHighlight))
 end
 )LUA";
 

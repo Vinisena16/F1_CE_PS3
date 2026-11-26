@@ -112,6 +112,14 @@ std::vector<Option> make_options() {
                        "Balances weak AI circuits (Magny-Cours, Bahrain, Hungary, Nürburgring, etc.) up to the Melbourne "
                        "and Suzuka Hard-AI benchmark by lifting under-baked corner speeds in each track's speed table. "
                        "Fast: raises AI cornering pace across every track."));
+    v.push_back(choice(GENERAL, "AI wet pace", "F1CE_AI_WET_DROP",
+                       {{"Original (PS3, -17%)", nullptr},
+                        {"Realistic (-20%)", "0.20"},
+                        {"Balanced (-22%)", "0.22"},
+                        {"Cautious (-25%)", "0.25"}}, 0,
+                       "In the original game AI only slows by 17% in full heavy rain, ignores puddles/aquaplaning, and "
+                       "skips rain slowdown above 288 km/h. Realistic (-20%) matches human wet pace; Balanced (-22%) "
+                       "and Cautious (-25%) give extra margin in heavy rain."));
     v.push_back(choice(GENERAL, "AI pit strategies", "F1CE_AI_STRATEGIES",
                        {{"Original", nullptr}, {"Realistic variety (1/2/3-stop)", "1"}}, 0,
                        "In 100% races the original game assigns the same pit stop count to every AI team. Realistic "
@@ -245,6 +253,11 @@ std::vector<Option> make_options() {
                               "With Up to 60 fps: a steady 30 or 45 fps on machines that cannot hold 60 (Steam Deck), "
                               "with that mode's frame pacing."),
                        "F1CE_60FPS", nullptr));
+    v.push_back(toggle(VIDEO, "Show FPS counter", "F1CE_SHOW_FPS",
+                       "Shows a live FPS and frame-time overlay in the bottom-left corner. Press F3 in-game to toggle it."));
+    v.push_back(toggle(VIDEO, "Show fastest lap", "F1CE_SHOW_LAPTIMES",
+                       "Shows live AI Fastest Lap vs your best lap and delta during sessions (also logs improvements "
+                       "to f1ce_recomp.log). Press F4 in-game to toggle it."));
     v.push_back(header(VIDEO, "Anti-aliasing"));
     v.push_back(choice(VIDEO, "MSAA", "F1CE_MSAA",
                        {{"Off", "1"}, {"2x", "2"}, {"4x (original)", nullptr}, {"8x", "8"}}, 2,
