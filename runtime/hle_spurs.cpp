@@ -24,6 +24,11 @@ void joblist_kick(u32 queue, u32 value);   // hle_joblist.cpp (F1CE_JOBLIST_LOG)
 void profile_register_thread();   // core.cpp (host profiler)
 extern std::atomic<u64> g_pm_skips;           // spu_pm.cpp: job queue skip entries passed (diagnostics)
 extern std::atomic<u32> g_pm_skip_run_max;
+bool geom_hle_claims(u32 queue);                            // hle_geom.cpp: w1 / w2 outside SPURS (F1CE_GEOM_HLE)
+void geom_hle_add(u32 spurs, u32 wid, u32 queue);
+u32 geom_hle_run(u32 num, u32 wid, u32 queue, bool (*yield)(u32 wid));
+void geom_hle_report();
+void geom_hle_dump();
 std::atomic<int> g_worker_wid[8] = {-1, -1, -1, -1, -1, -1, -1, -1};   // profiling (F1CE_PROFILE): workload each SPU worker runs
 
 namespace {
@@ -65,6 +70,7 @@ struct Workload {
     u64 runs = 0;
     u64 insns = 0;
     bool pm_native = false;   // its PM is the job manager whose functions spu_pm.cpp has natively
+    bool hle = false;         // a worker given it runs its jobs in hle_geom.cpp instead of its PM
 };
 
 struct SpursState {
@@ -350,7 +356,10 @@ void spu_worker(u32 num) {
             for (u32 k = 0; k < 16 && wid < 0; k++) {
                 u32 i = (g_sp.rr + k) % 16;
                 Workload& c = g_sp.wkl[i];
-                if (c.used && c.running < c.max_contention && (!ready_only || c.runs == 0)) { wid = (int)i; rule = 3; }
+                if (c.used && c.running < c.max_contention && (!ready_only || c.runs == 0) && !(c.hle && !ld8(g_sp.ea + i))) {
+                    wid = (int)i;   // (an HLE queue only when signalled: hle_geom.cpp grabs without a PM's checks)
+                    rule = 3;
+                }
             }
             if (wid >= 0 && getenv("F1CE_WATCH_LINE") && now / 1e6 >= watch_after()) {
                 static std::atomic<int> n{0};
@@ -383,7 +392,7 @@ void spu_worker(u32 num) {
         g_worker_wid[num & 7].store(wid, std::memory_order_relaxed);
         g_worker_since[num & 7].store(run_t0, std::memory_order_relaxed);
         joblist_kick((u32)w.arg, num << 12 | rule << 8 | ready_at_pick);
-        u64 n = run_workload(*spu, (u32)wid, w);
+        u64 n = w.hle ? geom_hle_run(num, (u32)wid, (u32)w.arg, others_waiting) : run_workload(*spu, (u32)wid, w);
         g_worker_since[num & 7].store(0, std::memory_order_relaxed);
         g_worker_wid[num & 7].store(-1, std::memory_order_relaxed);
         check_long_runs();
@@ -432,6 +441,7 @@ void spu_worker(u32 num) {
                 for (u32 i = 0; i < 16; i++)
                     if (u32 n = g_ready_calls[i].load()) { char b[24]; snprintf(b, sizeof(b), " w%u:%u", i, n); rc += b; }
                 LOG_I("SPURS ready-count stores:%s", rc.c_str());
+                geom_hle_report();
                 auto dump = [](const char* what, u32 ea, u32 n) {
                     std::string h;
                     for (u32 k = 0; k < n; k += 4) { char b[12]; snprintf(b, sizeof(b), "%s%08x", k % 32 ? " " : " | ", ld32(ea + k)); h += b; }
@@ -574,6 +584,7 @@ void spurs_watchdog_report() {
         ws += b;
     }
     LOG_I("  spurs workers:%s", ws.c_str());
+    geom_hle_dump();
     const u64 now = time_usec();
     std::string ls;
     for (u32 i = 0; i < 16; i++) {
@@ -671,6 +682,10 @@ HLE_FUNC(cellSpursAddWorkload) {
         if (const char* e = getenv("F1CE_SPURS_SPUS")) n = std::max(1, atoi(e));
         for (u32 i = 0; i < n; i++) std::thread(spu_worker, i).detach();
         if (getenv("F1CE_SPU_PROFILE")) std::thread(spu_profiler, n).detach();
+    }
+    if (w.pm_native && geom_hle_claims((u32)w.arg)) {
+        w.hle = true;
+        geom_hle_add(g_sp.ea, wid, (u32)w.arg);
     }
     w.used = true;
     RET(CELL_OK);
