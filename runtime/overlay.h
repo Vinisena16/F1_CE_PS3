@@ -23,6 +23,17 @@ void toggle_fps();
 // Toggles the on-screen Fastest Lap / AI vs Player timing pill (F1CE_SHOW_LAPTIMES=1; F4 in-game).
 void toggle_laptimes();
 
+// ---- Steward / Penalty notification banner (hle_penalties.cpp): top-center toast or persistent Drive-Through notice
+enum class PenaltySeverity { Info, Warning, FinalWarning, DriveThrough, Serving, Served, BlackFlag };
+struct PenaltyBanner {
+    bool active = false;
+    PenaltySeverity severity = PenaltySeverity::Info;
+    std::string title;
+    std::string subtitle;
+    u64 expires_at_us = 0;   // 0 = persistent until cleared/replaced; else auto-hide at time_usec() >= expires_at_us
+};
+void set_penalty_banner(const PenaltyBanner& b);   // (any thread)
+
 // ---- save data dialogs: called on the game's save threads, they block until the player answers
 struct SaveEntry {
     std::string dir, title, subtitle, detail;

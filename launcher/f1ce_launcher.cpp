@@ -162,6 +162,19 @@ Combo g_combos[] = {
       {L"High (3.5x)", L"2"}}, 0, GAME,
      L"Accelerates dry tyre wear (soft faster than hard) and increases end-of-stint grip drop for both player and AI "
      L"(1.5x is ideal for 50% scaled races; 2.0x-2.5x suits 100% races)."},
+    {L"Penalty system", L"F1CE_PENALTY_MODE",
+     {{L"Original (PS3, rev limiter)", nullptr},
+      {L"Drive-Through (2 warnings)", L"drivethrough"},
+      {L"Strict Drive-Through (0 warnings)", L"strict"},
+      {L"Warnings only (no slowdown)", L"warnings"}}, 0, GAME,
+     L"Replaces on-track rev-limiter slowdowns with F1 Drive-Through penalties (2 warnings on minor cuts, 5 s Give Back "
+     L"Time anti-exploit on blatant shortcuts, pit-lane pass-through within 3 laps, or Black Flag DQ)."},
+    {L"Mechanical failures", L"F1CE_RELIABILITY",
+     {{L"Original (PS3)", nullptr},
+      {L"Realistic (player enabled)", L"realistic"},
+      {L"High (dramatic)", L"high"}}, 0, GAME,
+     L"Enables full native mechanical failures (engine power loss + smoke blowout, gearbox, hydraulics, suspension) on "
+     L"the player's car in races, scaled from 2006 team reliability."},
     // in-game cameras (runtime/hle_camera.cpp): the second TV pod camera of the view cycle as a broadcast T-cam, and
     // the right stick turning the chase cameras
     {L"Onboard TV camera", L"F1CE_TVCAM",
