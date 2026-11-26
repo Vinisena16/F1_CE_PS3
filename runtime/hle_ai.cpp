@@ -118,7 +118,7 @@ constexpr TrackCalibration kBalancedTracks[] = {
     {"Shanghai",    "shanghai",    5348, 3.00f, 3.45f, 1.12f, 1.015f, 0.976f},   // 669m of corners < 2.8G
     {"Indy",        "indy",        4110, 3.00f, 3.45f, 1.12f, 1.015f, 0.974f},   // 25% corners < 2.5G
     {"Hockenheim",  "hockenheim",  4526, 2.90f, 3.35f, 1.10f, 1.005f, 0.979f},
-    {"SanMarino",   "imola",       4856, 2.90f, 3.35f, 1.10f, 1.005f, 0.983f},
+    {"SanMarino",   "imola",       4856, 3.25f, 3.70f, 1.18f, 1.045f, 0.961f},   // Variante Alta 1.65G, Rivazza 2.29G, Tosa 2.33G
     {"Canada",      "montreal",    4283, 2.90f, 3.35f, 1.10f, 1.005f, 0.982f},
     {"Monaco",      "montecarlo",  3283, 2.85f, 3.25f, 1.08f, 1.000f, 0.986f},   // tight barriers: modest lift
     {"Malaysia",    "sepang",      5471, 2.90f, 3.35f, 1.10f, 1.000f, 0.983f},
@@ -694,18 +694,81 @@ const TyreWearConfig& tyre_wear_config() {
     return cfg;
 }
 
+// Cached per-meter racing-line expected speed profile for the currently loaded track (used by hle_penalties.cpp
+// to measure real time gained when cutting corners and time given back during the 5 s Give Back Time window).
+std::vector<float> g_ref_speed;
+
+void cache_track_ref_speeds(u32 track_data) {
+    g_ref_speed.clear();
+    if (!mem::readable(track_data, 0x100)) return;
+    const u32 seg_ptr = ld32(track_data + 0xEC);
+    const u32 seg_cnt = ld32(track_data + 0xF4);
+    const u32 spline = ld32(track_data + 0x0C);
+    if (!seg_ptr || seg_cnt < 5 || seg_cnt > 2000 || !spline || !mem::readable(spline, 0x20)) return;
+    const u32 n_pts = ld32(spline + 0x0C);
+    if (n_pts < 500 || n_pts > 20000 || !mem::readable(seg_ptr, seg_cnt * 28)) return;
+
+    g_ref_speed.assign(n_pts, 85.0f);
+    for (u32 i = 0; i < seg_cnt; i++) {
+        const u32 s = seg_ptr + i * 28;
+        const float sc = ldf(s);
+        if (!std::isfinite(sc) || sc < 5.0f || sc > 110.0f) continue;
+        const int s_idx = (s16)ld16(s + 0x18);
+        const int e_idx = (s16)ld16(s + 0x1A);
+        int slen = e_idx - s_idx;
+        if (slen < 0) slen += (int)n_pts;
+        if (slen <= 0) slen = 1;
+        if (slen > (int)n_pts) slen = (int)n_pts;
+        for (int k = 0; k < slen; k++) {
+            const size_t idx = (size_t)((s_idx + k) % (int)n_pts);
+            if (sc < g_ref_speed[idx]) g_ref_speed[idx] = sc;
+        }
+    }
+    // Realistic F1 braking/acceleration smoothing along the cached racing-line profile (~38 m/s^2 brake, ~13 m/s^2 accel)
+    for (int pass = 0; pass < 2; pass++) {
+        for (int i = (int)n_pts - 1; i >= 0; i--) {
+            const float nxt = g_ref_speed[(size_t)((i + 1) % (int)n_pts)];
+            g_ref_speed[(size_t)i] = std::min(g_ref_speed[(size_t)i], std::sqrt(nxt * nxt + 76.0f));
+        }
+        for (u32 i = 0; i < n_pts; i++) {
+            const float prv = g_ref_speed[(i + n_pts - 1) % n_pts];
+            const float acc = std::max(2.5f, 15.0f - 0.0013f * prv * prv);
+            g_ref_speed[i] = std::min(g_ref_speed[i], std::sqrt(prv * prv + 2.0f * acc));
+        }
+    }
+}
+
 }  // namespace
+
+// Expected racing-line travel time (seconds) between normalized lap progresses p0 -> p1 (0..1, wrap-safe).
+// Returns < 0 if no track profile is cached or the delta is invalid.
+float hle_ai_expected_segment_time(float p0, float p1) {
+    const size_t n = g_ref_speed.size();
+    if (n < 500) return -1.0f;
+    float dp = p1 - p0;
+    if (dp < -0.5f) dp += 1.0f;
+    if (dp <= 0.0f || dp > 0.35f) return -1.0f;
+    const int i0 = ((int)std::floor(p0 * (float)n) % (int)n + (int)n) % (int)n;
+    const int steps = std::max(1, (int)std::lround(dp * (float)n));
+    double sec = 0.0;
+    for (int k = 0; k < steps; k++) {
+        const float v = std::clamp(g_ref_speed[(size_t)((i0 + k) % (int)n)], 12.0f, 95.0f);
+        sec += 1.0 / (double)v;
+    }
+    return (float)sec;
+}
 
 // 0x1D5F50(trackData, stream): loads the .tbf section-6 AI segment speed tables into trackData + 0xEC.
 bool track_ai_speeds_hook(PPUContext& c) {
     static thread_local bool inside = false;
+    if (inside) return false;
     const PaceConfig cfg = pace_config();
-    if (inside || cfg.mode == PaceMode::original) return false;
     const u32 track_data = (u32)c.r[3];
     inside = true;
     sub_001D5F50(c);
     inside = false;
-    apply_track_pace(track_data, cfg);
+    if (cfg.mode != PaceMode::original) apply_track_pace(track_data, cfg);
+    cache_track_ref_speeds(track_data);
     return true;
 }
 
