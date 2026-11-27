@@ -151,6 +151,21 @@ void sleep_usec(u64 us) {
 #endif
     std::this_thread::sleep_for(std::chrono::microseconds(us));
 }
+// Windows 11 stops honouring a process's 1 ms timer resolution once its window is fully covered or minimized, and may
+// put it into power throttling (EcoQoS): every 1 ms wait (SPU workers' idle waits, the PPU's job waits, the render
+// queue) then lasts a ~15.6 ms tick and the frame rate collapses while another program has the focus. The process opts
+// out of both at start-up (SetProcessInformation, ProcessPowerThrottling).
+void keep_full_speed_in_background() {
+#ifdef _WIN32
+    timeBeginPeriod(1);
+    struct { ULONG Version, ControlMask, StateMask; } s = {1, 0x1 | 0x4, 0};   // EXECUTION_SPEED | IGNORE_TIMER_RESOLUTION: off
+    // (looked up: Windows 8+ only, and hidden by the SDK target version here)
+    using Fn = BOOL(WINAPI*)(HANDLE, int, void*, DWORD);
+    const Fn set_info = (Fn)(void*)GetProcAddress(GetModuleHandleA("kernel32.dll"), "SetProcessInformation");
+    const BOOL ok = set_info && set_info(GetCurrentProcess(), 4 /* ProcessPowerThrottling */, &s, sizeof(s));
+    LOG_I("power throttling: %s for this process (timer resolution kept in the background)", ok ? "off" : "not changed");
+#endif
+}
 // ---- blocking waits on guest memory lines (ppu_runtime.h)
 // (also the render queue, hle_gcm.cpp)
 void futex_wait(std::atomic<u32>* a, u32 expected, u32 timeout_ms) {

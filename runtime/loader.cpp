@@ -208,6 +208,8 @@ int main(int argc, char** argv) {
 
     read_title_id(PATH_STR(fs::u8path(g_game_dir) / "PARAM.SFO"));
     host::init();
+    extern void keep_full_speed_in_background();
+    keep_full_speed_in_background();
     mem::init();
     extern void start_watchdog(u32);
     start_watchdog(20);
