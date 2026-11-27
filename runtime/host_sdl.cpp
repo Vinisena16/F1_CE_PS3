@@ -4,6 +4,7 @@
 // on a dedicated UI thread. The RSX thread owns the OpenGL context (created for that window).
 #include "host.h"
 #include "kernel.h"
+#include "overlay.h"
 #include "rsx.h"
 #include "input_config.h"
 #include "wheel_config.h"
@@ -163,6 +164,10 @@ void ui_thread() {
             if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat &&
                 (e.key.key == SDLK_F11 || (e.key.key == SDLK_RETURN && (e.key.mod & SDL_KMOD_ALT))))
                 SDL_SetWindowFullscreen(win, (SDL_GetWindowFlags(win) & SDL_WINDOW_FULLSCREEN) == 0);
+            if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat && e.key.key == SDLK_F3)
+                overlay::toggle_fps();
+            if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat && e.key.key == SDLK_F4)
+                overlay::toggle_laptimes();
             if (e.type == SDL_EVENT_MOUSE_MOTION || e.type == SDL_EVENT_MOUSE_BUTTON_DOWN || e.type == SDL_EVENT_MOUSE_BUTTON_UP ||
                 e.type == SDL_EVENT_WINDOW_MOUSE_LEAVE) {
                 // (the event's own position and button: window coordinates, as SDL_GetWindowSize)
