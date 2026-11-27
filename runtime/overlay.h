@@ -34,6 +34,21 @@ struct PenaltyBanner {
 };
 void set_penalty_banner(const PenaltyBanner& b);   // (any thread)
 
+// ---- On-track MFD overlay (hle_mfd.cpp): next pit-stop tyre selector (+ optional keyboard TC/ABS toast)
+struct MfdState {
+    bool visible = false;
+    int tyre_code = 0;       // 0=AUTO, 1=HARD, 2=SOFT, 3=INTER, 4=WET
+    std::string tyre_label;  // AUTO / HARD / SOFT / INTER / WET
+    std::string note;        // brief action subtitle while expanded
+    u64 popup_until_us = 0;  // expanded tyre card until this timestamp; then collapses to pit tyre badge if != AUTO
+    // Optional keyboard-only TC/ABS quick toast (F6 / F7)
+    std::string aid_tag;     // "TC" or "ABS"
+    std::string aid_val;     // e.g. "OFF", "LOW (25%)", "ON"
+    bool aid_green = false;
+    u64 aid_until_us = 0;
+};
+void set_mfd_state(const MfdState& s);   // (any thread)
+
 // ---- save data dialogs: called on the game's save threads, they block until the player answers
 struct SaveEntry {
     std::string dir, title, subtitle, detail;

@@ -992,6 +992,129 @@ void draw_penalty_banner(ImDrawList* dl, float W, float H) {
     f1_frame(dl, ImVec2(x0, y0), ImVec2(x1, y1), S);
 }
 
+// ------------------------------------------------------------------ On-track MFD (hle_mfd.cpp: 4-way Pit Tyre MFD)
+MfdState g_mfd_ov;
+std::atomic<bool> g_mfd_visible{false};
+std::atomic<int> g_mfd_tyre_code{0};
+std::atomic<u64> g_mfd_popup_until{0};
+std::atomic<u64> g_mfd_aid_until{0};
+
+ImU32 mfd_tyre_color(int code) {
+    switch (code) {
+        case 1: return IM_COL32(240, 242, 246, 255);   // HARD: crisp white
+        case 2: return IM_COL32(246, 200, 56, 255);    // SOFT: F1 gold/yellow
+        case 3: return IM_COL32(78, 206, 112, 255);    // INTER: green
+        case 4: return IM_COL32(74, 168, 244, 255);    // WET: blue
+        default: return IM_COL32(174, 182, 198, 255);  // AUTO: metallic silver
+    }
+}
+
+void draw_mfd(ImDrawList* dl, float W, float H, u64 now, bool lap_on) {
+    if (!g_mfd_ov.visible) return;
+    const bool expanded = g_mfd_ov.popup_until_us != 0 && now < g_mfd_ov.popup_until_us;
+    const bool pinned_tyre = g_mfd_ov.tyre_code != 0;
+    const bool aid_toast = g_mfd_ov.aid_until_us != 0 && now < g_mfd_ov.aid_until_us && !g_mfd_ov.aid_tag.empty();
+    if (!expanded && !pinned_tyre && !aid_toast) return;
+
+    const float S = std::min(W / 1280.0f, H / 720.0f);
+    const ImU32 GREEN = IM_COL32(124, 224, 138, 255);
+    const ImU32 AMBER = IM_COL32(244, 198, 96, 255);
+    const ImU32 SILVER = IM_COL32(218, 222, 232, 255);
+    const ImU32 tyre_col = mfd_tyre_color(g_mfd_ov.tyre_code);
+
+    // Position on the right edge below the native lap timer (and below F4 Fastest Lap when active)
+    const float bw = 204 * S;
+    const float x1 = W - 14 * S, x0 = x1 - bw;
+    float cur_y = (lap_on ? 164.0f : 92.0f) * S;
+
+    if (expanded) {
+        // Expanded 4-way 2006 F1 broadcast Pit Tyre MFD card (UP=SOFT, DN=HARD, LT=INTER, RT=WET)
+        const float sz_hdr = 12.5f * S, sz_dir = 12.0f * S, sz_val = 14.0f * S, sz_note = 11.5f * S;
+        const float hdr_h = 19 * S, row_h = 21 * S, cell_w = 42 * S;
+        const float note_h = g_mfd_ov.note.empty() ? 0.0f : 18 * S;
+        const float y0 = cur_y, y1 = y0 + hdr_h + row_h * 4 + note_h;
+
+        // Header bar: 2006 FOM steel-blue metallic gradient
+        f1_grad_rect(dl, ImVec2(x0, y0), ImVec2(x1, y0 + hdr_h), IM_COL32(108, 118, 144, 238), IM_COL32(72, 79, 100, 242));
+        const float hw = text_w(F.medium, sz_hdr, "PIT TYRES");
+        f1_shadow_text(dl, F.medium, sz_hdr, ImVec2(x0 + (bw - hw) * 0.5f, y0 + 3 * S), WHITE, "PIT TYRES", S);
+
+        struct TyreRow { int code; const char* dir; const char* name; };
+        constexpr TyreRow rows[4] = {
+            {2, "UP", "SOFT"},
+            {1, "DN", "HARD"},
+            {3, "LT", "INTER"},
+            {4, "RT", "WET"},
+        };
+        for (int i = 0; i < 4; i++) {
+            const float ry0 = y0 + hdr_h + i * row_h;
+            const float ry1 = ry0 + row_h;
+            const bool active = (g_mfd_ov.tyre_code == rows[i].code);
+            const ImU32 col = mfd_tyre_color(rows[i].code);
+            // Left direction cell: metallic white when selected, steel-grey otherwise
+            if (active) f1_grad_rect(dl, ImVec2(x0, ry0), ImVec2(x0 + cell_w, ry1), IM_COL32(244, 246, 250, 244), IM_COL32(206, 211, 220, 244));
+            else f1_grad_rect(dl, ImVec2(x0, ry0), ImVec2(x0 + cell_w, ry1), IM_COL32(118, 124, 138, 236), IM_COL32(84, 89, 102, 240));
+            // Right compound cell
+            if (active) f1_grad_rect(dl, ImVec2(x0 + cell_w, ry0), ImVec2(x1, ry1), IM_COL32(46, 52, 64, 238), IM_COL32(24, 27, 36, 244));
+            else f1_grad_rect(dl, ImVec2(x0 + cell_w, ry0), ImVec2(x1, ry1), IM_COL32(28, 30, 36, 224), IM_COL32(12, 14, 18, 236));
+            // Colored compound stripe on the right edge
+            dl->AddRectFilled(ImVec2(x1 - (active ? 6.0f : 3.5f) * S, ry0 + 2 * S), ImVec2(x1 - 1 * S, ry1 - 2 * S), col);
+
+            const float dw = text_w(F.medium, sz_dir, rows[i].dir);
+            if (active) text(dl, F.medium, sz_dir, ImVec2(x0 + (cell_w - dw) * 0.5f, ry0 + 4.5f * S), IM_COL32(22, 25, 32, 255), rows[i].dir);
+            else f1_shadow_text(dl, F.medium, sz_dir, ImVec2(x0 + (cell_w - dw) * 0.5f, ry0 + 4.5f * S), WHITE, rows[i].dir, S);
+
+            f1_shadow_text(dl, F.medium, sz_val, ImVec2(x0 + cell_w + 10 * S, ry0 + 3 * S), active ? col : SILVER, rows[i].name, S);
+            if (active) {
+                const float sw = text_w(F.medium, sz_note, "NEXT");
+                f1_shadow_text(dl, F.medium, sz_note, ImVec2(x1 - 11 * S - sw, ry0 + 4.5f * S), col, "NEXT", S);
+            }
+            dl->AddLine(ImVec2(x0, ry0), ImVec2(x1, ry0), IM_COL32(18, 20, 26, 210), 1.0f);
+        }
+        dl->AddLine(ImVec2(x0 + cell_w, y0 + hdr_h), ImVec2(x0 + cell_w, y0 + hdr_h + row_h * 4), IM_COL32(18, 20, 26, 200), 1.0f);
+
+        if (!g_mfd_ov.note.empty()) {
+            const float ny0 = y0 + hdr_h + row_h * 4;
+            f1_grad_rect(dl, ImVec2(x0, ny0), ImVec2(x1, y1), IM_COL32(62, 68, 86, 236), IM_COL32(42, 46, 60, 240));
+            dl->AddLine(ImVec2(x0, ny0), ImVec2(x1, ny0), IM_COL32(18, 20, 26, 210), 1.0f);
+            const float nw = text_w(F.medium, sz_note, g_mfd_ov.note.c_str());
+            f1_shadow_text(dl, F.medium, sz_note, ImVec2(x0 + (bw - nw) * 0.5f, ny0 + 3 * S), SILVER, g_mfd_ov.note, S);
+        }
+        f1_frame(dl, ImVec2(x0, y0), ImVec2(x1, y1), S);
+        cur_y = y1 + 6 * S;
+    } else if (pinned_tyre) {
+        // Compact 1-row 2006 F1 reminder badge when a non-AUTO pit tyre is queued
+        const float bh = 23 * S, tag_w = 64 * S;
+        const float y0 = cur_y, y1 = y0 + bh;
+        f1_grad_rect(dl, ImVec2(x0, y0), ImVec2(x0 + tag_w, y1), IM_COL32(242, 244, 248, 240), IM_COL32(204, 209, 218, 240));
+        f1_grad_rect(dl, ImVec2(x0 + tag_w, y0), ImVec2(x1, y1), IM_COL32(30, 33, 40, 228), IM_COL32(14, 16, 20, 238));
+        dl->AddRectFilled(ImVec2(x1 - 5 * S, y0 + 2 * S), ImVec2(x1 - 1 * S, y1 - 2 * S), tyre_col);
+        dl->AddLine(ImVec2(x0 + tag_w, y0), ImVec2(x0 + tag_w, y1), IM_COL32(18, 20, 26, 200), 1.0f);
+
+        const float sz_tag = 12.5f * S, sz_val = 14.5f * S;
+        const float tw = text_w(F.medium, sz_tag, "NEXT PIT");
+        text(dl, F.medium, sz_tag, ImVec2(x0 + (tag_w - tw) * 0.5f, y0 + 4.5f * S), IM_COL32(22, 25, 32, 255), "NEXT PIT");
+        f1_shadow_text(dl, F.medium, sz_val, ImVec2(x0 + tag_w + 10 * S, y0 + 3.5f * S), tyre_col, g_mfd_ov.tyre_label, S);
+        f1_frame(dl, ImVec2(x0, y0), ImVec2(x1, y1), S);
+        cur_y = y1 + 6 * S;
+    }
+
+    if (aid_toast) {
+        // Optional keyboard-only TC / ABS quick toast (F6 / F7)
+        const float bh = 23 * S, tag_w = 48 * S;
+        const float y0 = cur_y, y1 = y0 + bh;
+        f1_grad_rect(dl, ImVec2(x0, y0), ImVec2(x0 + tag_w, y1), IM_COL32(242, 244, 248, 240), IM_COL32(204, 209, 218, 240));
+        f1_grad_rect(dl, ImVec2(x0 + tag_w, y0), ImVec2(x1, y1), IM_COL32(30, 33, 40, 228), IM_COL32(14, 16, 20, 238));
+        dl->AddLine(ImVec2(x0 + tag_w, y0), ImVec2(x0 + tag_w, y1), IM_COL32(18, 20, 26, 200), 1.0f);
+
+        const float sz_tag = 12.5f * S, sz_val = 14.5f * S;
+        const float tw = text_w(F.medium, sz_tag, g_mfd_ov.aid_tag.c_str());
+        text(dl, F.medium, sz_tag, ImVec2(x0 + (tag_w - tw) * 0.5f, y0 + 4.5f * S), IM_COL32(22, 25, 32, 255), g_mfd_ov.aid_tag);
+        f1_shadow_text(dl, F.medium, sz_val, ImVec2(x0 + tag_w + 10 * S, y0 + 3.5f * S), g_mfd_ov.aid_green ? GREEN : AMBER, g_mfd_ov.aid_val, S);
+        f1_frame(dl, ImVec2(x0, y0), ImVec2(x1, y1), S);
+    }
+}
+
 // ------------------------------------------------------------------ frame
 Target g_target;
 std::unordered_map<ImTextureData*, SoftTex> g_texes;   // ImGui's textures (the font atlas): their pixels as ImGui keeps them
@@ -1034,6 +1157,15 @@ void set_penalty_banner(const PenaltyBanner& b) {
     g_pen_active.store(b.active && !b.title.empty());
 }
 
+void set_mfd_state(const MfdState& s) {
+    std::lock_guard lk(g_m);
+    g_mfd_ov = s;
+    g_mfd_tyre_code.store(s.tyre_code);
+    g_mfd_popup_until.store(s.popup_until_us);
+    g_mfd_aid_until.store(s.aid_until_us);
+    g_mfd_visible.store(s.visible);
+}
+
 bool frame(u32 win_w, u32 win_h, Image* out) {
     static u64 last = 0;
     const u64 now = time_usec();
@@ -1050,15 +1182,28 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
     const bool fps_on = g_fps_on.load();
     const bool lap_on = g_lap_on.load() && g_lap.in_session;
     const u64 pen_exp = g_pen_expires.load();
-    bool pen_on = g_pen_active.load() && g_lap.in_session && (!pen_exp || now < pen_exp);
-    if (g_pen_active.load() && (!g_lap.in_session || (pen_exp && now >= pen_exp))) {
+    const bool pen_was_active = g_pen_active.load();
+    bool pen_on = pen_was_active && g_lap.in_session && (!pen_exp || now < pen_exp);
+    if (pen_was_active && (!g_lap.in_session || (pen_exp && now >= pen_exp))) {
         std::lock_guard lk(g_m);
         g_pen = {};
         g_pen_active = false;
         g_pen_expires = 0;
         pen_on = false;
     }
-    if (!g_open.load() && !g_bar_active.load() && !fps_on && !lap_on && !pen_on) return false;
+    const u64 mfd_until = g_mfd_popup_until.load();
+    const u64 mfd_aid_until = g_mfd_aid_until.load();
+    const bool mfd_vis = g_mfd_visible.load() && g_lap.in_session;
+    const bool mfd_on = mfd_vis && ((mfd_until && now < mfd_until) || (mfd_aid_until && now < mfd_aid_until) || g_mfd_tyre_code.load() != 0);
+    if (g_mfd_visible.load() && !g_lap.in_session) {
+        std::lock_guard lk(g_m);
+        g_mfd_ov = {};
+        g_mfd_visible = false;
+        g_mfd_tyre_code = 0;
+        g_mfd_popup_until = 0;
+        g_mfd_aid_until = 0;
+    }
+    if (!g_open.load() && !g_bar_active.load() && !fps_on && !lap_on && !pen_on && !mfd_on) return false;
     std::lock_guard lk(g_m);
     static bool inited = false;
     bool dialog = g_open.load() && g_st.kind != Kind::None;
@@ -1073,7 +1218,7 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
         bar_mouse((float)win_w, (float)win_h);
         show_bar = bar_visible((float)win_w, (float)win_h);
     }
-    if (!dialog && !show_bar && !fps_on && !lap_on && !pen_on) return false;
+    if (!dialog && !show_bar && !fps_on && !lap_on && !pen_on && !mfd_on) return false;
     if (!inited) { imgui_init(); inited = true; }
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)win_w, (float)win_h);
@@ -1085,6 +1230,7 @@ bool frame(u32 win_w, u32 win_h, Image* out) {
     else if (show_bar) draw_bar(dl, (float)win_w, (float)win_h);
     if (fps_on) draw_fps(dl, (float)win_w, (float)win_h);
     if (lap_on && !dialog) draw_laptimes(dl, (float)win_w, (float)win_h);
+    if (mfd_on && !dialog) draw_mfd(dl, (float)win_w, (float)win_h, now, lap_on);
     if (pen_on && !dialog) draw_penalty_banner(dl, (float)win_w, (float)win_h);
     ImGui::Render();
     ImDrawData* dd = ImGui::GetDrawData();
