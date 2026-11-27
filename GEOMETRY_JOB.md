@@ -293,3 +293,6 @@ frame is bound by its dependency chain (main waits for jobs, jobs for main), so 
 as write tracking (`hash_range` ~9% of the renderer) would not raise the frame rate on this machine. Write tracking
 not started: PPU writes would need page protection; worth it only where the renderer thread is the limit.
 4 CPUs in all: original path ~26.3 fps -> HLE 31.0 -> native job 35.4 -> parse thread 38.2.
+
+Default since 2026-11-27 (after the user's PC session at 60 fps and the Steam Deck test at Original settings, 16 W max
+at the Silverstone start): `F1CE_GEOM_HLE` and `F1CE_GEOM_NJ` are on unless set to 0.

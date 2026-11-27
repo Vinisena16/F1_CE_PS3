@@ -1,10 +1,11 @@
 // HLE: the frame job lists of workloads w1 / w2 (queues 0x10C15100 / 0x10C29100, the geometry job 0x100A1280) run
-// without the SPURS policy module (F1CE_GEOM_HLE=1, GEOMETRY_HLE_HANDOFF.md step 1). The SPU worker that the scheduler
-// gives the workload (hle_spurs.cpp, same rules as before) takes the jobs straight from the queue and runs each on a
-// private SPU of its thread: the job's own code (generated / translated as before) with a small native job manager in
-// place of the game's PM (spu_pm.cpp). No PM code, no prefetch slots: one job at a time, its buffers fetched before it
-// starts. (A pool of threads of its own next to the workers was tried first: as fast with 12 hardware threads, much
-// slower with 8, where the extra threads took cores from the workers and the renderer.)
+// without the SPURS policy module (on by default, F1CE_GEOM_HLE=0: the job manager as before; GEOMETRY_HLE_HANDOFF.md
+// step 1). The SPU worker that the scheduler gives the workload (hle_spurs.cpp, same rules as before) takes the jobs
+// straight from the queue and runs each on a private SPU of its thread: the job's own code (generated / translated as
+// before) with a small native job manager in place of the game's PM (spu_pm.cpp). No PM code, no prefetch slots: one
+// job at a time, its buffers fetched before it starts. (A pool of threads of its own next to the workers was tried
+// first: as fast with 12 hardware threads, much slower with 8, where the extra threads took cores from the workers and
+// the renderer.)
 //
 // What the job sees is what the PM gives it (read from the PM's disassembly, PM addresses in brackets):
 //   LS 0xC00   the job descriptor, (entry word 0 >> 16) & 511 bytes from the entry's EA: the job's buffer list
@@ -63,7 +64,7 @@ void snap_write(const SPUThread& t, const char* where) {
 }  // namespace
 
 namespace {
-const bool g_on = getenv("F1CE_GEOM_HLE") && atoi(getenv("F1CE_GEOM_HLE")) != 0;
+const bool g_on = !(getenv("F1CE_GEOM_HLE") && atoi(getenv("F1CE_GEOM_HLE")) == 0);   // on by default since 2026-11-27
 
 constexpr u32 LS_LINE = 0x80, LS_READY = 0x100, LS_COUNTER = 0x180, LS_DESC = 0xC00, LS_TABLE = 0x1340;
 constexpr u32 SVC_RETURN = 0x100, SVC_BASE = 0x200, KERNEL_LIMIT = 0x400;   // branch targets handled on the host
@@ -723,10 +724,11 @@ struct Pool {
             else
                 g_nj_declined.fetch_add(1, std::memory_order_relaxed);
         }
-        // F1CE_GEOM_NJ=1: command handlers replaced by the native job where it covers the job (geom_native_job.cpp);
+        // F1CE_GEOM_NJ (default 1, 0: off): command handlers replaced by the native job where it covers the job
+        // (geom_native_job.cpp);
         // =2: also every 16th such job twice, first with the native handlers and DMA dry (puts logged, atomics on a
         // copy), then the original for real from the same state, and their puts and line stores compared
-        static const int nj_mode = getenv("F1CE_GEOM_NJ") ? atoi(getenv("F1CE_GEOM_NJ")) : 0;
+        static const int nj_mode = getenv("F1CE_GEOM_NJ") ? atoi(getenv("F1CE_GEOM_NJ")) : 1;   // (on by default)
         bool nj_on = false;
         if (nj_mode && !tracing && !nj) {
             nj_on = geom_nj_kept(t.ls + (start(1, map[1][0]) << 10), sets[1].a1 << 10, nj_kept, t_nj_pad, t_nj_pad_abc);
@@ -810,7 +812,7 @@ bool (*g_geom_nj_handler)(SPUThread& s, u32 handler) = nullptr;   // spu_ops.h s
 bool (*g_geom_nj_list)(SPUThread& s) = nullptr;
 void geom_hle_add(u32 spurs, u32 wid, u32 queue) {
     g_spurs = spurs;
-    if (getenv("F1CE_GEOM_NJ") && atoi(getenv("F1CE_GEOM_NJ")) != 0) {
+    if (!(getenv("F1CE_GEOM_NJ") && atoi(getenv("F1CE_GEOM_NJ")) == 0)) {
         g_geom_nj_handler = nj_handler;
         if (!(getenv("F1CE_GEOM_NJ_LIST") && atoi(getenv("F1CE_GEOM_NJ_LIST")) == 0)) g_geom_nj_list = nj_list;
     }
